@@ -243,7 +243,7 @@ class PMW3360DM():
 
 class MotionDetector(Analog_input):
     "Using the Analog_input code to interface with PMW3360DM"
-    def __init__(self, name, reset, threshold=10, sampling_rate=1000, event='motion'):
+    def __init__(self, name, reset, threshold=5, sampling_rate=1000, event='motion'):
         """
         name: name of the analog signal which will be streamed to the PC
         threshold: in centimeters, distance travelled longer than THRESHOLD triggers an event,
@@ -265,6 +265,7 @@ class MotionDetector(Analog_input):
         self.xy_mix_mv = self.motionBuffer_mv[1:3]
         self.delta_x, self.delta_y = 0, 0
         self._delta_x, self._delta_y = 0, 0
+        self.x, self.y = 0, 0  # to be accessed from the task
         # Parent
         Analog_input.__init__(self, pin=None, name=name, sampling_rate=int(sampling_rate),
                               threshold=threshold, rising_event=event, falling_event=None, data_type='l')
@@ -305,6 +306,8 @@ class MotionDetector(Analog_input):
         self.buffers[self.write_buffer][self.write_index] = int.from_bytes(self.xy_mix_mv, 'little')
         if self.threshold_active:
             if self.delta_x**2 + self.delta_y**2 >= self._threshold:
+                self.x = self.delta_x
+                self.y = self.delta_y
                 self.reset_delta()
                 self.timestamp = fw.current_time
                 interrupt_queue.put(self.ID)

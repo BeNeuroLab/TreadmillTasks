@@ -4,7 +4,8 @@ board = Breakout_dseries_1_6()
 
 # Instantiate Devices.
 
-motionSensor = MotionDetector(name='MotSen1', reset=board.port_3.DIO_B, threshold=10, sampling_rate=500, event='motion')
+# `motionSensor` triggers an event every 5cm, the task must count the events to measure the travelled distance as multiples of 5cm.
+motionSensor = MotionDetector(name='MotSen1', reset=board.port_3.DIO_B, threshold=5, sampling_rate=500, event='motion')
 
 # in each direction, Odour0 is always the clean air, Odour1 is the odourant,...
 odourDelivery = ParallelOdourRelease(5, 2,
