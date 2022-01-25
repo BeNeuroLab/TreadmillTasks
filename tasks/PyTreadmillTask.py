@@ -45,20 +45,18 @@ v.session_duration = 1 * hour
 v.reward_duration = 100 * ms
 v.penalty_duration = 10 * second
 v.trial_number = 0
-v.motion_timer___ = 1 * ms  # polls motion every 1ms
-v.new_motion___ = False  # flag to declare new motion
-v.delta_x = uarray.array('i')  # signed int minimum 2 bytes
-v.delta_y = uarray.array('i')
 
 # intertrial params
-v.min_IT_movement = 10  # cm
+v.min_IT_movement = 10  # cm - must be a multiple of 5
 v.min_IT_duration = 1 * second
 v.IT_duration_done___ = False
+v.x___ = 0
+v.y___ = 0
 
 # trial params
 v.max_odour_time = 10 * second
-v.max_odour_movement = 50  # cm
-v.distance_to_target = 20  # cm
+v.max_odour_movement = 50  # cm - must be a multiple of 5
+v.distance_to_target = 20  # cm - must be a multiple of 5
 v.target_angle_tolerance = math.pi / 18  # deg_rad
 v.odourant_direction = -1
 v.air_off_duration = 100 * ms
@@ -131,7 +129,6 @@ def run_start():
     hw.speaker.set_volume(90)
     hw.speaker.off()
     hw.odourDelivery.clean_air_on()
-    set_timer('motion', v.motion_timer___)
 
 
 def run_end():
@@ -150,23 +147,20 @@ def intertrial(event):
         # coded so that at this point, there is clean air coming from every direction
         set_timer('IT_timer', v.min_IT_duration)
         v.IT_duration_done___ = False
+        v.x___, v.y___ = 0, 0
     elif event == 'exit':
         disarm_timer('IT_timer')
-    elif event == 'lick':
-        # TODO: handle the lick data better
-        pass
     elif event == 'IT_timer':
         v.IT_duration_done___ = True
-        v.delta_x, v.delta_y = uarray.array('i'), uarray.array('i')
     elif event == 'motion':
-        if v.IT_duration_done___ and v.new_motion___:
-            if math.sqrt((sum(v.delta_x)**2) + (sum(v.delta_x)**2)) >= v.min_IT_movement:
+        if v.IT_duration_done___:
+            if math.sqrt((v.x___**2) + (v.y___**2)) >= v.min_IT_movement:
                 goto_state('trial_start')
 
 
 def trial_start(event):
     if event == 'entry':
-        v.delta_x, v.delta_y = uarray.array('i'), uarray.array('i')
+        v.x___, v.y___ = 0, 0
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         hw.odourDelivery.all_off()
@@ -177,27 +171,24 @@ def odour_release(event):
     if event == 'entry':
         set_timer('odour_timer', v.max_odour_time)
         v.odourant_direction = release_single_odourant_random(hw.odourDelivery)
-        v.delta_x, v.delta_y = uarray.array('i'), uarray.array('i')
+        v.x___, v.y___ = 0, 0
     elif event == 'exit':
         disarm_timer('odour_timer')
         hw.speaker.off()
     elif event == 'motion':
-        if v.new_motion___:
-            D_x = sum(v.delta_x)
-            D_y = sum(v.delta_y)
-            arrived = arrived_to_target(D_x, D_y,
-                                        v.odourant_direction,
-                                        v.distance_to_target,
-                                        v.target_angle_tolerance)
+        arrived = arrived_to_target(v.x___, v.y___,
+                                    v.odourant_direction,
+                                    v.distance_to_target,
+                                    v.target_angle_tolerance)
 
-            audio_feedback(hw.speaker, D_x, D_y, v.odourant_direction)
+        audio_feedback(hw.speaker, v.x___, v.y___, v.odourant_direction)
 
-            if arrived is None:
-                pass
-            elif arrived is True:
-                goto_state('reward')
-            elif arrived is False:
-                goto_state('penalty')
+        if arrived is None:
+            pass
+        elif arrived is True:
+            goto_state('reward')
+        elif arrived is False:
+            goto_state('penalty')
     elif event == 'odour_timer':
         goto_state('penalty')
 
@@ -228,15 +219,11 @@ def all_states(event):
     # irrespective of the state the machine is in.
     if event == 'motion':
         # read the motion registers and and append the variables
-        delta_x, delta_y = hw.motionSensor.read_pos()
-        if delta_x == 0 and delta_y == 0:
-            v.new_motion___ = False
-        else:
-            print('{},{}, dM'.format(delta_x, delta_y))
-            v.delta_x.append(delta_x)
-            v.delta_y.append(delta_y)
-            v.new_motion___ = True
-        set_timer('motion', v.motion_timer___)
-
+        v.x___ += hw.motionSensor.x
+        v.y___ += hw.motionSensor.y
+        print('{},{}, dM'.format(hw.motionSensor.x, hw.motionSensor.y))
+    elif event == 'lick':
+        # TODO: handle the lick data better
+        pass
     elif event == 'session_timer':
         stop_framework()
