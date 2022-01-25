@@ -21,13 +21,11 @@ class PMW3360DM():
                  SPI_type: str,
                  eventName: str = None,
                  reset: str = None,
-                 MT: str = None,
                  CS: str = None,
                  MI: str = None,
                  MO: str = None,
                  SCK: str = None):
 
-        self.MT = MT
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
         SPIparams = {'baudrate': 1000000, 'polarity': 1, 'phase': 1,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
@@ -45,8 +43,6 @@ class PMW3360DM():
                                        miso=machine.Pin(id=MI, mode=machine.Pin.IN), **SPIparams)
             self.select = Digital_output(pin=CS, inverted=True)
 
-        if MT is not None:
-            self.motion = Digital_input(pin=self.MT, falling_event=eventName, pull='up')
         if reset is not None:
             self.reset = Digital_output(pin=reset, inverted=True)
             self.reset.off()
