@@ -50,12 +50,12 @@ v.trial_number = 0
 v.min_IT_movement = 10  # cm - must be a multiple of 5
 v.min_IT_duration = 1 * second
 v.IT_duration_done___ = False
+v.IT_distance_done___ = False
 v.x___ = 0
 v.y___ = 0
 
 # trial params
 v.max_odour_time = 10 * second
-v.max_odour_movement = 50  # cm - must be a multiple of 5
 v.distance_to_target = 20  # cm - must be a multiple of 5
 v.target_angle_tolerance = math.pi / 18  # deg_rad
 v.odourant_direction = -1
@@ -81,7 +81,6 @@ def release_single_odourant_random(odourDevice: ParallelOdourRelease):
 
 def arrived_to_target(dX: float, dY: float,
                       odourant_direction: int,
-                      distance_to_target: float,
                       target_angle_tolerance: float):
     """
     checks the motion critereon
@@ -89,16 +88,11 @@ def arrived_to_target(dX: float, dY: float,
     """
     assert odourant_direction < 5, 'wrong direction value'
 
-    movement = math.sqrt(dX**2 + dY**2)
-    if movement < distance_to_target:
-        return None
-
+    move_angle = math.atan2(dY, dX)
+    if abs(move_angle - v.target_angle___[odourant_direction]) < target_angle_tolerance:
+        return True
     else:
-        move_angle = math.atan2(dY, dX)
-        if abs(move_angle - v.target_angle___[odourant_direction]) < target_angle_tolerance:
-            return True
-        else:
-            return False
+        return False
 
 
 def audio_mapping(d_a: float) -> float:
@@ -147,20 +141,22 @@ def intertrial(event):
         # coded so that at this point, there is clean air coming from every direction
         set_timer('IT_timer', v.min_IT_duration)
         v.IT_duration_done___ = False
-        v.x___, v.y___ = 0, 0
+        v.IT_distance_done___ = False
+        hw.motionSensor.threshold = v.min_IT_movement
     elif event == 'exit':
         disarm_timer('IT_timer')
     elif event == 'IT_timer':
         v.IT_duration_done___ = True
+        if v.IT_distance_done___:
+            goto_state('trial_start')
     elif event == 'motion':
+        v.IT_distance_done___ = True
         if v.IT_duration_done___:
-            if math.sqrt((v.x___**2) + (v.y___**2)) >= v.min_IT_movement:
-                goto_state('trial_start')
+            goto_state('trial_start')
 
 
 def trial_start(event):
     if event == 'entry':
-        v.x___, v.y___ = 0, 0
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         hw.odourDelivery.all_off()
@@ -171,21 +167,18 @@ def odour_release(event):
     if event == 'entry':
         set_timer('odour_timer', v.max_odour_time)
         v.odourant_direction = release_single_odourant_random(hw.odourDelivery)
-        v.x___, v.y___ = 0, 0
+        hw.motionSensor.threshold = v.distance_to_target
     elif event == 'exit':
         disarm_timer('odour_timer')
         hw.speaker.off()
     elif event == 'motion':
         arrived = arrived_to_target(v.x___, v.y___,
                                     v.odourant_direction,
-                                    v.distance_to_target,
                                     v.target_angle_tolerance)
 
         audio_feedback(hw.speaker, v.x___, v.y___, v.odourant_direction)
 
-        if arrived is None:
-            pass
-        elif arrived is True:
+        if arrived is True:
             goto_state('reward')
         elif arrived is False:
             goto_state('penalty')
@@ -219,9 +212,9 @@ def all_states(event):
     # irrespective of the state the machine is in.
     if event == 'motion':
         # read the motion registers and and append the variables
-        v.x___ += hw.motionSensor.x
-        v.y___ += hw.motionSensor.y
-        print('{},{}, dM'.format(hw.motionSensor.x, hw.motionSensor.y))
+        v.x___ = hw.motionSensor.x / hw.motionSensor.sensor.CPI * 2.54
+        v.y___ = hw.motionSensor.y / hw.motionSensor.sensor.CPI * 2.54
+        print('{},{}, dM'.format(v.x___, v.y___))
     elif event == 'lick':
         # TODO: handle the lick data better
         pass
