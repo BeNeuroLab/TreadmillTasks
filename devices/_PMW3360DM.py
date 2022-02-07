@@ -328,15 +328,15 @@ class MotionDetector(Analog_input):
 
 
 class MotionDetector_2ch(Analog_input):
-    "Using the Analog_input code to interface with PMW3360DM"
-    def __init__(self, name, reset, calib_coef=1, threshold=5, sampling_rate=500, event='motion'):
+    "Using the Analog_input code to interface with 2 PMW3360DM sensors, reading `x` and `y` separately."
+    def __init__(self, reset, name='MotDet', calib_coef=1, threshold=5, sampling_rate=100, event='motion'):
         """
         name: name of the analog signal which will be streamed to the PC
-        threshold: in centimeters, distance travelled longer than THRESHOLD triggers an event,
+        threshold: in centimeters, distance travelled longer than THRESHOLD triggers a PyControl event,
         under the hood, THRESHOLD is saved as the square of the movement counts.
         """
-        self.sensor = PMW3360DM(SPI_type='SPI2', reset=reset)
-        self.sensor.power_up()
+        self.sensor_x = PMW3360DM(SPI_type='SPI2', reset=reset)
+        self.sensor_x.power_up()
         self.calib_coef = calib_coef
         self.threshold = threshold
         # Motion sensor variables
@@ -361,11 +361,11 @@ class MotionDetector_2ch(Analog_input):
     @property
     def threshold(self):
         "return the value in cms"
-        return math.sqrt(self._threshold) / self.sensor.CPI * 2.54
+        return math.sqrt(self._threshold) / self.sensor_x.CPI * 2.54
 
     @threshold.setter
     def threshold(self, new_threshold):
-        self._threshold = int((new_threshold / 2.54 * self.sensor.CPI)**2) * self.calib_coef
+        self._threshold = int((new_threshold / 2.54 * self.sensor_x.CPI)**2) * self.calib_coef
         self.reset_delta()
 
     def reset_delta(self):
@@ -373,13 +373,13 @@ class MotionDetector_2ch(Analog_input):
         self.delta_x, self.delta_y = 0, 0
 
     def read_sample(self):
-        self.sensor.write_register_buff(b'\x82', b'\x01')
-        self.sensor.read_register_buff(b'\x02', self.delta_x_H_mv)
+        self.sensor_x.write_register_buff(b'\x82', b'\x01')
+        self.sensor_x.read_register_buff(b'\x02', self.delta_x_H_mv)
 
-        self.sensor.read_register_buff(b'\x03', self.delta_x_L_mv)
-        self.sensor.read_register_buff(b'\x04', self.delta_x_H_mv)
-        self.sensor.read_register_buff(b'\x05', self.delta_y_L_mv)
-        self.sensor.read_register_buff(b'\x06', self.delta_y_H_mv)
+        self.sensor_x.read_register_buff(b'\x03', self.delta_x_L_mv)
+        self.sensor_x.read_register_buff(b'\x04', self.delta_x_H_mv)
+        self.sensor_x.read_register_buff(b'\x05', self.delta_y_L_mv)
+        self.sensor_x.read_register_buff(b'\x06', self.delta_y_H_mv)
 
         self._delta_y = int.from_bytes(self.delta_y_mv, 'little')
         self._delta_x = endian_swap(int.from_bytes(self.delta_x_mv, 'little'))
@@ -408,7 +408,7 @@ class MotionDetector_2ch(Analog_input):
     def _stop_acquisition(self):
         # Stop sampling analog input values.
         self.timer.deinit()
-        self.sensor.shut_down()
+        self.sensor_x.shut_down()
         self.acquiring = False
 
     def _start_acquisition(self):
