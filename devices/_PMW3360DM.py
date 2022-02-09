@@ -37,9 +37,11 @@ class PMW3360DM():
             self.select = Digital_output(pin='W45', inverted=True)
 
         elif 'soft' in SPI_type.lower():  # not tested
-            self.SPI = machine.SoftSPI(sck=machine.Pin(id=SCK, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
-                                       mosi=machine.Pin(id=MO, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
-                                       miso=machine.Pin(id=MI, mode=machine.Pin.IN), **SPIparams)
+            self.SPI = machine.SoftSPI(sck=machine.Pin(SCK, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
+                                       mosi=machine.Pin(MO, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
+                                       miso=machine.Pin(MI, mode=machine.Pin.IN),
+                                       **SPIparams
+                                       )
             self.select = Digital_output(pin=CS, inverted=True)
 
         if reset is not None:
