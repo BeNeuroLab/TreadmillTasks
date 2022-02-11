@@ -36,7 +36,7 @@ class PMW3360DM():
             self.SPI = machine.SPI(2, **SPIparams)
             self.select = Digital_output(pin='W45', inverted=True)
 
-        elif 'soft' in SPI_type.lower():  # not tested
+        elif 'soft' in SPI_type.lower():  # Works for newer versions of micropython
             self.SPI = machine.SoftSPI(sck=machine.Pin(SCK, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
                                        mosi=machine.Pin(MO, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
                                        miso=machine.Pin(MI, mode=machine.Pin.IN),
