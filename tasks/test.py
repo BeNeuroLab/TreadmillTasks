@@ -24,7 +24,7 @@ initial_state = 'intertrial'
 # session params
 v.session_duration = 1 * hour
 v.motion_timer___ = 60 * second  # polls motion every 1ms
-v.total=0
+v.total = 0
 
 
 # Run start and stop behaviour.

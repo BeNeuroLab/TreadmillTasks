@@ -338,7 +338,7 @@ class MotionDetector_2ch(Analog_input):
         name: name of the analog signal which will be streamed to the PC
         threshold: in centimeters, distance travelled longer than THRESHOLD triggers a PyControl event,
         under the hood, THRESHOLD is saved as the square of the movement counts.
-        `sensor1pins` and `sensor2pins` must be dictionaries defining `CS`, `MI`, `MO`, `SCK` keys as softSPI pins. 
+        `sensor1pins` and `sensor2pins` must be dictionaries defining `CS`, `MI`, `MO`, `SCK` keys as softSPI pins.
         """
         self.sensor_x = PMW3360DM(SPI_type='soft', reset=reset, **sensor1pins)
         self.sensor_x.power_up()
@@ -359,7 +359,6 @@ class MotionDetector_2ch(Analog_input):
         self.delta_y_mv = self.motionBuffer_mv[2:]
         self.xy_mix_mv = self.motionBuffer_mv[1:3]
         self.delta_x, self.delta_y = 0, 0
-        self._delta_x, self._delta_y = 0, 0
         self.x, self.y = 0, 0  # to be accessed from the task, unit=movement count in CPI*inches
 
         # Parent
@@ -396,11 +395,11 @@ class MotionDetector_2ch(Analog_input):
         self.sensor_y.read_register_buff(b'\x05', self.delta_y_L_mv)
         self.sensor_y.read_register_buff(b'\x06', self.delta_y_H_mv)
 
-        self._delta_y = int.from_bytes(self.delta_y_mv, 'little')
-        self._delta_x = endian_swap(int.from_bytes(self.delta_x_mv, 'little'))
+        _delta_y = int.from_bytes(self.delta_y_mv, 'little')
+        _delta_x = endian_swap(int.from_bytes(self.delta_x_mv, 'little'))
 
-        self.delta_y += twos_comp(self._delta_y)
-        self.delta_x += twos_comp(self._delta_x)
+        self.delta_y += twos_comp(_delta_y)
+        self.delta_x += twos_comp(_delta_x)
 
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
