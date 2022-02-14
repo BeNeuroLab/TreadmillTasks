@@ -240,13 +240,13 @@ class PMW3360DM():
 
 class MotionDetector(Analog_input):
     "Using the Analog_input code to interface with PMW3360DM"
-    def __init__(self, name, reset, calib_coef=1, threshold=5, sampling_rate=500, event='motion'):
+    def __init__(self, name, reset, calib_coef=1, threshold=5, sampling_rate=500, event='motion', **kwarg):
         """
         name: name of the analog signal which will be streamed to the PC
         threshold: in centimeters, distance travelled longer than THRESHOLD triggers an event,
         under the hood, THRESHOLD is saved as the square of the movement counts.
         """
-        self.sensor = PMW3360DM(SPI_type='SPI2', reset=reset)
+        self.sensor = PMW3360DM(SPI_type='SPI2', reset=reset, **kwarg)
         self.sensor.power_up()
         self.calib_coef = calib_coef
         self.threshold = threshold
