@@ -1,4 +1,5 @@
-import utime, machine, math
+import utime, machine, math, gc
+from array import array
 from pyControl.hardware import *
 from devices.PMW3360DM_srom_0x04 import PROGMEM
 
@@ -364,7 +365,13 @@ class MotionDetector_2ch(Analog_input):
         # Parent
         Analog_input.__init__(self, pin=None, name=name, sampling_rate=int(sampling_rate),
                               threshold=threshold, rising_event=event, falling_event=None, data_type='l')
+        self.buffer_size *= 2  # to account for the `x` and `y` coordinates
+        self.buffers = (array(self.data_type, [0] * self.buffer_size), array(self.data_type, [0] * self.buffer_size))
+        self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
+
         self.crossing_direction = True  # to conform to the Analog_input syntax
+
+        gc.collect()
 
     @property
     def threshold(self):
