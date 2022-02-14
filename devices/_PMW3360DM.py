@@ -246,7 +246,7 @@ class MotionDetector(Analog_input):
         threshold: in centimeters, distance travelled longer than THRESHOLD triggers an event,
         under the hood, THRESHOLD is saved as the square of the movement counts.
         """
-        self.sensor = PMW3360DM(SPI_type='SPI2', reset=reset, **kwarg)
+        self.sensor = PMW3360DM(SPI_type='soft', reset=reset, **kwarg)
         self.sensor.power_up()
         self.calib_coef = calib_coef
         self.threshold = threshold
