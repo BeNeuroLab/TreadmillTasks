@@ -331,15 +331,18 @@ class MotionDetector(Analog_input):
 
 class MotionDetector_2ch(Analog_input):
     "Using the Analog_input code to interface with 2 PMW3360DM sensors, reading `x` and `y` separately."
-    def __init__(self, reset, name='MotDet', calib_coef=1, threshold=5, sampling_rate=100, event='motion'):
+    def __init__(self, reset, sensor1pins, sensor2pins,
+                 name='MotDet', calib_coef=1,
+                 threshold=5, sampling_rate=100, event='motion'):
         """
         name: name of the analog signal which will be streamed to the PC
         threshold: in centimeters, distance travelled longer than THRESHOLD triggers a PyControl event,
         under the hood, THRESHOLD is saved as the square of the movement counts.
+        `sensor1pins` and `sensor2pins` must be dictionaries defining `CS`, `MI`, `MO`, `SCK` keys as softSPI pins. 
         """
-        self.sensor_x = PMW3360DM(SPI_type='SPI1', reset=reset)
+        self.sensor_x = PMW3360DM(SPI_type='soft', reset=reset, **sensor1pins)
         self.sensor_x.power_up()
-        self.sensor_y = PMW3360DM(SPI_type='SPI2', reset=reset)
+        self.sensor_y = PMW3360DM(SPI_type='soft', reset=reset, **sensor2pins)
         self.sensor_y.power_up()
         self.calib_coef = calib_coef
         self.threshold = threshold
