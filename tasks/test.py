@@ -58,7 +58,7 @@ def all_states(event):
     # irrespective of the state the machine is in.
     if event == 'motion':
         # read the motion registers and and append the variables
-        print('dX={}; dY={}'.format(hw.motionSensor.x/ hw.motionSensor.sensor.CPI * 2.54, hw.motionSensor.y/ hw.motionSensor.sensor.CPI * 2.54))
+        print('dX={}; dY={}'.format(hw.motionSensor.x/ hw.motionSensor.sensor_x.CPI * 2.54, hw.motionSensor.y/ hw.motionSensor.sensor_x.CPI * 2.54))
         v.total += hw.motionSensor.threshold
         # set_timer('motion', v.motion_timer___)
 
