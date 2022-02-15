@@ -351,21 +351,21 @@ class MotionDetector_2ch(Analog_input):
         # Motion sensor variables
         self.motionBuffer = bytearray(4)
         self.motionBuffer_mv = memoryview(self.motionBuffer)
-        self.delta_x_L_mv = self.motionBuffer_mv[1:2]
-        self.delta_x_H_mv = self.motionBuffer_mv[0:1]
+        self.delta_x_L_mv = self.motionBuffer_mv[0:1]
+        self.delta_x_H_mv = self.motionBuffer_mv[1:2]
         self.delta_y_L_mv = self.motionBuffer_mv[2:3]
         self.delta_y_H_mv = self.motionBuffer_mv[3:]
 
-        self.delta_x_mv = self.motionBuffer_mv[:2]  # byte order is reversed
+        self.delta_x_mv = self.motionBuffer_mv[:2]  # byte order is correct!
         self.delta_y_mv = self.motionBuffer_mv[2:]
-        self.xy_mix_mv = self.motionBuffer_mv[1:3]
         self.delta_x, self.delta_y = 0, 0
         self.x, self.y = 0, 0  # to be accessed from the task, unit=movement count in CPI*inches
 
         # Parent
         Analog_input.__init__(self, pin=None, name=name, sampling_rate=int(sampling_rate),
-                              threshold=threshold, rising_event=event, falling_event=None, data_type='l')
+                              threshold=threshold, rising_event=event, falling_event=None, data_type='h')
         self.buffer_size *= 2  # to account for the `x` and `y` coordinates
+        self.buffer_size += 1  # for safety!
         self.buffers = (array(self.data_type, [0] * self.buffer_size), array(self.data_type, [0] * self.buffer_size))
         self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
 
@@ -393,7 +393,7 @@ class MotionDetector_2ch(Analog_input):
         self.sensor_x.read_register_buff(b'\x03', self.delta_x_L_mv)
         self.sensor_x.read_register_buff(b'\x04', self.delta_x_H_mv)
         self.sensor_x.read_register_buff(b'\x05', self.delta_y_L_mv)
-        self.sensor_x.read_register_buff(b'\x06', self.delta_y_L_mv)
+        self.sensor_x.read_register_buff(b'\x06', self.delta_y_H_mv)
 
         self.sensor_y.write_register_buff(b'\x82', b'\x01')
         self.sensor_y.read_register_buff(b'\x02', self.delta_y_L_mv)
@@ -402,8 +402,8 @@ class MotionDetector_2ch(Analog_input):
         self.sensor_y.read_register_buff(b'\x05', self.delta_y_L_mv)
         self.sensor_y.read_register_buff(b'\x06', self.delta_y_H_mv)
 
+        _delta_x = int.from_bytes(self.delta_x_mv, 'little')
         _delta_y = int.from_bytes(self.delta_y_mv, 'little')
-        _delta_x = endian_swap(int.from_bytes(self.delta_x_mv, 'little'))
 
         self.delta_y += twos_comp(_delta_y)
         self.delta_x += twos_comp(_delta_x)
@@ -411,7 +411,9 @@ class MotionDetector_2ch(Analog_input):
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
         self.read_sample()
-        self.buffers[self.write_buffer][self.write_index] = int.from_bytes(self.xy_mix_mv, 'little')
+        self.buffers[self.write_buffer][self.write_index] = int.from_bytes(self.delta_x_mv, 'little')
+        self.buffers[self.write_buffer][self.write_index + 1] = int.from_bytes(self.delta_y_mv, 'little')
+
         if self.threshold_active:
             if self.delta_x**2 + self.delta_y**2 >= self._threshold:
                 self.x = self.delta_x
@@ -420,8 +422,8 @@ class MotionDetector_2ch(Analog_input):
                 self.timestamp = fw.current_time
                 interrupt_queue.put(self.ID)
         if self.recording:
-            self.write_index = (self.write_index + 1) % self.buffer_size
-            if self.write_index == 0:  # Buffer full, switch buffers.
+            self.write_index = self.write_index + 2
+            if self.write_index >= self.buffer_size - 1:  # Buffer full, switch buffers.
                 self.write_buffer = 1 - self.write_buffer
                 self.buffer_start_times[self.write_buffer] = fw.current_time
                 stream_data_queue.put(self.ID)
