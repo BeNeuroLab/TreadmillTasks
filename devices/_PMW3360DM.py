@@ -414,13 +414,12 @@ class MotionDetector_2ch(Analog_input):
         self.buffers[self.write_buffer][self.write_index] = int.from_bytes(self.delta_x_mv, 'little')
         self.buffers[self.write_buffer][self.write_index + 1] = int.from_bytes(self.delta_y_mv, 'little')
 
-        if self.threshold_active:
-            if self.delta_x**2 + self.delta_y**2 >= self._threshold:
-                self.x = self.delta_x
-                self.y = self.delta_y
-                self.reset_delta()
-                self.timestamp = fw.current_time
-                interrupt_queue.put(self.ID)
+        if self.delta_x**2 + self.delta_y**2 >= self._threshold:
+            self.x = self.delta_x
+            self.y = self.delta_y
+            self.reset_delta()
+            self.timestamp = fw.current_time
+            interrupt_queue.put(self.ID)
         if self.recording:
             self.write_index = self.write_index + 2
             if self.write_index >= self.buffer_size - 1:  # Buffer full, switch buffers.
