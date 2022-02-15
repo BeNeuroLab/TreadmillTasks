@@ -420,13 +420,13 @@ class MotionDetector_2ch(Analog_input):
             self.reset_delta()
             self.timestamp = fw.current_time
             interrupt_queue.put(self.ID)
-        if self.recording:
-            self.write_index = self.write_index + 2
-            if self.write_index >= self.buffer_size - 1:  # Buffer full, switch buffers.
-                self.write_index = 0
-                self.write_buffer = 1 - self.write_buffer
-                self.buffer_start_times[self.write_buffer] = fw.current_time
-                stream_data_queue.put(self.ID)
+        
+        self.write_index = self.write_index + 2
+        if self.write_index >= self.buffer_size - 1:  # Buffer full, switch buffers.
+            self.write_index = 0
+            self.write_buffer = 1 - self.write_buffer
+            self.buffer_start_times[self.write_buffer] = fw.current_time
+            stream_data_queue.put(self.ID)
 
     def _stop_acquisition(self):
         # Stop sampling analog input values.
