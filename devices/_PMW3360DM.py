@@ -363,7 +363,7 @@ class MotionDetector_2ch(Analog_input):
 
         # Parent
         Analog_input.__init__(self, pin=None, name=name, sampling_rate=int(sampling_rate),
-                              threshold=threshold, rising_event=event, falling_event=None, data_type='h')
+                              threshold=threshold, rising_event=event, falling_event=None, data_type='l')
         self.buffer_size *= 2  # to account for the `x` and `y` coordinates
         self.buffer_size += 1  # for safety!
         self.buffers = (array(self.data_type, [0] * self.buffer_size), array(self.data_type, [0] * self.buffer_size))
