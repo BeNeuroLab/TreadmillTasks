@@ -12,7 +12,7 @@ import uarray
 
 states = ['intertrial']
 
-events = ['motion','min',
+events = ['motion',
           'session_timer']
 
 initial_state = 'intertrial'
@@ -22,9 +22,7 @@ initial_state = 'intertrial'
 # -------------------------------------------------------------------------
 
 # session params
-v.session_duration = 1 * hour
-v.motion_timer___ = 60 * second  # polls motion every 1ms
-v.total = 0
+v.session_duration = 1 * minute
 
 
 # Run start and stop behaviour.
@@ -34,7 +32,6 @@ def run_start():
     hw.motionSensor.record()
     print(hw.motionSensor._threshold)
     print(hw.motionSensor.threshold)
-    set_timer('min', v.motion_timer___)
 
 
 def run_end():
@@ -46,11 +43,7 @@ def run_end():
 
 # State behaviour functions.
 def intertrial(event):
-    if event == 'min':
-        v.total += 1
-        print('t={}'.format(v.total))
-        set_timer('min', v.motion_timer___)
-
+    pass
 
 # State independent behaviour.
 def all_states(event):
@@ -59,9 +52,6 @@ def all_states(event):
     if event == 'motion':
         # read the motion registers and and append the variables
         print('dX={}; dY={}'.format(hw.motionSensor.x/ hw.motionSensor.sensor_x.CPI * 2.54, hw.motionSensor.y/ hw.motionSensor.sensor_x.CPI * 2.54))
-        v.total += hw.motionSensor.threshold
-        # set_timer('motion', v.motion_timer___)
 
     elif event == 'session_timer':
-        print("total={}".format(v.total))
         stop_framework()
