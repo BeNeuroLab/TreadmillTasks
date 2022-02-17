@@ -4,18 +4,8 @@ board = Breakout_dseries_1_6()
 
 # Instantiate Devices.
 
-# `motionSensor` triggers an event every 5cm, the task must count the events to measure the travelled distance as multiples of 5cm.
-# motionSensor = MotionDetector(name='MotSen1', event='motion',
-#                               calib_coef=1, threshold=1, sampling_rate=100,
-#                               reset=board.port_4.DIO_A,
-#                               CS=board.port_4.DIO_B,
-#                               MI=board.port_4.DIO_C,
-#                               MO=board.port_5.DIO_A,
-#                               SCK=board.port_5.DIO_B)
-
 motionSensor = MotionDetector_2ch(name='MotSen1', event='motion',
-                                  calib_coef=1, threshold=1, sampling_rate=100,
-                                  sensor1pins={'CS': board.port_1.DIO_A, 'MI': board.port_1.DIO_B, 'MO': board.port_1.DIO_C, 'SCK': board.port_2.DIO_A, 'reset':board.port_2.DIO_B},
+                                  calib_coef=1, threshold=1, sampling_rate=100, reset1=board.port_3.DIO_B,
                                   sensor2pins={'CS': board.port_4.DIO_B, 'MI': board.port_4.DIO_C, 'MO': board.port_5.DIO_A, 'SCK': board.port_5.DIO_B, 'reset':board.port_4.DIO_A})
 
 # in each direction, Odour0 is always the clean air, Odour1 is the odourant,...
