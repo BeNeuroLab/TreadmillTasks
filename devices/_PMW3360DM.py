@@ -364,14 +364,12 @@ class MotionDetector_2ch(Analog_input):
         self.x, self.y = 0, 0  # to be accessed from the task, unit=movement count in CPI*inches
 
         # Parent
-        Analog_input.__init__(self, pin=None, name=name, sampling_rate=int(sampling_rate),
+        Analog_input.__init__(self, pin=None, name=name+'-X', sampling_rate=int(sampling_rate),
                               threshold=threshold, rising_event=event, falling_event=None, data_type='l')
-        self.buffer_size *= 2  # to account for the `x` and `y` coordinates
-        self.buffer_size += 1  # for safety!
-        self.buffers = (array(self.data_type, [0] * self.buffer_size), array(self.data_type, [0] * self.buffer_size))
-        self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
-        self.crossing_direction = True  # to conform to the Analog_input syntax
+        self.data_chx = self.data_channel
 
+        self.data_chy = Data_channel(name+'-Y', sampling_rate, data_type='l')
+        
         gc.collect()
 
     @property
