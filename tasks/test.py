@@ -30,8 +30,9 @@ def run_start():
     # Code here is executed when the framework starts running.
     set_timer('session_timer', v.session_duration, True)
     hw.motionSensor.record()
-    print(hw.motionSensor._threshold)
-    print(hw.motionSensor.threshold)
+    print('internal th={}'.format(hw.motionSensor._threshold))
+    print('external th={}'.format(hw.motionSensor.threshold))
+    print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
 
 
 def run_end():
