@@ -1,4 +1,5 @@
-import utime, machine, math
+import utime, machine, math, gc
+from array import array
 from pyControl.hardware import *
 from devices.PMW3360DM_srom_0x04 import PROGMEM
 
@@ -240,13 +241,13 @@ class PMW3360DM():
 
 class MotionDetector(Analog_input):
     "Using the Analog_input code to interface with PMW3360DM"
-    def __init__(self, name, reset, calib_coef=1, threshold=5, sampling_rate=500, event='motion'):
+    def __init__(self, name, reset, calib_coef=1, threshold=5, sampling_rate=500, event='motion', **kwarg):
         """
         name: name of the analog signal which will be streamed to the PC
         threshold: in centimeters, distance travelled longer than THRESHOLD triggers an event,
         under the hood, THRESHOLD is saved as the square of the movement counts.
         """
-        self.sensor = PMW3360DM(SPI_type='SPI2', reset=reset)
+        self.sensor = PMW3360DM(SPI_type='soft', reset=reset, **kwarg)
         self.sensor.power_up()
         self.calib_coef = calib_coef
         self.threshold = threshold
@@ -331,15 +332,18 @@ class MotionDetector(Analog_input):
 
 class MotionDetector_2ch(Analog_input):
     "Using the Analog_input code to interface with 2 PMW3360DM sensors, reading `x` and `y` separately."
-    def __init__(self, reset, name='MotDet', calib_coef=1, threshold=5, sampling_rate=100, event='motion'):
+    def __init__(self, sensor1pins, sensor2pins,
+                 name='MotDet', calib_coef=1,
+                 threshold=5, sampling_rate=100, event='motion'):
         """
         name: name of the analog signal which will be streamed to the PC
         threshold: in centimeters, distance travelled longer than THRESHOLD triggers a PyControl event,
         under the hood, THRESHOLD is saved as the square of the movement counts.
+        `sensor1pins` and `sensor2pins` must be dictionaries defining `CS`, `MI`, `MO`, `SCK`, 'reset` keys as softSPI pins.
         """
-        self.sensor_x = PMW3360DM(SPI_type='SPI1', reset=reset)
+        self.sensor_x = PMW3360DM(SPI_type='soft', **sensor1pins)
         self.sensor_x.power_up()
-        self.sensor_y = PMW3360DM(SPI_type='SPI2', reset=reset)
+        self.sensor_y = PMW3360DM(SPI_type='soft', **sensor2pins)
         self.sensor_y.power_up()
         self.calib_coef = calib_coef
         self.threshold = threshold
@@ -347,22 +351,27 @@ class MotionDetector_2ch(Analog_input):
         # Motion sensor variables
         self.motionBuffer = bytearray(4)
         self.motionBuffer_mv = memoryview(self.motionBuffer)
-        self.delta_x_L_mv = self.motionBuffer_mv[1:2]
-        self.delta_x_H_mv = self.motionBuffer_mv[0:1]
+        self.delta_x_L_mv = self.motionBuffer_mv[0:1]
+        self.delta_x_H_mv = self.motionBuffer_mv[1:2]
         self.delta_y_L_mv = self.motionBuffer_mv[2:3]
         self.delta_y_H_mv = self.motionBuffer_mv[3:]
 
-        self.delta_x_mv = self.motionBuffer_mv[:2]  # byte order is reversed
+        self.delta_x_mv = self.motionBuffer_mv[:2]  # byte order is correct!
         self.delta_y_mv = self.motionBuffer_mv[2:]
-        self.xy_mix_mv = self.motionBuffer_mv[1:3]
         self.delta_x, self.delta_y = 0, 0
-        self._delta_x, self._delta_y = 0, 0
         self.x, self.y = 0, 0  # to be accessed from the task, unit=movement count in CPI*inches
 
         # Parent
         Analog_input.__init__(self, pin=None, name=name, sampling_rate=int(sampling_rate),
                               threshold=threshold, rising_event=event, falling_event=None, data_type='l')
+        self.buffer_size *= 2  # to account for the `x` and `y` coordinates
+        self.buffer_size += 1  # for safety!
+        self.buffers = (array(self.data_type, [0] * self.buffer_size), array(self.data_type, [0] * self.buffer_size))
+        self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
+
         self.crossing_direction = True  # to conform to the Analog_input syntax
+
+        gc.collect()
 
     @property
     def threshold(self):
@@ -384,7 +393,7 @@ class MotionDetector_2ch(Analog_input):
         self.sensor_x.read_register_buff(b'\x03', self.delta_x_L_mv)
         self.sensor_x.read_register_buff(b'\x04', self.delta_x_H_mv)
         self.sensor_x.read_register_buff(b'\x05', self.delta_y_L_mv)
-        self.sensor_x.read_register_buff(b'\x06', self.delta_y_L_mv)
+        self.sensor_x.read_register_buff(b'\x06', self.delta_y_H_mv)
 
         self.sensor_y.write_register_buff(b'\x82', b'\x01')
         self.sensor_y.read_register_buff(b'\x02', self.delta_y_L_mv)
@@ -393,29 +402,31 @@ class MotionDetector_2ch(Analog_input):
         self.sensor_y.read_register_buff(b'\x05', self.delta_y_L_mv)
         self.sensor_y.read_register_buff(b'\x06', self.delta_y_H_mv)
 
-        self._delta_y = int.from_bytes(self.delta_y_mv, 'little')
-        self._delta_x = endian_swap(int.from_bytes(self.delta_x_mv, 'little'))
+        _delta_x = int.from_bytes(self.delta_x_mv, 'little')
+        _delta_y = int.from_bytes(self.delta_y_mv, 'little')
 
-        self.delta_y += twos_comp(self._delta_y)
-        self.delta_x += twos_comp(self._delta_x)
+        self.delta_y += twos_comp(_delta_y)
+        self.delta_x += twos_comp(_delta_x)
 
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
         self.read_sample()
-        self.buffers[self.write_buffer][self.write_index] = int.from_bytes(self.xy_mix_mv, 'little')
-        if self.threshold_active:
-            if self.delta_x**2 + self.delta_y**2 >= self._threshold:
-                self.x = self.delta_x
-                self.y = self.delta_y
-                self.reset_delta()
-                self.timestamp = fw.current_time
-                interrupt_queue.put(self.ID)
-        if self.recording:
-            self.write_index = (self.write_index + 1) % self.buffer_size
-            if self.write_index == 0:  # Buffer full, switch buffers.
-                self.write_buffer = 1 - self.write_buffer
-                self.buffer_start_times[self.write_buffer] = fw.current_time
-                stream_data_queue.put(self.ID)
+        self.buffers[self.write_buffer][self.write_index] = int.from_bytes(self.delta_x_mv, 'little')
+        self.buffers[self.write_buffer][self.write_index + 1] = int.from_bytes(self.delta_y_mv, 'little')
+
+        if self.delta_x**2 + self.delta_y**2 >= self._threshold:
+            self.x = self.delta_x
+            self.y = self.delta_y
+            self.reset_delta()
+            self.timestamp = fw.current_time
+            interrupt_queue.put(self.ID)
+        
+        self.write_index = self.write_index + 2
+        if self.write_index >= self.buffer_size - 1:  # Buffer full, switch buffers.
+            self.write_index = 0
+            self.write_buffer = 1 - self.write_buffer
+            self.buffer_start_times[self.write_buffer] = fw.current_time
+            stream_data_queue.put(self.ID)
 
     def _stop_acquisition(self):
         # Stop sampling analog input values.

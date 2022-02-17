@@ -22,8 +22,7 @@ initial_state = 'intertrial'
 # -------------------------------------------------------------------------
 
 # session params
-v.session_duration = 10 * second
-v.motion_timer___ = 10 * ms  # polls motion every 1ms
+v.session_duration = 1 * minute
 
 
 # Run start and stop behaviour.
@@ -31,7 +30,8 @@ def run_start():
     # Code here is executed when the framework starts running.
     set_timer('session_timer', v.session_duration, True)
     hw.motionSensor.record()
-    # set_timer('motion', v.motion_timer___)
+    print(hw.motionSensor._threshold)
+    print(hw.motionSensor.threshold)
 
 
 def run_end():
@@ -43,10 +43,7 @@ def run_end():
 
 # State behaviour functions.
 def intertrial(event):
-    if event == 'motion':
-        # print('mo')
-        pass
-
+    pass
 
 # State independent behaviour.
 def all_states(event):
@@ -54,8 +51,7 @@ def all_states(event):
     # irrespective of the state the machine is in.
     if event == 'motion':
         # read the motion registers and and append the variables
-        print('dX={}; dY={}'.format(hw.motionSensor.x / hw.motionSensor.sensor.CPI * 2.54, hw.motionSensor.y / hw.motionSensor.sensor.CPI * 2.54))
-        # set_timer('motion', v.motion_timer___)
+        print('dX={}; dY={}'.format(hw.motionSensor.x/ hw.motionSensor.sensor_x.CPI * 2.54, hw.motionSensor.y/ hw.motionSensor.sensor_x.CPI * 2.54))
 
     elif event == 'session_timer':
         stop_framework()
