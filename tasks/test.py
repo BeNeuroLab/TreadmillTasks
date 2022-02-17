@@ -54,4 +54,5 @@ def all_states(event):
         print('dX={}; dY={}'.format(hw.motionSensor.x/ hw.motionSensor.sensor_x.CPI * 2.54, hw.motionSensor.y/ hw.motionSensor.sensor_x.CPI * 2.54))
 
     elif event == 'session_timer':
+        hw.motionSensor.stop()
         stop_framework()
