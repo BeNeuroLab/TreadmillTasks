@@ -6,7 +6,7 @@ board = Breakout_dseries_1_6()
 
 motionSensor = MotionDetector_2ch(name='MotSen1', event='motion',
                                   calib_coef=1, threshold=1, sampling_rate=100, reset1=board.port_3.DIO_B,
-                                  sensor2pins={'CS': board.port_4.DIO_B, 'MI': board.port_4.DIO_C, 'MO': board.port_5.DIO_A, 'SCK': board.port_5.DIO_B, 'reset':board.port_4.DIO_A})
+                                  sensor2pins={'CS': board.port_1.DIO_C, 'MI': board.port_2.DIO_A, 'MO': board.port_2.DIO_B, 'SCK': board.port_3.DIO_C, 'reset':board.port_4.DIO_C})
 
 # in each direction, Odour0 is always the clean air, Odour1 is the odourant,...
 # odourDelivery = ParallelOdourRelease(5, 2,
