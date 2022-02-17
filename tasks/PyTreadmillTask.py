@@ -219,4 +219,5 @@ def all_states(event):
         # TODO: handle the lick data better
         pass
     elif event == 'session_timer':
+        hw.motionSensor.stop()
         stop_framework()
