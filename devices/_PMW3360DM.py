@@ -410,9 +410,8 @@ class MotionDetector_2ch(Analog_input):
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
         self.read_sample()
-        self.buffers[self.write_buffer][self.write_index] = self._delta_x
-        self.buffers[self.write_buffer][self.write_index + 1] = self._delta_y
-        self.write_index = self.write_index + 2
+        self.data_chx.put(self._delta_x)
+        self.data_chy.put(self._delta_y)
         
         if self.delta_x**2 + self.delta_y**2 >= self._threshold:
             self.x = self.delta_x
@@ -421,21 +420,18 @@ class MotionDetector_2ch(Analog_input):
             self.timestamp = fw.current_time
             interrupt_queue.put(self.ID)
         
-        if self.write_index >= self.buffer_size - 1:  # Buffer full, switch buffers.
-            self.write_index = 0
-            self.write_buffer = 1 - self.write_buffer
-            self.buffer_start_times[self.write_buffer] = fw.current_time
-            stream_data_queue.put(self.ID)
-
     def _stop_acquisition(self):
         # Stop sampling analog input values.
         self.timer.deinit()
+        self.data_chx.stop()
+        self.data_chy.stop()
         self.sensor_x.shut_down()
         self.sensor_y.shut_down()
         self.acquiring = False
 
     def _start_acquisition(self):
         # Start sampling analog input values.
+        self.data_chy.record()
         self.timer.init(freq=self.sampling_rate)
         self.timer.callback(self._timer_ISR)
         self.acquiring = True
