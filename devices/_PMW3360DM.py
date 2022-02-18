@@ -432,6 +432,6 @@ class MotionDetector_2ch(Analog_input):
     def _start_acquisition(self):
         # Start sampling analog input values.
         self.data_chy.record()
-        self.timer.init(freq=self.sampling_rate)
+        self.timer.init(freq=self.data_chx.sampling_rate)
         self.timer.callback(self._timer_ISR)
         self.acquiring = True
