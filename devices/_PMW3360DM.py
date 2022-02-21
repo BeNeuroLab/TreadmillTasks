@@ -364,11 +364,11 @@ class MotionDetector_2ch(Analog_input):
         self.x, self.y = 0, 0  # to be accessed from the task, unit=movement count in CPI*inches
 
         # Parent
-        Analog_input.__init__(self, pin=None, name=name+'-X', sampling_rate=int(sampling_rate),
+        Analog_input.__init__(self, pin=None, name=name + '-X', sampling_rate=int(sampling_rate),
                               threshold=threshold, rising_event=event, falling_event=None, data_type='l')
         self.data_chx = self.data_channel
-
-        self.data_chy = Data_channel(name+'-Y', sampling_rate, data_type='l')
+        self.data_chy = Data_channel(name + '-Y', sampling_rate, data_type='l')
+        self.crossing_direction = True  # to conform to the Analog_input syntax
         
         gc.collect()
 
@@ -431,7 +431,12 @@ class MotionDetector_2ch(Analog_input):
 
     def _start_acquisition(self):
         # Start sampling analog input values.
-        self.data_chy.record()
         self.timer.init(freq=self.data_chx.sampling_rate)
         self.timer.callback(self._timer_ISR)
         self.acquiring = True
+
+    def record(self):
+        # Start streaming data to computer.
+        self.data_chx.record()
+        self.data_chy.record()
+        if not self.acquiring: self._start_acquisition()
