@@ -369,7 +369,7 @@ class MotionDetector_2ch(Analog_input):
         self.data_chx = self.data_channel
         self.data_chy = Data_channel(name + '-Y', sampling_rate, data_type='l')
         self.crossing_direction = True  # to conform to the Analog_input syntax
-        
+
         gc.collect()
 
     @property
@@ -401,11 +401,11 @@ class MotionDetector_2ch(Analog_input):
         self.sensor_y.read_register_buff(b'\x05', self.delta_y_L_mv)
         self.sensor_y.read_register_buff(b'\x06', self.delta_y_H_mv)
 
-        self._delta_x = int.from_bytes(self.delta_x_mv, 'little')
-        self._delta_y = int.from_bytes(self.delta_y_mv, 'little')
+        self._delta_x = twos_comp(int.from_bytes(self.delta_x_mv, 'little'))
+        self._delta_y = twos_comp(int.from_bytes(self.delta_y_mv, 'little'))
 
-        self.delta_y += twos_comp(self._delta_y)
-        self.delta_x += twos_comp(self._delta_x)
+        self.delta_y += self._delta_y
+        self.delta_x += self._delta_x
 
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
