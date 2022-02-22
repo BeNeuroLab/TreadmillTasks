@@ -364,15 +364,14 @@ class MotionDetector_2ch(Analog_input):
         self.x, self.y = 0, 0  # to be accessed from the task, unit=movement count in CPI*inches
 
         # Parent
-        Analog_input.__init__(self, pin=None, name=name, sampling_rate=int(sampling_rate),
+        Analog_input.__init__(self, pin=None, name=name + '-X', sampling_rate=int(sampling_rate),
                               threshold=threshold, rising_event=event, falling_event=None, data_type='l')
-        self.buffer_size *= 2  # to account for the `x` and `y` coordinates
-        self.buffer_size += 1  # for safety!
-        self.buffers = (array(self.data_type, [0] * self.buffer_size), array(self.data_type, [0] * self.buffer_size))
-        self.buffers_mv = (memoryview(self.buffers[0]), memoryview(self.buffers[1]))
+        self.data_chx = self.data_channel
+        self.data_chy = Data_channel(name + '-Y', sampling_rate, data_type='l')
         self.crossing_direction = True  # to conform to the Analog_input syntax
 
         gc.collect()
+        utime.sleep_ms(2)
 
     @property
     def threshold(self):
@@ -403,41 +402,42 @@ class MotionDetector_2ch(Analog_input):
         self.sensor_y.read_register_buff(b'\x05', self.delta_y_L_mv)
         self.sensor_y.read_register_buff(b'\x06', self.delta_y_H_mv)
 
-        self._delta_x = int.from_bytes(self.delta_x_mv, 'little')
-        self._delta_y = int.from_bytes(self.delta_y_mv, 'little')
+        self._delta_x = twos_comp(int.from_bytes(self.delta_x_mv, 'little'))
+        self._delta_y = twos_comp(int.from_bytes(self.delta_y_mv, 'little'))
 
-        self.delta_y += twos_comp(self._delta_y)
-        self.delta_x += twos_comp(self._delta_x)
+        self.delta_y += self._delta_y
+        self.delta_x += self._delta_x
 
     def _timer_ISR(self, t):
         # Read a sample to the buffer, update write index.
         self.read_sample()
-        self.buffers[self.write_buffer][self.write_index] = self._delta_x
-        self.buffers[self.write_buffer][self.write_index + 1] = self._delta_y
-        self.write_index = self.write_index + 2
-        
+        self.data_chx.put(self._delta_x)
+        self.data_chy.put(self._delta_y)
+
         if self.delta_x**2 + self.delta_y**2 >= self._threshold:
             self.x = self.delta_x
             self.y = self.delta_y
             self.reset_delta()
             self.timestamp = fw.current_time
             interrupt_queue.put(self.ID)
-        
-        if self.write_index >= self.buffer_size - 1:  # Buffer full, switch buffers.
-            self.write_index = 0
-            self.write_buffer = 1 - self.write_buffer
-            self.buffer_start_times[self.write_buffer] = fw.current_time
-            stream_data_queue.put(self.ID)
 
     def _stop_acquisition(self):
         # Stop sampling analog input values.
         self.timer.deinit()
+        self.data_chx.stop()
+        self.data_chy.stop()
         self.sensor_x.shut_down()
         self.sensor_y.shut_down()
         self.acquiring = False
 
     def _start_acquisition(self):
         # Start sampling analog input values.
-        self.timer.init(freq=self.sampling_rate)
+        self.timer.init(freq=self.data_chx.sampling_rate)
         self.timer.callback(self._timer_ISR)
         self.acquiring = True
+
+    def record(self):
+        # Start streaming data to computer.
+        self.data_chx.record()
+        self.data_chy.record()
+        if not self.acquiring: self._start_acquisition()
