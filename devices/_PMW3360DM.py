@@ -371,6 +371,7 @@ class MotionDetector_2ch(Analog_input):
         self.crossing_direction = True  # to conform to the Analog_input syntax
 
         gc.collect()
+        utime.sleep_ms(2)
 
     @property
     def threshold(self):
@@ -412,14 +413,14 @@ class MotionDetector_2ch(Analog_input):
         self.read_sample()
         self.data_chx.put(self._delta_x)
         self.data_chy.put(self._delta_y)
-        
+
         if self.delta_x**2 + self.delta_y**2 >= self._threshold:
             self.x = self.delta_x
             self.y = self.delta_y
             self.reset_delta()
             self.timestamp = fw.current_time
             interrupt_queue.put(self.ID)
-        
+
     def _stop_acquisition(self):
         # Stop sampling analog input values.
         self.timer.deinit()
