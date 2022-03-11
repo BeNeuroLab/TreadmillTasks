@@ -31,11 +31,9 @@ class PMW3360DM():
                      'bits': 8, 'firstbit': machine.SPI.MSB}
         if '1' in SPI_type:
             self.SPI = machine.SPI(1, **SPIparams)
-            self.select = Digital_output(pin='W7', inverted=True)
 
         elif '2' in SPI_type:
             self.SPI = machine.SPI(2, **SPIparams)
-            self.select = Digital_output(pin='W45', inverted=True)
 
         elif 'soft' in SPI_type.lower():  # Works for newer versions of micropython
             self.SPI = machine.SoftSPI(sck=machine.Pin(SCK, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
@@ -43,6 +41,8 @@ class PMW3360DM():
                                        miso=machine.Pin(MI, mode=machine.Pin.IN),
                                        **SPIparams
                                        )
+
+        if CS is not None:
             self.select = Digital_output(pin=CS, inverted=True)
 
         if reset is not None:
