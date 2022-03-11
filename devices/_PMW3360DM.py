@@ -388,12 +388,6 @@ class MotionDetector_2ch(Analog_input):
         self.delta_x, self.delta_y = 0, 0
 
     def read_sample(self):
-        self.sensor_x.write_register_buff(b'\x82', b'\x01')
-        self.sensor_x.read_register_buff(b'\x02', self.delta_x_L)
-        self.sensor_x.read_register_buff(b'\x03', self.delta_x_L)
-        self.sensor_x.read_register_buff(b'\x04', self.delta_x_H)
-        self.sensor_x.read_register_buff(b'\x05', self.delta_y_L)
-        self.sensor_x.read_register_buff(b'\x06', self.delta_y_L)
 
         self.sensor_y.write_register_buff(b'\x82', b'\x01')
         self.sensor_y.read_register_buff(b'\x02', self.delta_y_L)
@@ -401,9 +395,15 @@ class MotionDetector_2ch(Analog_input):
         self.sensor_y.read_register_buff(b'\x04', self.delta_y_L)
         self.sensor_y.read_register_buff(b'\x05', self.delta_y_L)
         self.sensor_y.read_register_buff(b'\x06', self.delta_y_H)
-
-        self._delta_x = twos_comp(int.from_bytes(self.xBuffer_mv, 'little'))
         self._delta_y = twos_comp(int.from_bytes(self.yBuffer_mv, 'little'))
+
+        self.sensor_x.write_register_buff(b'\x82', b'\x01')
+        self.sensor_x.read_register_buff(b'\x02', self.delta_x_L)
+        self.sensor_x.read_register_buff(b'\x03', self.delta_x_L)
+        self.sensor_x.read_register_buff(b'\x04', self.delta_x_H)
+        self.sensor_x.read_register_buff(b'\x05', self.delta_y_L)
+        self.sensor_x.read_register_buff(b'\x06', self.delta_y_L)
+        self._delta_x = twos_comp(int.from_bytes(self.xBuffer_mv, 'little'))
 
         self.delta_y += self._delta_y
         self.delta_x += self._delta_x
