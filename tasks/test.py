@@ -46,13 +46,14 @@ def run_end():
 def intertrial(event):
     pass
 
+
 # State independent behaviour.
 def all_states(event):
     # Code here will be executed when any event occurs,
     # irrespective of the state the machine is in.
     if event == 'motion':
         # read the motion registers and and append the variables
-        print('dX={}; dY={}'.format(hw.motionSensor.x/ hw.motionSensor.sensor_x.CPI * 2.54, hw.motionSensor.y/ hw.motionSensor.sensor_x.CPI * 2.54))
+        print('dX={}; dY={}'.format(hw.motionSensor.x / hw.motionSensor.sensor_x.CPI * 2.54, hw.motionSensor.y / hw.motionSensor.sensor_x.CPI * 2.54))
 
     elif event == 'session_timer':
         hw.motionSensor.stop()
