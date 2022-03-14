@@ -42,13 +42,10 @@ class PMW3360DM():
                                        **SPIparams
                                        )
 
-        if CS is not None:
-            self.select = Digital_output(pin=CS, inverted=True)
-
-        if reset is not None:
-            self.reset = Digital_output(pin=reset, inverted=True)
-            self.reset.off()
-
+        self.select = Digital_output(pin=CS, inverted=True)
+        self.reset = Digital_output(pin=reset, inverted=True)
+        
+        self.reset.off()
         self.select.off()
 
     def read_pos(self):
@@ -177,6 +174,7 @@ class PMW3360DM():
             utime.sleep_us(15)
 
         self.select.off()
+        utime.sleep_ms(1)
 
     def burst_read(self):
         """
@@ -343,8 +341,9 @@ class MotionDetector_2ch(Analog_input):
         First sensor will be run on SPI2.
         """
         self.sensor_x = PMW3360DM(SPI_type='SPI2', reset=reset1, CS=CS1)
-        self.sensor_x.power_up()
         self.sensor_y = PMW3360DM(SPI_type='SPI2', reset=reset2, CS=CS2)
+        
+        self.sensor_x.power_up()
         self.sensor_y.power_up()
         self.calib_coef = calib_coef
         self.threshold = threshold

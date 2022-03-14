@@ -6,8 +6,8 @@ board = Breakout_dseries_1_6()
 
 motionSensor = MotionDetector_2ch(name='MotSen1', event='motion',
                                   reset1=board.port_3.DIO_B,
-                                  reset2=board.port_4.DIO_C,
                                   CS1=board.port_3.DIO_A,
+                                  reset2=board.port_4.DIO_C,
                                   CS2=board.port_1.DIO_C,
                                   calib_coef=1, threshold=1, sampling_rate=100)
 
