@@ -146,7 +146,7 @@ class PMW3360DM():
 
         utime.sleep_ms(10)
 
-    def shut_down(self):
+    def shut_down(self, deinitSPI=True):
         """
         Perform the shut down sequence
         As per page 27 of datasheet
@@ -161,8 +161,8 @@ class PMW3360DM():
         utime.sleep_ms(1)
         self.select.off()
         utime.sleep_ms(1)
-
-        self.SPI.deinit()
+        if deinitSPI:
+            self.SPI.deinit()
 
     def download_srom(self, srom):
         self.select.on()
@@ -425,7 +425,7 @@ class MotionDetector_2ch(Analog_input):
         self.timer.deinit()
         self.data_chx.stop()
         self.data_chy.stop()
-        self.sensor_x.shut_down()
+        self.sensor_x.shut_down(deinitSPI=False)
         self.sensor_y.shut_down()
         self.acquiring = False
 
