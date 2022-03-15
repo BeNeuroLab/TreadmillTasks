@@ -330,7 +330,7 @@ class MotionDetector(Analog_input):
 
 class MotionDetector_2ch(Analog_input):
     "Using the Analog_input code to interface with 2 PMW3360DM sensors, reading `x` (SPI2) and `y` (softSPI) separately."
-    def __init__(self, reset1, reset2, CS1, CS2,
+    def __init__(self, reset, CS1, CS2,
                  name='MotDet', calib_coef=1,
                  threshold=1, sampling_rate=100, event='motion'):
         """
@@ -340,8 +340,8 @@ class MotionDetector_2ch(Analog_input):
         `sensor2pins` must be a dictionary defining `CS`, `MI`, `MO`, `SCK`, 'reset` keys as softSPI pins.
         First sensor will be run on SPI2.
         """
-        self.sensor_x = PMW3360DM(SPI_type='SPI2', reset=reset1, CS=CS1)
-        self.sensor_y = PMW3360DM(SPI_type='SPI2', reset=reset2, CS=CS2)
+        self.sensor_x = PMW3360DM(SPI_type='SPI2', reset=reset, CS=CS1)
+        self.sensor_y = PMW3360DM(SPI_type='SPI2', reset=reset, CS=CS2)
         
         self.sensor_x.power_up()
         self.sensor_y.power_up()
