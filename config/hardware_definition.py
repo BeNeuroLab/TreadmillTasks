@@ -14,9 +14,9 @@ motionSensor = MotionDetector_2ch(name='MotSen1', event='motion',
 odourDelivery = ParallelOdourRelease(5, 2,
                                      board.port_1.POW_A, board.port_1.POW_B,    # Dir1
                                      board.port_2.POW_A, board.port_2.POW_B,    # Dir2
-                                     board.port_3.POW_A, board.port_3.POW_B,    # Dir3
-                                     board.port_4.DIO_A, board.port_4.DIO_B,    # Dir4
-                                     board.port_4.POW_A, board.port_4.POW_B)    # Dir5
+                                     board.port_3.DIO_A, board.port_3.DIO_B,    # Dir3
+                                     board.port_3.DIO_C, board.port_4.DIO_A,    # Dir4
+                                     board.port_4.DIO_B, board.port_4.DIO_C)    # Dir5
 
 lickometer = Lickometer(port=board.port_6, rising_event_A='lick', falling_event_A='lick_off',
                         rising_event_B='_lick_2___', falling_event_B='_lick_2_off___', debounce=5)
