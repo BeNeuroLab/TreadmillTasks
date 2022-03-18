@@ -23,7 +23,7 @@ events = ['motion',
           'IT_timer',
           'odour_timer',
           'reward_timer',
-          'read_uart'
+          'audio_freq'
           ]
 
 initial_state = 'intertrial'

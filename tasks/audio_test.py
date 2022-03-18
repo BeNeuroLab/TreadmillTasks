@@ -2,11 +2,8 @@ from pyControl.utility import *
 import hardware_definition as hw
 
 states = ['init']
-events = ['read_uart']
+events = ['audio_freq']
 initial_state = 'init'
-
-
-hw.usb_uart.start_test()
 
 def init(event):
     if event == 'entry':
@@ -14,5 +11,5 @@ def init(event):
     elif event == 'exit':
         print('exiting init')
     elif event == 'read_uart':
-        print(hw.usb_uart.output)
+        print(hw.usb_uart.freq)
     
