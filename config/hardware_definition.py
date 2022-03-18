@@ -3,6 +3,7 @@ from devices import *
 board = Breakout_dseries_1_6()
 
 # Instantiate Devices.
+usb_uart = USB_UART('audio_freq')
 
 motionSensor = MotionDetector_2ch(name='MotSen1', event='motion',
                                   reset=board.port_1.DIO_C,
