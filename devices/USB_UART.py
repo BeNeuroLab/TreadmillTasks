@@ -19,7 +19,7 @@ class USB_UART(IO_object):
     def _timer_ISR(self, t):
         if self.uart.any() > 0:    # no message
             self.uart.readinto(self.buffer, 2)
-            self.freq = float(int.from_bytes(self.buffer, 'little'))
+            self.freq = int.from_bytes(self.buffer, 'little')
             if self.freq != self.prev_freq:
                 self.timestamp = fw.current_time
                 interrupt_queue.put(self.ID)
