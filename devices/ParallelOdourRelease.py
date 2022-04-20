@@ -7,8 +7,8 @@ class ParallelOdourRelease():
     def __init__(self):
         # PINS should be exactly Ndirections x NstimPerDir strings
         # specifying the pins! iterating over Direction and Odour, Odour ==0 is clean air
-        self.Ndirections = 5,
-        self.NstimPerDir = 2,
+        self.Ndirections = 5
+        self.NstimPerDir = 2
         pins = ('W16', 'W50',    # Dir1
                 'W60', 'W22',    # Dir2
                 'W45', 'W43',    # Dir3
