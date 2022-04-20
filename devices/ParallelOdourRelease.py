@@ -2,7 +2,7 @@ import pyb, machine, time
 import pyControl.hardware as _h
 
 
-class ParallelOdourRelease():
+class ParallelOdourRelease:
     # Odour system.
     def __init__(self):
         # PINS should be exactly Ndirections x NstimPerDir strings
