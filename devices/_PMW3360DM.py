@@ -171,42 +171,6 @@ class PMW3360DM():
         self.select.off()
         utime.sleep_ms(1)
 
-    def burst_read(self):
-        """
-        Based on Burst mode Page 22 [not tested]
-        reads 12 bytes:
-        BYTE[00] = Motion    = if the 7th bit is 1, a motion is detected.
-            ==> 7 bit: MOT (1 when motion is detected)
-            ==> 3 bit: 0 when chip is on surface / 1 when off surface
-        BYTE[01] = Observation
-        BYTE[02] = Delta_X_L = dx (LSB)
-        BYTE[03] = Delta_X_H = dx (MSB)
-        BYTE[04] = Delta_Y_L = dy (LSB)
-        BYTE[05] = Delta_Y_H = dy (MSB)
-        ...
-        """
-        # 1
-        self.write_register(0x50, 0x00)
-        # 2
-        self.select.on()
-        # 3
-        self.SPI.write(0x50 .to_bytes(1, 'little'))
-        # 4
-        utime.sleep_us(35)  # wait for tSRAD_MOTBR
-        # 5
-        data = self.SPI.read(6)
-        # 6
-        self.select.off()
-        utime.sleep_us(2)
-
-        delta_x = (data[3] << 8) | data[2]
-        delta_y = (data[5] << 8) | data[4]
-
-        delta_x = twos_comp(delta_x)
-        delta_y = twos_comp(delta_y)
-
-        return delta_x, delta_y
-
     def read_register_buff(self, addrs: bytes, buff: bytes):
         """
         addrs < 128
