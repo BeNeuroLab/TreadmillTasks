@@ -5,11 +5,11 @@ board = Breakout_dseries_1_6()
 # Instantiate Devices.
 usb_uart = USB_UART('audio_freq')
 
-motionSensor = MotionDetector_2ch(name='MotSen1', event='motion',
-                                  reset=board.port_1.DIO_C,
-                                  CS1=board.port_2.DIO_A,
-                                  CS2=board.port_2.DIO_B,
-                                  calib_coef=1, threshold=1, sampling_rate=100)
+motionSensor = MotionDetector(name='MotSen1', event='motion',
+                              reset=board.port_1.DIO_C,
+                              CS1=board.port_2.DIO_A,
+                              CS2=board.port_2.DIO_B,
+                              calib_coef=1, threshold=1, sampling_rate=100)
 
 odourDelivery = ParallelOdourRelease()
 
