@@ -196,7 +196,7 @@ class PMW3360DM():
         utime.sleep_us(100)  # tSWW/tSWR (=120us) minus tSCLK-NCS. Could be shortened, but is looks like a safe lower bound
 
 
-class MotionDetector_2ch(Analog_input):
+class MotionDetector(Analog_input):
     "Using the Analog_input code to interface with 2 PMW3360DM sensors, reading `x` (SPI2) and `y` (softSPI) separately."
     def __init__(self, reset, CS1, CS2,
                  name='MotDet', calib_coef=1,
