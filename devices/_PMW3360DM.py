@@ -203,10 +203,9 @@ class MotionDetector(Analog_input):
                  threshold=1, sampling_rate=100, event='motion'):
         """
         name: name of the analog signal which will be streamed to the PC
+        CS1, CS2: Chip select pins for each sensor
         threshold: in centimeters, distance travelled longer than THRESHOLD triggers a PyControl event,
         under the hood, THRESHOLD is saved as the square of the movement counts.
-        `sensor2pins` must be a dictionary defining `CS`, `MI`, `MO`, `SCK`, 'reset` keys as softSPI pins.
-        First sensor will be run on SPI2.
         """
         self.sensor_x = PMW3360DM(SPI_type='SPI2', reset=reset, CS=CS1)
         self.sensor_y = PMW3360DM(SPI_type='SPI2', reset=reset, CS=CS2)
