@@ -11,11 +11,6 @@ def twos_comp(val, bits=16):
     return val                          # return positive value as is
 
 
-def endian_swap(val: int):
-    "Swaps byte order. Tested for 2-byte input"
-    return ((val & 0x00ff) << 8) | ((val & 0xff00) >> 8)
-
-
 class PMW3360DM():
     # mouse motion sensor.
     def __init__(self,
