@@ -197,33 +197,37 @@ class PMW3360DM():
 
 
 class MotionDetector(Analog_input):
-    "Using the Analog_input code to interface with 2 PMW3360DM sensors, reading `x` (SPI2) and `y` (softSPI) separately."
-    def __init__(self, reset, CS1, CS2,
+    """
+    Using the Analog_input code to interface with 2 PMW3360DM sensors
+    reading `x` (SPI2) and `y` (softSPI) separately.
+    """
+    def __init__(self, reset, cs1, cs2,
                  name='MotDet', calib_coef=1,
                  threshold=1, sampling_rate=100, event='motion'):
         """
         name: name of the analog signal which will be streamed to the PC
-        CS1, CS2: Chip select pins for each sensor
-        threshold: in centimeters, distance travelled longer than THRESHOLD triggers a PyControl event,
+        cs1, cs2: Chip select pins for each sensor
+        threshold: in centimeters,
+                   distance travelled longer than THRESHOLD triggers a PyControl event,
         under the hood, THRESHOLD is saved as the square of the movement counts.
         """
-        self.sensor_x = PMW3360DM(SPI_type='SPI2', reset=reset, CS=CS1)
-        self.sensor_y = PMW3360DM(SPI_type='SPI2', reset=reset, CS=CS2)
-        
+        self.sensor_x = PMW3360DM(SPI_type='SPI2', reset=reset, CS=cs1)
+        self.sensor_y = PMW3360DM(SPI_type='SPI2', reset=reset, CS=cs2)
+
         self.sensor_x.power_up()
         self.sensor_y.power_up()
         self.calib_coef = calib_coef
         self.threshold = threshold
 
         # Motion sensor variables
-        self.xBuffer = bytearray(2)
-        self.yBuffer = bytearray(2)
-        self.xBuffer_mv = memoryview(self.xBuffer)
-        self.yBuffer_mv = memoryview(self.yBuffer)
-        self.delta_x_L = self.xBuffer_mv[0:1]
-        self.delta_x_H = self.xBuffer_mv[1:]
-        self.delta_y_L = self.yBuffer_mv[0:1]
-        self.delta_y_H = self.yBuffer_mv[1:]
+        self.x_buffer = bytearray(2)
+        self.y_buffer = bytearray(2)
+        self.x_buffer_mv = memoryview(self.x_buffer)
+        self.y_buffer_mv = memoryview(self.y_buffer)
+        self.delta_x_l = self.x_buffer_mv[0:1]
+        self.delta_x_h = self.x_buffer_mv[1:]
+        self.delta_y_l = self.y_buffer_mv[0:1]
+        self.delta_y_h = self.y_buffer_mv[1:]
 
         self.delta_x, self.delta_y = 0, 0
         self._delta_x, self._delta_y = 0, 0
@@ -231,10 +235,13 @@ class MotionDetector(Analog_input):
 
         # Parent
         Analog_input.__init__(self, pin=None, name=name + '-X', sampling_rate=int(sampling_rate),
-                              threshold=threshold, rising_event=event, falling_event=None, data_type='l')
+                              threshold=threshold, rising_event=event, falling_event=None,
+                              data_type='l')
         self.data_chx = self.data_channel
         self.data_chy = Data_channel(name + '-Y', sampling_rate, data_type='l')
         self.crossing_direction = True  # to conform to the Analog_input syntax
+        self.timestamp = fw.current_time
+        self.acquiring = False
 
         gc.collect()
         utime.sleep_ms(2)
@@ -254,14 +261,14 @@ class MotionDetector(Analog_input):
         self.delta_x, self.delta_y = 0, 0
 
     def read_sample(self):
-
+        "read the sensors once"
         self.sensor_y.write_register_buff(b'\x82', b'\x01')
         self.sensor_y.read_register_buff(b'\x02', self.delta_y_L)
         self.sensor_y.read_register_buff(b'\x03', self.delta_y_L)
         self.sensor_y.read_register_buff(b'\x04', self.delta_y_L)
         self.sensor_y.read_register_buff(b'\x05', self.delta_y_L)
         self.sensor_y.read_register_buff(b'\x06', self.delta_y_H)
-        self._delta_y = twos_comp(int.from_bytes(self.yBuffer_mv, 'little'))
+        self._delta_y = twos_comp(int.from_bytes(self.y_buffer_mv, 'little'))
 
         self.sensor_x.write_register_buff(b'\x82', b'\x01')
         self.sensor_x.read_register_buff(b'\x02', self.delta_x_L)
@@ -269,13 +276,13 @@ class MotionDetector(Analog_input):
         self.sensor_x.read_register_buff(b'\x04', self.delta_x_H)
         self.sensor_x.read_register_buff(b'\x05', self.delta_y_L)
         self.sensor_x.read_register_buff(b'\x06', self.delta_y_L)
-        self._delta_x = twos_comp(int.from_bytes(self.xBuffer_mv, 'little'))
+        self._delta_x = twos_comp(int.from_bytes(self.x_buffer_mv, 'little'))
 
         self.delta_y += self._delta_y
         self.delta_x += self._delta_x
 
     def _timer_ISR(self, t):
-        # Read a sample to the buffer, update write index.
+        "Read a sample to the buffer, update write index."
         self.read_sample()
         self.data_chx.put(self._delta_x)
         self.data_chy.put(self._delta_y)
@@ -303,7 +310,7 @@ class MotionDetector(Analog_input):
         self.acquiring = True
 
     def record(self):
-        # Start streaming data to computer.
+        "Start streaming data to computer."
         self.data_chx.record()
         self.data_chy.record()
         if not self.acquiring:
