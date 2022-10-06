@@ -12,7 +12,7 @@ def twos_comp(val, bits=16):
 
 
 class PMW3360DM():
-    # mouse motion sensor.
+    """ mouse motion sensor."""
     def __init__(self,
                  SPI_type: str,
                  reset: str = None,
