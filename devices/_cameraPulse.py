@@ -11,3 +11,7 @@ class CameraPulse(_h.Digital_output):
     def start(self):
         "start generating the trigger pulse"
         self.pulse(freq=self.trigger_rate, duty_cycle=self.duty_cycle)
+
+    def stop(self):
+        "stop generating the trigger pulse"
+        self.off()
