@@ -21,3 +21,5 @@ rewardSol = lickometer.SOL_1  # has two methods: on() and off()
 speaker = Audio_board(board.port_7)
 
 cameraTrigger = CameraPulse(pin=board.port_3.DIO_A, trigger_rate=100, duty_cycle=50)
+
+_sync_output = Rsync(pin=, event_name='rsync', mean_IPI=5000, pulse_dur=50)
