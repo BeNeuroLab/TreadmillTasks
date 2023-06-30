@@ -59,7 +59,7 @@ v.y___ = 0
 v.max_odour_time = 10 * second
 v.distance_to_target = 20  # cm - must be a multiple of 5
 v.target_angle_tolerance = math.pi / 18  # deg_rad
-v.odourant_direction = -1
+v.led_direction = -1
 v.air_off_duration = 100 * ms
 
 # -------------------------------------------------------------------------
