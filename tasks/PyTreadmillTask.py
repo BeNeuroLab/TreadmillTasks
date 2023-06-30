@@ -12,7 +12,7 @@ import uarray
 
 states = ['intertrial',
           'trial_start',
-          'odour_release',
+          'stim_on',
           'reward',
           'penalty']
 
@@ -21,7 +21,7 @@ events = ['motion',
           'lick_off',
           'session_timer',
           'IT_timer',
-          'odour_timer',
+          'stim_timer',
           'reward_timer',
           'audio_freq'
           ]
@@ -67,30 +67,29 @@ v.air_off_duration = 100 * ms
 # -------------------------------------------------------------------------
 
 
-def release_single_odourant_random(odourDevice: ParallelOdourRelease):
+def cue_random_led(LedDevice: LEDStim):
     """
-    Releases 1 odourant at a random direction
+    Cues 1 LED at a random direction
     """
-    stimDir = randint(0, odourDevice.Ndirections - 1)
-    odourDevice.all_off()
-    odourDevice.odour_release(stimDir)
+    stim_dir = randint(0, LedDevice.n_directions - 1)
+    LedDevice.all_off()
+    LedDevice.cue_led(stim_dir)
+    print('{}, LED_direction'.format(stim_dir))
 
-    print('{}, odourant_direction'.format(stimDir))
-
-    return stimDir
+    return stim_dir
 
 
 def arrived_to_target(dX: float, dY: float,
-                      odourant_direction: int,
+                      stim_direction: int,
                       target_angle_tolerance: float):
     """
     checks the motion critereon
     MUST have 5 odour directions
     """
-    assert odourant_direction < 5, 'wrong direction value'
+    assert stim_direction < 5, 'wrong direction value'
 
     move_angle = math.atan2(dY, dX)
-    if abs(move_angle - v.target_angle___[odourant_direction]) < target_angle_tolerance:
+    if abs(move_angle - v.target_angle___[stim_direction]) < target_angle_tolerance:
         return True
     else:
         return False
@@ -106,6 +105,7 @@ def audio_mapping(d_a: float) -> float:
 def audio_feedback(speaker,
                    dX: float, dY: float,
                    odourant_direction: int):
+    """ Set the audio frequency based on the direction of the movement. """
     angle = math.atan2(dY, dX)
     audio_freq = audio_mapping(angle - v.target_angle___[odourant_direction])
     speaker.sine(audio_freq)
@@ -118,26 +118,28 @@ def audio_feedback(speaker,
 
 # Run start and stop behaviour.
 def run_start():
-    # Code here is executed when the framework starts running.
+    "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
     hw.motionSensor.power_up()
     hw.speaker.set_volume(90)
     hw.speaker.off()
-    hw.odourDelivery.clean_air_on()
+    hw.LED_Delivery.all_off()
 
 
 def run_end():
-    # Code here is executed when the framework stops running.
-    # Turn off all hardware outputs.
-    hw.odourDelivery.all_off()
+    """ 
+    Code here is executed when the framework stops running.
+    Turn off all hardware outputs.
+    """
+    hw.LED_Delivery.all_off()
     hw.rewardSol.off()
     hw.speaker.off()
     hw.motionSensor.shut_down()
     hw.off()
 
-
 # State behaviour functions.
 def intertrial(event):
+    "intertrial state behaviour"
     if event == 'entry':
         # coded so that at this point, there is clean air coming from every direction
         set_timer('IT_timer', v.min_IT_duration)
@@ -157,39 +159,42 @@ def intertrial(event):
 
 
 def trial_start(event):
+    "beginning of the trial"
     if event == 'entry':
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
-        hw.odourDelivery.all_off()
-        timed_goto_state('odour_release', v.air_off_duration)
+        hw.LED_Delivery.all_off()
+        timed_goto_state('stim_on', v.air_off_duration)
 
 
-def odour_release(event):
+def stim_on(event):
+    "stimulation onset"
     if event == 'entry':
-        set_timer('odour_timer', v.max_odour_time)
-        v.odourant_direction = release_single_odourant_random(hw.odourDelivery)
+        set_timer('stim_timer', v.max_odour_time)
+        v.led_direction = cue_random_led(hw.LED_Delivery)
         hw.motionSensor.threshold = v.distance_to_target
     elif event == 'exit':
-        disarm_timer('odour_timer')
+        disarm_timer('stim_timer')
         hw.speaker.off()
     elif event == 'motion':
         arrived = arrived_to_target(v.x___, v.y___,
-                                    v.odourant_direction,
+                                    v.led_direction,
                                     v.target_angle_tolerance)
 
-        audio_feedback(hw.speaker, v.x___, v.y___, v.odourant_direction)
+        audio_feedback(hw.speaker, v.x___, v.y___, v.led_direction)
 
         if arrived is True:
             goto_state('reward')
         elif arrived is False:
             goto_state('penalty')
-    elif event == 'odour_timer':
+    elif event == 'stim_timer':
         goto_state('penalty')
 
 
 def reward(event):
+    "reward state"
     if event == 'entry':
-        hw.odourDelivery.clean_air_on()
+        hw.LED_Delivery.all_off()
         set_timer('reward_timer', v.reward_duration, False)
         hw.rewardSol.on()
         print('{}, reward_on'.format(get_current_time()))
@@ -201,23 +206,26 @@ def reward(event):
 
 
 def penalty(event):
+    "penalty state"
     if event == 'entry':
-        hw.odourDelivery.clean_air_on()
+        hw.LED_Delivery.all_off()
         print('{}, penalty_on'.format(get_current_time()))
         timed_goto_state('intertrial', v.penalty_duration)
 
 
 # State independent behaviour.
 def all_states(event):
-    # Code here will be executed when any event occurs,
-    # irrespective of the state the machine is in.
+    """
+    Code here will be executed when any event occurs,
+    irrespective of the state the machine is in.
+    """
     if event == 'motion':
         # read the motion registers and and append the variables
         v.x___ = hw.motionSensor.x / hw.motionSensor.sensor.CPI * 2.54
         v.y___ = hw.motionSensor.y / hw.motionSensor.sensor.CPI * 2.54
         print('{},{}, dM'.format(v.x___, v.y___))
     elif event == 'lick':
-        # TODO: handle the lick data better
+        #TODO: handle the lick data better
         pass
     elif event == 'session_timer':
         hw.motionSensor.stop()

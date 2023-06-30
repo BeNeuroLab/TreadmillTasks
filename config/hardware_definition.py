@@ -11,7 +11,7 @@ motionSensor = MotionDetector(name='MotSen1', event='motion',
                               cs2=board.port_2.DIO_B,
                               calib_coef=1, threshold=1, sampling_rate=100)
 
-odourDelivery = ParallelOdourRelease()
+LED_Delivery = LEDStim()
 
 lickometer = Lickometer(port=board.port_6, rising_event_A='lick', falling_event_A='lick_off',
                         rising_event_B='_lick_2___', falling_event_B='_lick_2_off___', debounce=5)
