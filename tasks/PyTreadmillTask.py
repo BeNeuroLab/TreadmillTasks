@@ -120,10 +120,11 @@ def audio_feedback(speaker,
 def run_start():
     "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
-    hw.motionSensor.power_up()
+    hw.motionSensor.record()
     hw.speaker.set_volume(90)
     hw.speaker.off()
     hw.LED_Delivery.all_off()
+    print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
 
 
 def run_end():
@@ -134,7 +135,7 @@ def run_end():
     hw.LED_Delivery.all_off()
     hw.rewardSol.off()
     hw.speaker.off()
-    hw.motionSensor.shut_down()
+    hw.motionSensor.off()
     hw.off()
 
 # State behaviour functions.
@@ -220,9 +221,10 @@ def all_states(event):
     irrespective of the state the machine is in.
     """
     if event == 'motion':
-        # read the motion registers and and append the variables
-        v.x___ = hw.motionSensor.x / hw.motionSensor.sensor.CPI * 2.54
-        v.y___ = hw.motionSensor.y / hw.motionSensor.sensor.CPI * 2.54
+        # read the motion registers
+        # to convert to cm, divide by CPI and multiply by 2.54
+        v.x___ = hw.motionSensor.x #/ hw.motionSensor.sensor_x.CPI * 2.54
+        v.y___ = hw.motionSensor.y #/ hw.motionSensor.sensor_x.CPI * 2.54
         print('{},{}, dM'.format(v.x___, v.y___))
     elif event == 'lick':
         #TODO: handle the lick data better
