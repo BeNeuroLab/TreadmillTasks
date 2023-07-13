@@ -88,6 +88,7 @@ def arrived_to_target(dX: float, dY: float,
     assert stim_direction < 5, 'wrong direction value'
 
     move_angle = math.atan2(dY, dX)
+    print('{}, run_angle'.format(move_angle)
     if abs(move_angle - v.target_angle___[stim_direction]) < target_angle_tolerance:
         return True
     else:
@@ -143,9 +144,10 @@ def intertrial(event):
     if event == 'entry':
         # coded so that at this point, there is clean air coming from every direction
         set_timer('IT_timer', v.min_IT_duration)
+        hw.LED_Delivery.all_off()
         v.IT_duration_done___ = False
         v.IT_distance_done___ = False
-        hw.motionSensor.threshold = v.min_IT_movement
+        hw.motionSensor.threshold = v.min_IT_movement # to issue an event only after enough movement
     elif event == 'exit':
         disarm_timer('IT_timer')
     elif event == 'IT_timer':
@@ -208,7 +210,7 @@ def reward(event):
 def penalty(event):
     "penalty state"
     if event == 'entry':
-        hw.LED_Delivery.all_off()
+        hw.LED_Delivery.all_on()
         print('{}, penalty_on'.format(get_current_time()))
         timed_goto_state('intertrial', v.penalty_duration)
 
