@@ -20,6 +20,7 @@ events = ['motion',
           'lick_off',
           'session_timer',
           'IT_timer',
+          'max_IT_timer',
           'stim_timer',
           'reward_timer',
           'audio_freq'
@@ -49,6 +50,7 @@ v.trial_number = 0
 # intertrial params
 v.min_IT_movement = 10  # cm - must be a multiple of 5
 v.min_IT_duration = 1 * second
+v.max_IT_duration = 15 * second
 v.IT_duration_done___ = False
 v.IT_distance_done___ = False
 v.x___ = 0
@@ -144,6 +146,7 @@ def intertrial(event):
     if event == 'entry':
         # coded so that at this point, there is clean air coming from every direction
         set_timer('IT_timer', v.min_IT_duration)
+        set_timer('max_IT_timer', v.max_IT_duration)
         hw.LED_Delivery.all_off()
         v.IT_duration_done___ = False
         v.IT_distance_done___ = False
@@ -158,6 +161,8 @@ def intertrial(event):
         v.IT_distance_done___ = True
         if v.IT_duration_done___:
             goto_state('trial_start')
+    elif event == 'max_IT_timer':
+        hw.LED_Delivery.all_on()
 
 
 def trial_start(event):
