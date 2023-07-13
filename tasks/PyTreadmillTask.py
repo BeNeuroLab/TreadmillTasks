@@ -4,7 +4,6 @@ from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
 import math
-import uarray
 
 # -------------------------------------------------------------------------
 # States and events.
@@ -56,11 +55,11 @@ v.x___ = 0
 v.y___ = 0
 
 # trial params
-v.max_odour_time = 10 * second
+v.stim_len = 10 * second
 v.distance_to_target = 20  # cm - must be a multiple of 5
 v.target_angle_tolerance = math.pi / 18  # deg_rad
 v.led_direction = -1
-v.air_off_duration = 100 * ms
+v.trial_start_len = 100 * ms
 
 # -------------------------------------------------------------------------
 # State-independent Code
@@ -84,7 +83,7 @@ def arrived_to_target(dX: float, dY: float,
                       target_angle_tolerance: float):
     """
     checks the motion critereon
-    MUST have 5 odour directions
+    MUST have 5 stim directions
     """
     assert stim_direction < 5, 'wrong direction value'
 
@@ -104,10 +103,10 @@ def audio_mapping(d_a: float) -> float:
 
 def audio_feedback(speaker,
                    dX: float, dY: float,
-                   odourant_direction: int):
+                   stim_direction: int):
     """ Set the audio frequency based on the direction of the movement. """
     angle = math.atan2(dY, dX)
-    audio_freq = audio_mapping(angle - v.target_angle___[odourant_direction])
+    audio_freq = audio_mapping(angle - v.target_angle___[stim_direction])
     speaker.sine(audio_freq)
 
 
@@ -165,13 +164,13 @@ def trial_start(event):
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         hw.LED_Delivery.all_off()
-        timed_goto_state('stim_on', v.air_off_duration)
+        timed_goto_state('stim_on', v.trial_start_len)
 
 
 def stim_on(event):
     "stimulation onset"
     if event == 'entry':
-        set_timer('stim_timer', v.max_odour_time)
+        set_timer('stim_timer', v.stim_len)
         v.led_direction = cue_random_led(hw.LED_Delivery)
         hw.motionSensor.threshold = v.distance_to_target
     elif event == 'exit':
