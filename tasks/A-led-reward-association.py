@@ -70,23 +70,6 @@ def cue_random_led(LedDevice: LEDStim):
     return stim_dir
 
 
-def arrived_to_target(dX: float, dY: float,
-                      stim_direction: int,
-                      target_angle_tolerance: float):
-    """
-    checks the motion critereon
-    MUST have 5 stim directions
-    """
-    assert stim_direction < 5, 'wrong direction value'
-
-    move_angle = math.atan2(dY, dX)
-    print('{}, run_angle'.format(move_angle))
-    # this is to reward at every trial
-    return True
-
-
-
-
 # -------------------------------------------------------------------------
 # Define behaviour.
 # -------------------------------------------------------------------------
