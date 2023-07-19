@@ -33,23 +33,19 @@ initial_state = 'intertrial'
 # general parameters
 
 # session params
-v.session_duration = 15 * minute
-v.reward_duration = 100 * ms
+v.session_duration = 45 * minute
+v.reward_duration = 70 * ms
 v.trial_number = 0
 
 # intertrial params
 v.min_IT_movement = 5  # cm - must be a multiple of 5
-v.min_IT_duration = 1 * second
-v.max_IT_duration = 10 * second
+v.min_IT_duration = 2 * second
 v.IT_duration_done___ = False
 v.IT_distance_done___ = False
 v.x___ = 0
 v.y___ = 0
 
 # trial params
-v.stim_len = 10 * second
-v.distance_to_target = 5  # cm - must be a multiple of 5
-v.target_angle_tolerance = math.pi / 18  # deg_rad
 v.led_direction = -1
 v.trial_start_len = 100 * ms
 
