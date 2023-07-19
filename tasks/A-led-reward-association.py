@@ -80,7 +80,7 @@ def arrived_to_target(dX: float, dY: float,
     assert stim_direction < 5, 'wrong direction value'
 
     move_angle = math.atan2(dY, dX)
-    print('{}, run_angle'.format(move_angle)
+    print('{}, run_angle'.format(move_angle))
     # this is to reward at every trial
     return True
 
