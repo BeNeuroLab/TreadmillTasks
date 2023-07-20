@@ -19,10 +19,8 @@ events = ['motion',
           'lick_off',
           'session_timer',
           'IT_timer',
-          'max_IT_timer',
           'stim_timer',
-          'reward_timer',
-          ]
+          'reward_timer']
 
 initial_state = 'intertrial'
 
