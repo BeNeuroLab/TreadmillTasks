@@ -34,7 +34,9 @@ initial_state = 'intertrial'
 
 # session params
 v.session_duration = 60 * minute
-v.reward_duration = 70 * ms
+v.reward_duration = 50 * ms
+v.stim_duration = 1 * second
+
 v.trial_number = 0
 
 # intertrial params
@@ -74,6 +76,8 @@ def cue_random_led(LedDevice: LEDStim):
 # Run start and stop behaviour.
 def run_start():
     "Code here is executed when the framework starts running."
+    assert v.stim_duration < v.min_IT_duration
+
     set_timer('session_timer', v.session_duration, True)
     hw.motionSensor.record()
     hw.LED_Delivery.all_off()
@@ -96,7 +100,6 @@ def intertrial(event):
     if event == 'entry':
         # coded so that at this point, there is clean air coming from every direction
         set_timer('IT_timer', v.min_IT_duration)
-        hw.LED_Delivery.all_off()
         v.IT_duration_done___ = False
         v.IT_distance_done___ = False
         hw.motionSensor.threshold = v.min_IT_movement # to issue an event only after enough movement
@@ -117,7 +120,6 @@ def trial_start(event):
     if event == 'entry':
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
-        hw.LED_Delivery.all_off()
         timed_goto_state('reward', v.trial_start_len)
 
 
@@ -128,6 +130,7 @@ def reward(event):
         v.led_direction = cue_random_led(hw.LED_Delivery)
         set_timer('reward_timer', v.reward_duration, False)
         hw.rewardSol.on()
+        set_timer('stim_timer', v.stim_duration, False)
         print('{}, reward_on'.format(get_current_time()))
     elif event == 'exit':
         disarm_timer('reward_timer')
@@ -148,6 +151,8 @@ def all_states(event):
         v.x___ = hw.motionSensor.x #/ hw.motionSensor.sensor_x.CPI * 2.54
         v.y___ = hw.motionSensor.y #/ hw.motionSensor.sensor_x.CPI * 2.54
         print('{},{}, dM'.format(v.x___, v.y___))
+    elif event == 'stim_timer':
+        hw.LED_Delivery.all_off()
     elif event == 'session_timer':
         hw.motionSensor.stop()
         stop_framework()
