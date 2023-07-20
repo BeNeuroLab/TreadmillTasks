@@ -134,9 +134,6 @@ def reward(event):
         print('{}, reward_on'.format(get_current_time()))
     elif event == 'exit':
         disarm_timer('reward_timer')
-    elif event == 'reward_timer':
-        hw.rewardSol.off()
-        goto_state('intertrial')
 
 
 # State independent behaviour.
@@ -153,6 +150,10 @@ def all_states(event):
         print('{},{}, dM'.format(v.x___, v.y___))
     elif event == 'stim_timer':
         hw.LED_Delivery.all_off()
+    elif event == 'reward_timer':
+        hw.rewardSol.off()
+        goto_state('intertrial')
+
     elif event == 'session_timer':
         hw.motionSensor.stop()
         stop_framework()
