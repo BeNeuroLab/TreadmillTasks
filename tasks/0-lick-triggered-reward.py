@@ -14,13 +14,10 @@ states = ['intertrial',
           'stim_on',
           'reward']
 
-events = ['motion',
-          'lick',
+events = ['lick',
           'lick_off',
           'session_timer',
-          'stim_timer',
-          'reward_timer',
-          ]
+          'reward_timer']
 
 initial_state = 'intertrial'
 
@@ -109,12 +106,6 @@ def all_states(event):
     Code here will be executed when any event occurs,
     irrespective of the state the machine is in.
     """
-    if event == 'motion':
-        # read the motion registers
-        # to convert to cm, divide by CPI and multiply by 2.54
-        v.x___ = hw.motionSensor.x #/ hw.motionSensor.sensor_x.CPI * 2.54
-        v.y___ = hw.motionSensor.y #/ hw.motionSensor.sensor_x.CPI * 2.54
-        print('{},{}, dM'.format(v.x___, v.y___))
-    elif event == 'session_timer':
+    if event == 'session_timer':
         hw.motionSensor.stop()
         stop_framework()
