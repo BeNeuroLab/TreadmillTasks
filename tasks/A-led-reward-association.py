@@ -148,9 +148,6 @@ def all_states(event):
         v.x___ = hw.motionSensor.x #/ hw.motionSensor.sensor_x.CPI * 2.54
         v.y___ = hw.motionSensor.y #/ hw.motionSensor.sensor_x.CPI * 2.54
         print('{},{}, dM'.format(v.x___, v.y___))
-    elif event == 'lick':
-        #TODO: handle the lick data better
-        pass
     elif event == 'session_timer':
         hw.motionSensor.stop()
         stop_framework()
