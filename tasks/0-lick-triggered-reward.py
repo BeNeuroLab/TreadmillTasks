@@ -16,8 +16,7 @@ states = ['intertrial',
 
 events = ['lick',
           'lick_off',
-          'session_timer',
-          'reward_timer']
+          'session_timer']
 
 initial_state = 'intertrial'
 
@@ -81,6 +80,7 @@ def intertrial(event):
 def trial_start(event):
     "beginning of the trial"
     if event == 'entry':
+        hw.rewardSol.off()
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         hw.LED_Delivery.all_off()
@@ -90,14 +90,9 @@ def trial_start(event):
 def reward(event):
     "reward state"
     if event == 'entry':
-        set_timer('reward_timer', v.reward_duration, False)
         hw.rewardSol.on()
         print('{}, reward_on'.format(get_current_time()))
-    elif event == 'exit':
-        disarm_timer('reward_timer')
-    elif event == 'reward_timer':
-        hw.rewardSol.off()
-        goto_state('trial_start')
+        timed_goto_state('trial_start', v.reward_duration)
 
 
 # State independent behaviour.
