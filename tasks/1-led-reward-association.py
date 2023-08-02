@@ -20,7 +20,7 @@ events = ['motion',
           'session_timer',
           'IT_timer',
           'stim_timer',
-          'reward_timer']
+          'sol_timer']
 
 initial_state = 'intertrial'
 
@@ -118,6 +118,8 @@ def trial_start(event):
     if event == 'entry':
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
+        v.led_direction = cue_random_led(hw.LED_Delivery)
+        set_timer('stim_timer', v.stim_duration, False)
         timed_goto_state('reward', v.trial_start_len)
 
 
@@ -125,13 +127,13 @@ def trial_start(event):
 def reward(event):
     "reward state"
     if event == 'entry':
-        v.led_direction = cue_random_led(hw.LED_Delivery)
-        set_timer('reward_timer', v.reward_duration, False)
+        timed_goto_state('intertrial', v.min_IT_duration)
+    elif event == 'lick' or event == 'lick_off':  # any lick-related event during reward
         hw.rewardSol.on()
-        set_timer('stim_timer', v.stim_duration, False)
         print('{}, reward_on'.format(get_current_time()))
+        set_timer('sol_timer', v.reward_duration, False)
     elif event == 'exit':
-        disarm_timer('reward_timer')
+        disarm_timer('sol_timer')
 
 
 # State independent behaviour.
@@ -148,7 +150,7 @@ def all_states(event):
         print('{},{}, dM'.format(v.x___, v.y___))
     elif event == 'stim_timer':
         hw.LED_Delivery.all_off()
-    elif event == 'reward_timer':
+    elif event == 'sol_timer':
         hw.rewardSol.off()
         goto_state('intertrial')
 
