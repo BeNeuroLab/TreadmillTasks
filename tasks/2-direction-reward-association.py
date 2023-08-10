@@ -43,7 +43,7 @@ v.audio_f_range___ = (10000, 20000)  # between 10kHz and 20kHz, loosely based on
 
 # session params
 v.session_duration = 1 * hour
-v.reward_duration = 100 * ms
+v.reward_duration = 30 * ms
 v.penalty_duration = 10 * second
 v.trial_number = 0
 
