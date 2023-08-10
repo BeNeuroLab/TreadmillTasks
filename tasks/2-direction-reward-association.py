@@ -46,6 +46,7 @@ v.session_duration = 1 * hour
 v.reward_duration = 30 * ms
 v.penalty_duration = 10 * second
 v.trial_number = 0
+v.centre_led_p = 0.9  # probability of cueing the centre LED
 
 # intertrial params
 v.min_IT_movement = 10  # cm - must be a multiple of 5
@@ -68,11 +69,15 @@ v.trial_start_len = 100 * ms
 # -------------------------------------------------------------------------
 
 
-def cue_random_led(LedDevice: LEDStim):
+def cue_centre_led_p(LedDevice: LEDStim, p: float =0.9):
     """
-    Cues 1 LED at a random direction
+    Cues the central led at the probablity `p`, else cues another led randomly
     """
-    stim_dir = randint(0, LedDevice.n_directions - 1)
+    if withprob(p):
+        stim_dir = 2
+    else:
+        cues = list(v.target_angle___.keys()).remove(2)
+        stim_dir = choice(cues)
     LedDevice.all_off()
     LedDevice.cue_led(stim_dir)
     print('{}, LED_direction'.format(stim_dir))
