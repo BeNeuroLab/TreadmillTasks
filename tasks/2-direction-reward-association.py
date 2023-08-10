@@ -73,6 +73,8 @@ def cue_centre_led_p(LedDevice: LEDStim, p: float =0.9):
     """
     Cues the central led at the probablity `p`, else cues another led randomly
     """
+    assert p >= 0.2 and p <= 1, 'p must be between 0.2 and 1'
+    
     if withprob(p):
         stim_dir = 2
     else:
@@ -89,13 +91,13 @@ def arrived_to_target(dX: float, dY: float,
                       stim_direction: int,
                       target_angle_tolerance: float):
     """
-    checks the motion critereon
+    checks the motion direction against the target direction
     MUST have 5 stim directions
     """
     assert stim_direction < 5, 'wrong direction value'
 
     move_angle = math.atan2(dY, dX)
-    print('{}, run_angle'.format(move_angle)
+    print('{}, run_angle'.format(move_angle))
     if abs(move_angle - v.target_angle___[stim_direction]) < target_angle_tolerance:
         return True
     else:
