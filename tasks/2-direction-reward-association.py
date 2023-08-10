@@ -59,7 +59,7 @@ v.y___ = 0
 # trial params
 v.stim_len = 10 * second
 v.distance_to_target = 20  # cm - must be a multiple of 5
-v.target_angle_tolerance = math.pi / 18  # deg_rad
+v.target_angle_tolerance = math.pi / 12  # deg_rad
 v.led_direction = -1
 v.trial_start_len = 100 * ms
 
