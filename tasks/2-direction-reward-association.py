@@ -160,6 +160,7 @@ def intertrial(event):
         hw.motionSensor.threshold = v.min_IT_movement # to issue an event only after enough movement
     elif event == 'exit':
         disarm_timer('IT_timer')
+        disarm_timer('max_IT_timer')
     elif event == 'IT_timer':
         v.IT_duration_done___ = True
         if v.IT_distance_done___:
@@ -185,7 +186,7 @@ def stim_on(event):
     "stimulation onset"
     if event == 'entry':
         set_timer('stim_timer', v.stim_len)
-        v.led_direction = cue_random_led(hw.LED_Delivery)
+        v.led_direction = cue_centre_led_p(hw.LED_Delivery, v.centre_led_p)
         hw.motionSensor.threshold = v.distance_to_target
     elif event == 'exit':
         disarm_timer('stim_timer')
@@ -209,14 +210,14 @@ def reward(event):
     "reward state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
+        timed_goto_state('intertrial', v.max_IT_duration)
+    elif event == 'lick' or event == 'lick_off':  # any lick-related event during reward
         set_timer('reward_timer', v.reward_duration, False)
         hw.rewardSol.on()
         print('{}, reward_on'.format(get_current_time()))
+        goto_state('intertrial')
     elif event == 'exit':
         disarm_timer('reward_timer')
-    elif event == 'reward_timer':
-        hw.rewardSol.off()
-        goto_state('intertrial')
 
 
 def penalty(event):
@@ -242,6 +243,8 @@ def all_states(event):
     elif event == 'lick':
         #TODO: handle the lick data better
         pass
+    elif event == 'reward_timer':
+        hw.rewardSol.off()
     elif event == 'session_timer':
         hw.motionSensor.stop()
         stop_framework()
