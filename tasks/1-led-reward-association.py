@@ -132,8 +132,6 @@ def reward(event):
         hw.rewardSol.on()
         print('{}, reward_on'.format(get_current_time()))
         set_timer('sol_timer', v.reward_duration, False)
-    elif event == 'exit':
-        disarm_timer('sol_timer')
 
 
 # State independent behaviour.
