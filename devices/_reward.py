@@ -1,17 +1,24 @@
-import pyb, machine, time
+import machine
 import pyControl.hardware as _h
 
-class RewardPort(_h.Digital_output):
-    "generate a clock to trigger the cameras"
-    def __init__(self, pin, trigger_rate=100, duty_cycle=50):
-        super().__init__(pin, pulse_enabled=True)
-        self.duty_cycle = duty_cycle
-        self.trigger_rate = trigger_rate
+class Reward(_h.IO_object):
+    "Open the solnoid to release water reward"
+    def __init__(self, sol:_h.Digital_output, reward_duration: int=100):
+        "reward_duration in ms"
+        self.reward_duration = int(reward_duration)
+        self.sol = sol
+        self.timer = machine.Timer(_h.available_timers.pop())
 
-    def start(self):
+    def release(self):
+        "release water reward"
+        self.sol.on()
+        self.timer.init(period=self.reward_duration, mode=machine.Timer.ONE_SHOT, callback=self.callback)
+
+    def _callback(self, timer):
         "start generating the trigger pulse"
-        self.pulse(freq=self.trigger_rate, duty_cycle=self.duty_cycle)
-
+        self.sol.off()
+    
     def stop(self):
         "stop generating the trigger pulse"
-        self.off()
+        self.timer.deinit() # stop the timer
+        self.sol.off()
