@@ -216,8 +216,6 @@ def reward(event):
         hw.rewardSol.on()
         print('{}, reward_on'.format(get_current_time()))
         goto_state('intertrial')
-    elif event == 'exit':
-        disarm_timer('reward_timer')
 
 
 def penalty(event):
