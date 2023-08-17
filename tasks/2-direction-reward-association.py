@@ -33,11 +33,11 @@ initial_state = 'intertrial'
 # -------------------------------------------------------------------------
 
 # general parameters
-v.target_angle___ = {0: 5 * math.pi / 6,
-                     1: 2 * math.pi / 3,
-                     2: math.pi / 2,
-                     3: math.pi / 3,
-                     4: math.pi / 6}
+v.target_angle___ = {0: math.pi / 3,
+                     1: math.pi / 6,
+                     2: 0,
+                     3: - math.pi / 6,
+                     4: - math.pi / 3}
 
 v.audio_f_range___ = (10000, 20000)  # between 10kHz and 20kHz, loosely based on Heffner & Heffner 2007
 
