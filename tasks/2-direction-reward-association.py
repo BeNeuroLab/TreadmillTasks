@@ -78,7 +78,8 @@ def cue_centre_led_p(LedDevice: LEDStim, p: float =0.9):
     if withprob(p):
         stim_dir = 2
     else:
-        cues = list(v.target_angle___.keys()).remove(2)
+        cues = list(v.target_angle___.keys())
+        del cues[2]
         stim_dir = choice(cues)
     LedDevice.all_off()
     LedDevice.cue_led(stim_dir)
