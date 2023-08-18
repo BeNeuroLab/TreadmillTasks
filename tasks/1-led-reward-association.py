@@ -80,6 +80,8 @@ def run_start():
     hw.motionSensor.record()
     hw.LED_Delivery.all_off()
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
+    hw.reward.reward_duration = v.reward_duration
+
 
 
 def run_end():
@@ -88,7 +90,7 @@ def run_end():
     Turn off all hardware outputs.
     """
     hw.LED_Delivery.all_off()
-    hw.rewardSol.off()
+    hw.reward.stop()
     hw.motionSensor.off()
     hw.off()
 
@@ -129,9 +131,8 @@ def reward(event):
     if event == 'entry':
         timed_goto_state('intertrial', v.min_IT_duration)
     elif event == 'lick' or event == 'lick_off':  # any lick-related event during reward
-        hw.rewardSol.on()
-        print('{}, reward_on'.format(get_current_time()))
-        set_timer('sol_timer', v.reward_duration, False)
+        hw.reward.release()
+        goto_state('intertrial')
 
 
 # State independent behaviour.
@@ -148,9 +149,6 @@ def all_states(event):
         print('{},{}, dM'.format(v.x___, v.y___))
     elif event == 'stim_timer':
         hw.LED_Delivery.all_off()
-    elif event == 'sol_timer':
-        hw.rewardSol.off()
-        goto_state('intertrial')
 
     elif event == 'session_timer':
         hw.motionSensor.stop()

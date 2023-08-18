@@ -15,8 +15,7 @@ LED_Delivery = LEDStim()
 
 lickometer = Lickometer(port=board.port_6, rising_event_A='lick', falling_event_A='lick_off',
                         rising_event_B='_lick_2___', falling_event_B='_lick_2_off___', debounce=5)
-
-rewardSol = lickometer.SOL_1  # has two methods: on() and off()
+reward = Reward(lickometer.SOL_1 , reward_duration=50)
 
 speaker = Audio_board(board.port_7)
 

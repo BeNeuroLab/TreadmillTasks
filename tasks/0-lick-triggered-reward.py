@@ -55,6 +55,7 @@ def run_start():
     set_timer('session_timer', v.session_duration, True)
     hw.motionSensor.record()
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
+    hw.reward.reward_duration = v.reward_duration
 
 
 def run_end():
@@ -63,7 +64,7 @@ def run_end():
     Turn off all hardware outputs.
     """
     hw.LED_Delivery.all_off()
-    hw.rewardSol.off()
+    hw.reward.stop()
     hw.motionSensor.off()
     hw.off()
 
@@ -74,26 +75,17 @@ def intertrial(event):
         # coded so that at this point, there is clean air coming from every direction
         hw.motionSensor.threshold = v.min_IT_movement # to issue an event only after enough movement
     elif event == 'lick':
-        goto_state('reward')
+        hw.reward.release()
+        timed_goto_state('trial_start', v.reward_duration)
 
 
 def trial_start(event):
     "beginning of the trial"
     if event == 'entry':
-        hw.rewardSol.off()
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         hw.LED_Delivery.all_off()
         timed_goto_state('intertrial', v.trial_start_len)  # enforcing min 1s between rewards
-
-
-def reward(event):
-    "reward state"
-    if event == 'entry':
-        hw.rewardSol.on()
-        print('{}, reward_on'.format(get_current_time()))
-        timed_goto_state('trial_start', v.reward_duration)
-
 
 # State independent behaviour.
 def all_states(event):

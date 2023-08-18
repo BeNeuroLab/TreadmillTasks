@@ -135,6 +135,7 @@ def run_start():
     hw.speaker.off()
     hw.LED_Delivery.all_off()
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
+    hw.reward.reward_duration = v.reward_duration
 
 
 def run_end():
@@ -143,7 +144,7 @@ def run_end():
     Turn off all hardware outputs.
     """
     hw.LED_Delivery.all_off()
-    hw.rewardSol.off()
+    hw.reward.stop()
     hw.speaker.off()
     hw.motionSensor.off()
     hw.off()
@@ -213,9 +214,7 @@ def reward(event):
         hw.LED_Delivery.all_off()
         timed_goto_state('intertrial', v.max_IT_duration)
     elif event == 'lick' or event == 'lick_off':  # any lick-related event during reward
-        set_timer('reward_timer', v.reward_duration, False)
-        hw.rewardSol.on()
-        print('{}, reward_on'.format(get_current_time()))
+        hw.reward.release()
         goto_state('intertrial')
 
 
@@ -242,8 +241,6 @@ def all_states(event):
     elif event == 'lick':
         #TODO: handle the lick data better
         pass
-    elif event == 'reward_timer':
-        hw.rewardSol.off()
     elif event == 'session_timer':
         hw.motionSensor.stop()
         stop_framework()
