@@ -16,11 +16,9 @@ states = ['intertrial',
 
 events = ['motion',
           'lick',
-          'lick_off',
           'session_timer',
           'IT_timer',
-          'stim_timer',
-          'sol_timer']
+          'stim_timer']
 
 initial_state = 'intertrial'
 

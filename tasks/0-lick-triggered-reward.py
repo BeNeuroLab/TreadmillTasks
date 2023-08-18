@@ -15,7 +15,6 @@ states = ['intertrial',
           'reward']
 
 events = ['lick',
-          'lick_off',
           'session_timer']
 
 initial_state = 'intertrial'
