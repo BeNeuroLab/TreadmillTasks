@@ -7,6 +7,7 @@ class Reward(_h.IO_object):
         "reward_duration in ms"
         self.reward_duration = int(reward_duration)
         self.sol = sol
+        self.sol.off()
         self.timer = machine.Timer(_h.available_timers.pop())
 
     def release(self):
