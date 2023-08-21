@@ -37,6 +37,7 @@ v.y___ = 0
 
 # trial params
 v.trial_len = 1 * second
+v.led_len = 500 * ms
 
 
 
@@ -65,6 +66,7 @@ def run_start():
     "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
     hw.motionSensor.record()
+    hw.LED_Delivery.all_off()
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
 
@@ -87,12 +89,14 @@ def intertrial(event):
         hw.motionSensor.threshold = v.min_IT_movement # to issue an event only after enough movement
     elif event == 'lick':
         hw.reward.release()
-        goto_state('trial_start')
+        cue_random_led(hw.LED_Delivery)
+        timed_goto_state('trial_start', v.led_len)  # half a seconf of LED cue
 
 
 def trial_start(event):
     "beginning of the trial"
     if event == 'entry':
+        hw.LED_Delivery.all_off()
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         hw.LED_Delivery.all_off()
