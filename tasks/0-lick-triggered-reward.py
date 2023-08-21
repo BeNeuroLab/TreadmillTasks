@@ -32,15 +32,11 @@ v.trial_number = 0
 
 # intertrial params
 v.min_IT_movement = 5  # cm - must be a multiple of 5
-v.min_IT_duration = 2 * second
-v.IT_duration_done___ = False
-v.IT_distance_done___ = False
 v.x___ = 0
 v.y___ = 0
 
 # trial params
-v.led_direction = -1
-v.trial_start_len = 1 * second
+v.trial_len = 1 * second
 
 
 # -------------------------------------------------------------------------
@@ -75,7 +71,7 @@ def intertrial(event):
         hw.motionSensor.threshold = v.min_IT_movement # to issue an event only after enough movement
     elif event == 'lick':
         hw.reward.release()
-        timed_goto_state('trial_start', v.reward_duration)
+        goto_state('trial_start')
 
 
 def trial_start(event):
@@ -84,7 +80,7 @@ def trial_start(event):
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         hw.LED_Delivery.all_off()
-        timed_goto_state('intertrial', v.trial_start_len)  # enforcing min 1s between rewards
+        timed_goto_state('intertrial', v.trial_len)  # enforcing min 1s between rewards
 
 # State independent behaviour.
 def all_states(event):
