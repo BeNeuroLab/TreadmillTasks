@@ -200,7 +200,7 @@ def stim_on(event):
 
 def reward(event):
     "reward state"
-    if event == 'lick' or event == 'lick_off':  # any lick-related event during reward
+    if event == 'lick':  # any lick-related event during reward
         hw.LED_Delivery.all_off()
         hw.reward.release()
         goto_state('intertrial')

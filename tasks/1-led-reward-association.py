@@ -128,7 +128,7 @@ def reward(event):
     "reward state"
     if event == 'entry':
         timed_goto_state('intertrial', v.min_IT_duration)
-    elif event == 'lick' or event == 'lick_off':  # any lick-related event during reward
+    elif event == 'lick':  # any lick-related event during reward
         hw.reward.release()
         goto_state('intertrial')
 

@@ -211,7 +211,7 @@ def reward(event):
     if event == 'entry':
         hw.LED_Delivery.all_off()
         timed_goto_state('intertrial', v.max_IT_duration)
-    elif event == 'lick' or event == 'lick_off':  # any lick-related event during reward
+    elif event == 'lick':  # any lick-related event during reward
         hw.reward.release()
         goto_state('intertrial')
 
