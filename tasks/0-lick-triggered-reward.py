@@ -39,6 +39,22 @@ v.y___ = 0
 v.trial_len = 1 * second
 
 
+
+# -------------------------------------------------------------------------
+# State-independent Code
+# -------------------------------------------------------------------------
+
+def cue_random_led(LedDevice: LEDStim):
+    """
+    Cues 1 LED at a random direction
+    """
+    stim_dir = randint(0, LedDevice.n_directions - 1)
+    LedDevice.all_off()
+    LedDevice.cue_led(stim_dir)
+    print('{}, LED_direction'.format(stim_dir))
+
+    return stim_dir
+
 # -------------------------------------------------------------------------
 # Define behaviour.
 # -------------------------------------------------------------------------
