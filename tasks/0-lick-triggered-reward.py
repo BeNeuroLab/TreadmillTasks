@@ -10,7 +10,8 @@ import math
 # -------------------------------------------------------------------------
 
 states = ['intertrial',
-          'trial_start']
+          'trial_start',
+          'cue_gap']
 
 events = ['lick',
           'session_timer']
@@ -88,8 +89,12 @@ def intertrial(event):
     elif event == 'lick':
         hw.reward.release()
         cue_random_led(hw.LED_Delivery)
-        timed_goto_state('trial_start', v.led_len)  # half a seconf of LED cue
+        goto_state('cue_gap')
 
+def cue_gap(event):
+    "gap for the LED cue"
+    if event == 'entry':
+        timed_goto_state('trial_start', v.led_len)  # half a seconf of LED cue
 
 def trial_start(event):
     "beginning of the trial"
