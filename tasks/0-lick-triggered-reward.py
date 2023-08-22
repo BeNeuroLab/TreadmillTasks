@@ -10,9 +10,7 @@ import math
 # -------------------------------------------------------------------------
 
 states = ['intertrial',
-          'trial_start',
-          'stim_on',
-          'reward']
+          'trial_start']
 
 events = ['lick',
           'session_timer']
