@@ -6,13 +6,12 @@ class Reward(_h.IO_object):
     def __init__(self, sol:_h.Digital_output, reward_duration: int=100):
         "reward_duration in ms"
         self.timer = pyb.Timer(_h.available_timers.pop())
+        
         self.reward_duration = reward_duration
         self.sol = sol
         self.sol.off()
         self.sol_state = False  # to avoid turning on the solenoid twice
-        
-        self.timer.init(freq=self.reward_freq, callback=None)
-    
+            
     @property
     def reward_duration(self):
         return 1000 / self.reward_freq
