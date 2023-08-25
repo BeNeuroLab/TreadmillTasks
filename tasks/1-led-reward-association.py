@@ -10,11 +10,13 @@ import math
 # -------------------------------------------------------------------------
 
 states = ['trial_start',
+          'intertrial',
           'reward']
 
 events = ['lick',
           'session_timer',
-          'IT_timer']
+          'IT_timer',
+          'motion']
 
 initial_state = 'trial_start'
 
@@ -27,6 +29,7 @@ initial_state = 'trial_start'
 # session params
 v.session_duration = 45 * minute
 v.reward_duration = 50 * ms
+v.trial_number = 0
 
 
 # intertrial params
@@ -63,6 +66,7 @@ def run_start():
     hw.LED_Delivery.all_off()
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
+    hw.motionSensor.threshold = 10
 
 
 
@@ -83,19 +87,25 @@ def trial_start(event):
     if event == 'entry':
         cue_random_led(hw.LED_Delivery)
         set_timer('IT_timer', v.max_IT_duration, False)
-    elif event =='exit':
-        disarm_timer('IT_timer')
-    elif event == 'IT_timer':  # if the animal didn't lick, a new LED is cued
-        cue_random_led(hw.LED_Delivery)
-        set_timer('IT_timer', v.max_IT_duration, False)
+    elif event == 'IT_timer':  
+        goto_state('intertrial')
     elif event == 'lick':
         goto_state('reward')
+
+def intertrial(event):
+    if event == 'entry':
+        hw.LED_Delivery.all_off()
+    elif event =='motion' or event=='lick':  #any behaviours
+        goto_state('trial_start')
+
 
 def reward(event):
     "reward state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
         hw.reward.release()
+        v.trial_number += 1
+        print('{}, trial_number'.format(v.trial_number))
         timed_goto_state('trial_start', v.gap_duration)
 
 # State independent behaviour.
