@@ -62,7 +62,7 @@ def run_start():
     hw.motionSensor.record()
     hw.LED_Delivery.all_off()
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
-    hw.reward.reward_freq = int(1000 / v.reward_duration)
+    hw.reward.reward_duration = v.reward_duration
 
 
 
