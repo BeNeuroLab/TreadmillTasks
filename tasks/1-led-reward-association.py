@@ -87,7 +87,7 @@ def trial_start(event):
         disarm_timer('IT_timer')
     elif event == 'IT_timer':  # if the animal didn't lick, a new LED is cued
         cue_random_led(hw.LED_Delivery)
-        timer('IT_timer', v.max_IT_duration, False)
+        set_timer('IT_timer', v.max_IT_duration, False)
     elif event == 'lick':
         goto_state('reward')
 
