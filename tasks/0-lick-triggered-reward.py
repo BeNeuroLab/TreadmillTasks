@@ -69,6 +69,7 @@ def run_start():
     hw.LED_Delivery.all_off()
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
+    hw.motionSensor.threshold = 10
 
 
 def run_end():
