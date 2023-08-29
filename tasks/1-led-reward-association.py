@@ -33,7 +33,7 @@ v.trial_number = 0
 
 
 # intertrial params
-v.gap_duration = 2 * second
+v.gap_duration = 4 * second
 v.max_IT_duration = 10 * second
 
 # -------------------------------------------------------------------------
