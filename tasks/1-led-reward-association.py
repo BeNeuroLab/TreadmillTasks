@@ -33,7 +33,7 @@ v.trial_number = 0
 
 
 # intertrial params
-v.gap_duration = 4 * second
+v.max_gap_duration = 10 * second
 v.max_IT_duration = 10 * second
 
 # -------------------------------------------------------------------------
@@ -108,7 +108,7 @@ def reward(event):
         hw.reward.release()
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
-        timed_goto_state('trial_start', v.gap_duration)
+        timed_goto_state('trial_start', randint(1, v.max_gap_duration))
 
 # State independent behaviour.
 def all_states(event):
