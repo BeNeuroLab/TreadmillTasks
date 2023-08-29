@@ -87,6 +87,8 @@ def trial_start(event):
     if event == 'entry':
         cue_random_led(hw.LED_Delivery)
         set_timer('IT_timer', v.max_IT_duration, False)
+    if event == 'exit':
+        disarm_timer('IT_timer')
     elif event == 'IT_timer':  
         goto_state('intertrial')
     elif event == 'lick':
