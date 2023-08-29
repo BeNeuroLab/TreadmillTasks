@@ -14,6 +14,7 @@ states = ['intertrial',
           'cue_gap']
 
 events = ['lick',
+          'motion',
           'session_timer']
 
 initial_state = 'intertrial'
