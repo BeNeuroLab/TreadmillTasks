@@ -28,7 +28,7 @@ initial_state = 'trial_start'
 
 # session params
 v.session_duration = 45 * minute
-v.reward_duration = 50 * ms
+v.reward_duration = 30 * ms
 v.trial_number = 0
 
 
@@ -97,7 +97,7 @@ def trial_start(event):
 def intertrial(event):
     if event == 'entry':
         hw.LED_Delivery.all_off()
-    elif event =='motion' or event=='lick':  #any behaviours
+    elif event =='motion':
         goto_state('trial_start')
 
 
