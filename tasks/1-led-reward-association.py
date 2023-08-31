@@ -90,8 +90,9 @@ def trial_start(event):
     if event == 'exit':
         disarm_timer('led_timer')
     if event == 'motion':
-        v.stim_dir = cue_random_led(hw.LED_Delivery)
-        set_timer('led_timer', v.max_led_duration, False)
+        if v.stim_dir is None:
+            v.stim_dir = cue_random_led(hw.LED_Delivery)
+            set_timer('led_timer', v.max_led_duration, False)
     elif event == 'led_timer':
         goto_state('penalty')
     elif event == 'lick':
