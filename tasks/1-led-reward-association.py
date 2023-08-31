@@ -114,6 +114,7 @@ def penalty(event):
     "penalty state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
+        hw.speaker.set_volume(120)
         hw.speaker.sine(10000)
         timed_goto_state('trial_start', randint(v.max_led_duration, v.max_IT_duration))
 
@@ -122,7 +123,8 @@ def reward(event):
     if event == 'entry':
         hw.LED_Delivery.all_off()
         hw.reward.release()
-        hw.speaker.click()
+        hw.speaker.set_volume(50)
+        hw.speaker.noise(20000)
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         timed_goto_state('trial_start', randint(1, v.max_gap_duration))
