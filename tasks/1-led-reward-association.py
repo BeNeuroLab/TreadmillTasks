@@ -11,11 +11,12 @@ import math
 
 states = ['trial_start',
           'intertrial',
-          'reward']
+          'reward',
+          'penalty']
 
 events = ['lick',
           'session_timer',
-          'IT_timer',
+          'led_timer',
           'motion']
 
 initial_state = 'trial_start'
@@ -30,11 +31,10 @@ initial_state = 'trial_start'
 v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
 v.trial_number = 0
-
-
-# intertrial params
+v.stim_dir = None
 v.max_gap_duration = 10 * second
 v.max_IT_duration = 10 * second
+v.max_led_duration = 3 * second
 
 # -------------------------------------------------------------------------
 # State-independent Code
@@ -85,23 +85,31 @@ def run_end():
 def trial_start(event):
     "beginning of the trial"
     if event == 'entry':
-        cue_random_led(hw.LED_Delivery)
-        set_timer('IT_timer', v.max_IT_duration, False)
+        v.stim_dir = None  # reset stim_dir, otherwise any lick will be rewarded, even before LED presentation
+        timed_goto_state('intertrial', v.max_IT_duration)
     if event == 'exit':
-        disarm_timer('IT_timer')
-    elif event == 'IT_timer':
-        goto_state('intertrial')
-    elif event =='motion':
-        reset_timer('IT_timer', v.max_IT_duration)
+        disarm_timer('led_timer')
+    if event == 'motion':
+        v.stim_dir = cue_random_led(hw.LED_Delivery)
+        set_timer('led_timer', v.max_led_duration, False)
+    elif event == 'led_timer':
+        goto_state('penalty')
     elif event == 'lick':
-        goto_state('reward')
+        if v.stim_dir is not None:
+            goto_state('reward')  # lick during LED presentation
 
 def intertrial(event):
+    "intertrial state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
     elif event =='motion':
         goto_state('trial_start')
 
+def penalty(event):
+    "penalty state"
+    if event == 'entry':
+        hw.LED_Delivery.all_off()
+        timed_goto_state('trial_start', randint(v.max_led_duration, v.max_IT_duration))
 
 def reward(event):
     "reward state"
