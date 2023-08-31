@@ -89,8 +89,10 @@ def trial_start(event):
         set_timer('IT_timer', v.max_IT_duration, False)
     if event == 'exit':
         disarm_timer('IT_timer')
-    elif event == 'IT_timer':  
+    elif event == 'IT_timer':
         goto_state('intertrial')
+    elif event =='motion':
+        reset_timer('IT_timer', v.max_IT_duration)
     elif event == 'lick':
         goto_state('reward')
 
