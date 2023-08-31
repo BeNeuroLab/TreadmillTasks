@@ -10,7 +10,8 @@ import math
 # -------------------------------------------------------------------------
 
 states = ['trial_start',
-          'intertrial',
+          'led_on',
+          'disengaged',
           'reward',
           'penalty']
 
@@ -68,8 +69,6 @@ def run_start():
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = 10
 
-
-
 def run_end():
     """ 
     Code here is executed when the framework stops running.
@@ -86,21 +85,25 @@ def trial_start(event):
     "beginning of the trial"
     if event == 'entry':
         v.stim_dir = None  # reset stim_dir, otherwise any lick will be rewarded, even before LED presentation
-        timed_goto_state('intertrial', v.max_IT_duration)
-    if event == 'exit':
-        disarm_timer('led_timer')
+        timed_goto_state('disengaged', v.max_IT_duration)
     if event == 'motion':
-        if v.stim_dir is None:
-            v.stim_dir = cue_random_led(hw.LED_Delivery)
-            set_timer('led_timer', v.max_led_duration, False)
+        goto_state('led_on')
+
+def led_on(event):
+    "turn on the led"
+    if event == 'entry':
+        cue_random_led(hw.LED_Delivery)
+        set_timer('led_timer', v.max_led_duration, False)
+    if event == 'exit':
+        hw.LED_Delivery.all_off()
+        disarm_timer('led_timer')
     elif event == 'led_timer':
         goto_state('penalty')
     elif event == 'lick':
-        if v.stim_dir is not None:
-            goto_state('reward')  # lick during LED presentation
+        goto_state('reward')  # lick during LED presentation
 
-def intertrial(event):
-    "intertrial state"
+def disengaged(event):
+    "disengaged state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
     elif event =='motion':
