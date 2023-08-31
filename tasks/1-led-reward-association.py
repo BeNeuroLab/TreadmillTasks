@@ -86,6 +86,7 @@ def trial_start(event):
     "beginning of the trial"
     if event == 'entry':
         v.stim_dir = None  # reset stim_dir, otherwise any lick will be rewarded, even before LED presentation
+        hw.speaker.off()
         timed_goto_state('disengaged', v.max_IT_duration)
     if event == 'motion':
         goto_state('led_on')
@@ -93,6 +94,7 @@ def trial_start(event):
 def led_on(event):
     "turn on the led"
     if event == 'entry':
+        hw.speaker.off()
         cue_random_led(hw.LED_Delivery)
         set_timer('led_timer', v.max_led_duration, False)
     if event == 'exit':
@@ -107,6 +109,7 @@ def disengaged(event):
     "disengaged state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
+        hw.speaker.off()
     elif event =='motion':
         goto_state('trial_start')
 
