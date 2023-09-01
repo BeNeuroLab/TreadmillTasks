@@ -70,7 +70,7 @@ def run_start():
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = 10
-
+    hw.speaker.set_volume(90)
 
 def run_end():
     """ 
@@ -91,6 +91,8 @@ def intertrial(event):
     elif event == 'lick':
         hw.reward.release()
         cue_random_led(hw.LED_Delivery)
+        hw.speaker.set_volume(50)
+        hw.speaker.noise(20000)
         goto_state('cue_gap')
 
 def cue_gap(event):
@@ -103,6 +105,8 @@ def trial_start(event):
     if event == 'entry':
         hw.LED_Delivery.all_off()
         v.trial_number += 1
+        hw.speaker.off()
+
         print('{}, trial_number'.format(v.trial_number))
         timed_goto_state('intertrial', v.trial_len)  # enforcing min 1s between rewards
 
