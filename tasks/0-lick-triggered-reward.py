@@ -42,21 +42,6 @@ v.led_len = 500 * ms
 
 
 # -------------------------------------------------------------------------
-# State-independent Code
-# -------------------------------------------------------------------------
-
-def cue_random_led(LedDevice: LEDStim):
-    """
-    Cues 1 LED at a random direction
-    """
-    stim_dir = randint(0, LedDevice.n_directions - 1)
-    LedDevice.all_off()
-    LedDevice.cue_led(stim_dir)
-    print('{}, LED_direction'.format(stim_dir))
-
-    return stim_dir
-
-# -------------------------------------------------------------------------
 # Define behaviour.
 # -------------------------------------------------------------------------
 
@@ -70,7 +55,7 @@ def run_start():
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = 10
-    hw.speaker.set_volume(90)
+    hw.speaker.set_volume(50)
     hw.speaker.noise(freq=20000)
 
 def run_end():
