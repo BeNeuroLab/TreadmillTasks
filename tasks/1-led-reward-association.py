@@ -95,7 +95,7 @@ def led_on(event):
     "turn on the led"
     if event == 'entry':
         hw.speaker.off()
-        cue_random_led(hw.LED_Delivery)
+        hw.LED_Delivery.cue_led(2)
         set_timer('led_timer', v.max_led_duration, False)
     if event == 'exit':
         hw.LED_Delivery.all_off()
