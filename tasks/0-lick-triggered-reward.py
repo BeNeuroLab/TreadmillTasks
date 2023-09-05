@@ -31,7 +31,7 @@ v.reward_duration = 70 * ms
 v.trial_number = 0
 
 # intertrial params
-v.min_IT_movement = 5  # cm - must be a multiple of 5
+v.min_IT_movement = 10  # cm - must be a multiple of 5
 v.x___ = 0
 v.y___ = 0
 
@@ -54,7 +54,7 @@ def run_start():
     hw.LED_Delivery.all_off()
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
-    hw.motionSensor.threshold = 10
+    hw.motionSensor.threshold = v.min_IT_movement
     hw.speaker.set_volume(50)
     hw.speaker.noise(freq=20000)
 
@@ -71,29 +71,26 @@ def run_end():
     hw.off()
 
 # State behaviour functions.
-def intertrial(event):
-    "intertrial state behaviour"
-    if event == 'entry':
-        # coded so that at this point, there is clean air coming from every direction
-        hw.motionSensor.threshold = v.min_IT_movement # to issue an event only after enough movement
-    elif event == 'lick':
+def trial_start(event):
+    "start state behaviour"
+    if event == 'lick':
         hw.reward.release()
-        cue_random_led(hw.LED_Delivery)
+        hw.LED_Delivery.cue_led(2)
         goto_state('cue_gap')
 
 def cue_gap(event):
     "gap for the LED cue"
     if event == 'entry':
-        timed_goto_state('trial_start', v.led_len)  # half a seconf of LED cue
+        timed_goto_state('intertrial', v.led_len)  # half a seconf of LED cue
 
-def trial_start(event):
-    "beginning of the trial"
+def intertrial(event):
+    "intertrial"
     if event == 'entry':
         hw.LED_Delivery.all_off()
         v.trial_number += 1
 
         print('{}, trial_number'.format(v.trial_number))
-        timed_goto_state('intertrial', v.trial_len)  # enforcing min 1s between rewards
+        timed_goto_state('trial_start', v.trial_len)  # enforcing min 1s between rewards
 
 # State independent behaviour.
 def all_states(event):
