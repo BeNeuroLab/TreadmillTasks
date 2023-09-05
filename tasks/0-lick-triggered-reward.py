@@ -81,6 +81,8 @@ def run_end():
     hw.LED_Delivery.all_off()
     hw.reward.stop()
     hw.motionSensor.off()
+    hw.motionSensor.stop()
+    hw.speaker.off()
     hw.off()
 
 # State behaviour functions.
@@ -92,8 +94,6 @@ def intertrial(event):
     elif event == 'lick':
         hw.reward.release()
         cue_random_led(hw.LED_Delivery)
-        hw.speaker.set_volume(50)
-        hw.speaker.noise(20000)
         goto_state('cue_gap')
 
 def cue_gap(event):
@@ -106,7 +106,6 @@ def trial_start(event):
     if event == 'entry':
         hw.LED_Delivery.all_off()
         v.trial_number += 1
-        hw.speaker.off()
 
         print('{}, trial_number'.format(v.trial_number))
         timed_goto_state('intertrial', v.trial_len)  # enforcing min 1s between rewards
@@ -118,5 +117,4 @@ def all_states(event):
     irrespective of the state the machine is in.
     """
     if event == 'session_timer':
-        hw.motionSensor.stop()
         stop_framework()
