@@ -71,6 +71,7 @@ def run_start():
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = 10
     hw.speaker.set_volume(90)
+    hw.speaker.noise(freq=20000)
 
 def run_end():
     """ 
