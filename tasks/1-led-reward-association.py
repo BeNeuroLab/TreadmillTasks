@@ -105,7 +105,7 @@ def led_on(event):
     elif event == 'lick':
         t_rem = timer_remaining('led_timer')
         if t_rem < v.max_led_duration - 1000:
-            goto_state('reward')  # lick during LED presentation
+            goto_state('reward') 
         else:
             timed_goto_state('reward', 1000 + t_rem - v.max_led_duration)
 
