@@ -32,6 +32,7 @@ initial_state = 'trial_start'
 v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
 v.trial_number = 0
+v.lick_n___ = 0
 v.stim_dir = None
 v.max_gap_duration = 10 * second
 v.max_IT_duration = 10 * second
@@ -96,6 +97,7 @@ def trial_start(event):
 def led_on(event):
     "turn on the led"
     if event == 'entry':
+        v.lick_n___ = 0
         hw.LED_Delivery.cue_led(2)
         set_timer('led_timer', v.max_led_duration, False)
     if event == 'exit':
@@ -104,11 +106,12 @@ def led_on(event):
     elif event == 'led_timer':
         goto_state('penalty')
     elif event == 'lick':
-        t_rem = timer_remaining('led_timer')
-        if t_rem < v.max_led_duration - 1000:
-            goto_state('reward') 
-        else:
-            timed_goto_state('reward', 1000 + t_rem - v.max_led_duration)
+        if v.lick_n___ == 2:  # ignore the first lick, might be a false positive
+            t_rem = timer_remaining('led_timer')
+            if t_rem < v.max_led_duration - 1000:
+                goto_state('reward') 
+            else:
+                timed_goto_state('reward', 1000 + t_rem - v.max_led_duration)
 
 def disengaged(event):
     "disengaged state"
@@ -140,7 +143,10 @@ def all_states(event):
     """
     Code here will be executed when any event occurs,
     irrespective of the state the machine is in.
+    Executes before the state code.
     """
-    if event == 'session_timer':
+    if event == 'lick':
+        v.lick_n___ += 1
+    elif event == 'session_timer':
         hw.motionSensor.stop()
         stop_framework()
