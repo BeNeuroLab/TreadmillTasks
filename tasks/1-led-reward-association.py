@@ -118,7 +118,7 @@ def disengaged(event):
     if event == 'entry':
         hw.LED_Delivery.all_off()
         hw.speaker.off()
-    elif event =='motion':
+    elif event =='motion' or event == 'lick':
         goto_state('trial_start')
 
 def penalty(event):
