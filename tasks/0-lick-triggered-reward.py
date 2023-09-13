@@ -81,7 +81,7 @@ def trial_start(event):
 def cue_gap(event):
     "gap for the LED cue"
     if event == 'entry':
-        timed_goto_state('intertrial', v.led_len)  # half a seconf of LED cue
+        timed_goto_state('intertrial', v.led_len)  # half a second of LED cue
 
 def intertrial(event):
     "intertrial"
@@ -90,7 +90,7 @@ def intertrial(event):
         v.trial_number += 1
 
         print('{}, trial_number'.format(v.trial_number))
-        timed_goto_state('trial_start', v.trial_len)  # enforcing min 1s between rewards
+        timed_goto_state('trial_start', v.trial_len)  # enforcing min 3s between rewards
 
 # State independent behaviour.
 def all_states(event):
