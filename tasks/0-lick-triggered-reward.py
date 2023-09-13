@@ -55,7 +55,7 @@ def run_start():
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = v.min_IT_movement
-    hw.speaker.set_volume(50)
+    hw.speaker.set_volume(60)
     hw.speaker.noise(freq=20000)
 
 def run_end():
