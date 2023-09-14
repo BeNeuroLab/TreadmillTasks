@@ -9,7 +9,7 @@ import math
 # States and events.
 # -------------------------------------------------------------------------
 
-states = ['trial_start',
+states = ['trial',
           'led_on',
           'disengaged',
           'reward',
@@ -20,7 +20,7 @@ events = ['lick',
           'led_timer',
           'motion']
 
-initial_state = 'trial_start'
+initial_state = 'trial'
 
 # -------------------------------------------------------------------------
 # Variables.
@@ -85,11 +85,11 @@ def run_end():
 
 # State behaviour functions.
 
-def trial_start(event):
+def trial(event):
     "beginning of the trial"
     if event == 'entry':
         v.stim_dir = None  # reset stim_dir, otherwise any lick will be rewarded, even before LED presentation
-        hw.speaker.noise(20000)
+        hw.speaker.off()
         timed_goto_state('disengaged', v.max_IT_duration)
     if event == 'motion' or event == 'lick':  # any action will start the trial
         goto_state('led_on')
@@ -98,6 +98,7 @@ def led_on(event):
     "turn on the led"
     if event == 'entry':
         v.lick_n___ = 0
+        hw.speaker.noise(20000)
         hw.LED_Delivery.cue_led(2)
         set_timer('led_timer', v.max_led_duration, False)
     if event == 'exit':
@@ -108,10 +109,10 @@ def led_on(event):
     elif event == 'lick':
         if v.lick_n___ == 2:  # ignore the first lick, might be a false positive
             t_rem = timer_remaining('led_timer')
-            if t_rem < v.max_led_duration - 1000:
-                goto_state('reward') 
+            if t_rem < v.max_led_duration - 500:
+                goto_state('reward')
             else:
-                timed_goto_state('reward', 1000 + t_rem - v.max_led_duration)
+                timed_goto_state('reward', 500 + t_rem - v.max_led_duration)
 
 def disengaged(event):
     "disengaged state"
@@ -119,7 +120,7 @@ def disengaged(event):
         hw.LED_Delivery.all_off()
         hw.speaker.off()
     elif event =='motion' or event == 'lick':
-        goto_state('trial_start')
+        goto_state('led_on')
 
 def penalty(event):
     "penalty state"
@@ -127,16 +128,18 @@ def penalty(event):
         hw.LED_Delivery.all_off()
         hw.speaker.set_volume(55)
         hw.speaker.sine(10000)
-        timed_goto_state('trial_start', randint(v.max_led_duration, v.max_IT_duration))
+        timed_goto_state('trial', randint(v.max_led_duration, v.max_IT_duration))
 
 def reward(event):
     "reward state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
+        hw.speaker.off()
         hw.reward.release()
+        hw.speaker.click()
         v.trial_number += 1
-        print('{}, trial_number'.format(v.trial_number))
-        timed_goto_state('trial_start', randint(1, v.max_gap_duration))
+        print('{}, reward_number'.format(v.trial_number))
+        timed_goto_state('trial', randint(1, v.max_gap_duration))
 
 # State independent behaviour.
 def all_states(event):
