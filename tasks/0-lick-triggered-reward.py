@@ -11,7 +11,7 @@ import math
 
 states = ['intertrial',
           'trial',
-          'cue_gap']
+          'led_on']
 
 events = ['lick',
           'motion',
@@ -76,9 +76,9 @@ def trial(event):
     if event == 'entry':
         hw.speaker.noise(freq=20000)
     if event == 'lick':
-        goto_state('cue_gap')
+        goto_state('led_on')
 
-def cue_gap(event):
+def led_on(event):
     "gap for the LED cue"
     if event == 'entry':
         hw.speaker.off()
