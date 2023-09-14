@@ -93,7 +93,7 @@ def intertrial(event):
         hw.LED_Delivery.all_off()
         v.trial_number += 1
 
-        print('{}, trial_number'.format(v.trial_number))
+        print('{}, reward_number'.format(v.trial_number))
         timed_goto_state('trial', v.trial_len)  # enforcing min 1s between rewards
 
 # State independent behaviour.
