@@ -17,7 +17,7 @@ events = ['lick',
           'motion',
           'session_timer']
 
-initial_state = 'intertrial'
+initial_state = 'trial'
 
 # -------------------------------------------------------------------------
 # Variables.
