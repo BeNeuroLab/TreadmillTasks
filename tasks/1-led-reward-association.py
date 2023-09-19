@@ -107,12 +107,13 @@ def led_on(event):
     elif event == 'led_timer':
         goto_state('penalty')
     elif event == 'lick':
-        if v.lick_n___ == 2:  # ignore the first lick, might be a false positive
+        if v.lick_n___ >= 2:  # ignore the first lick, might be a false positive
             t_rem = timer_remaining('led_timer')
             if t_rem < v.max_led_duration - 500:
                 goto_state('reward')
             else:
                 timed_goto_state('reward', 500 + t_rem - v.max_led_duration)
+                v.lick_n___ = -100
 
 def disengaged(event):
     "disengaged state"
