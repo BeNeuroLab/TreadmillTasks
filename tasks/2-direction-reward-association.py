@@ -132,7 +132,7 @@ def run_start():
     hw.speaker.set_volume(90)
     hw.speaker.off()
     hw.LED_Delivery.all_off()
-    print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
+    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
 
 def run_end():

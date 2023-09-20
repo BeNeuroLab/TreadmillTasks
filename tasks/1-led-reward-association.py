@@ -66,7 +66,7 @@ def run_start():
     set_timer('session_timer', v.session_duration, True)
     hw.motionSensor.record()
     hw.LED_Delivery.all_off()
-    print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
+    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = 10
     hw.speaker.set_volume(60)
