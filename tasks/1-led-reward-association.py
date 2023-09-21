@@ -36,7 +36,7 @@ v.lick_n___ = 0
 v.stim_dir = None
 v.max_gap_duration = 10 * second
 v.max_IT_duration = 10 * second
-v.max_led_duration = 3 * second
+v.max_led_duration = 5 * second
 
 # -------------------------------------------------------------------------
 # State-independent Code
