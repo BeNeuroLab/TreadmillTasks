@@ -98,7 +98,7 @@ def led_on(event):
         hw.reward.release()
         v.trial_number += 1
         print('{}, reward_number'.format(v.trial_number))
-        timed_goto_state('gap', v.max_led_duration, False)
+        timed_goto_state('gap', v.max_led_duration)
     elif event == 'exit':
         hw.LED_Delivery.all_off()
 
