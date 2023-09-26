@@ -89,7 +89,7 @@ def trial(event):
     "beginning of the trial"
     if event == 'entry':
         v.stim_dir = None  # reset stim_dir, otherwise any lick will be rewarded, even before LED presentation
-        hw.speaker.off()
+        hw.speaker.noise(20000)
         timed_goto_state('disengaged', v.max_IT_duration)
     if event == 'motion' or event == 'lick':  # any action will start the trial
         goto_state('led_on')
@@ -98,7 +98,6 @@ def led_on(event):
     "turn on the led"
     if event == 'entry':
         v.lick_n___ = 0
-        hw.speaker.noise(20000)
         hw.LED_Delivery.cue_led(2)
         set_timer('led_timer', v.max_led_duration, False)
     if event == 'exit':
@@ -119,7 +118,6 @@ def disengaged(event):
     "disengaged state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
-        hw.speaker.off()
     elif event =='motion' or event == 'lick':
         goto_state('led_on')
 
@@ -127,8 +125,6 @@ def penalty(event):
     "penalty state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
-        # hw.speaker.set_volume(45)
-        # hw.speaker.sine(10000)
         timed_goto_state('trial', randint(v.max_led_duration, v.max_IT_duration))
 
 def reward(event):
@@ -137,7 +133,6 @@ def reward(event):
         hw.LED_Delivery.all_off()
         hw.speaker.off()
         hw.reward.release()
-        hw.speaker.click()
         v.trial_number += 1
         print('{}, reward_number'.format(v.trial_number))
         timed_goto_state('trial', randint(1, v.max_gap_duration))
