@@ -29,9 +29,9 @@ initial_state = 'trial'
 # session params
 v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
-v.trial_number = 0
+v.reward_number = 0
 v.stim_dir = None
-v.max_gap_duration = 10 * second
+v.n_lick___ = 5
 v.max_IT_duration = 10 * second
 v.max_led_duration = 3 * second
 
@@ -95,10 +95,12 @@ def led_on(event):
     "turn on the led"
     if event == 'entry':
         hw.LED_Delivery.cue_led(2)
-        hw.reward.release()
-        v.trial_number += 1
-        print('{}, reward_number'.format(v.trial_number))
         timed_goto_state('gap', v.max_led_duration)
+        if v.n_lick___ >= 3:
+            hw.reward.release()
+            v.n_lick___ = 0
+            v.reward_number += 1
+            print('{}, reward_number'.format(v.reward_number))
     elif event == 'exit':
         hw.LED_Delivery.all_off()
 
@@ -123,6 +125,8 @@ def all_states(event):
     irrespective of the state the machine is in.
     Executes before the state code.
     """
-    if event == 'session_timer':
+    if event == "lick":
+        v.n_lick___ += 1
+    elif event == 'session_timer':
         hw.motionSensor.stop()
         stop_framework()
