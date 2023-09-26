@@ -12,12 +12,10 @@ import math
 states = ['trial',
           'led_on',
           'disengaged',
-          'reward',
-          'penalty']
+          'gap']
 
 events = ['lick',
           'session_timer',
-          'led_timer',
           'motion']
 
 initial_state = 'trial'
@@ -32,11 +30,10 @@ initial_state = 'trial'
 v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
 v.trial_number = 0
-v.lick_n___ = 0
 v.stim_dir = None
 v.max_gap_duration = 10 * second
 v.max_IT_duration = 10 * second
-v.max_led_duration = 5 * second
+v.max_led_duration = 3 * second
 
 # -------------------------------------------------------------------------
 # State-independent Code
@@ -97,22 +94,13 @@ def trial(event):
 def led_on(event):
     "turn on the led"
     if event == 'entry':
-        v.lick_n___ = 0
         hw.LED_Delivery.cue_led(2)
-        set_timer('led_timer', v.max_led_duration, False)
-    if event == 'exit':
+        hw.reward.release()
+        v.trial_number += 1
+        print('{}, reward_number'.format(v.trial_number))
+        timed_goto_state('gap', v.max_led_duration, False)
+    elif event == 'exit':
         hw.LED_Delivery.all_off()
-        disarm_timer('led_timer')
-    elif event == 'led_timer':
-        goto_state('penalty')
-    elif event == 'lick':
-        if v.lick_n___ >= 2:  # ignore the first lick, might be a false positive
-            t_rem = timer_remaining('led_timer')
-            if t_rem < v.max_led_duration - 500:
-                goto_state('reward')
-            else:
-                timed_goto_state('reward', 500 + t_rem - v.max_led_duration)
-                v.lick_n___ = -100
 
 def disengaged(event):
     "disengaged state"
@@ -121,21 +109,12 @@ def disengaged(event):
     elif event =='motion' or event == 'lick':
         goto_state('led_on')
 
-def penalty(event):
+def gap(event):
     "penalty state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
         timed_goto_state('trial', randint(v.max_led_duration, v.max_IT_duration))
 
-def reward(event):
-    "reward state"
-    if event == 'entry':
-        hw.LED_Delivery.all_off()
-        hw.speaker.off()
-        hw.reward.release()
-        v.trial_number += 1
-        print('{}, reward_number'.format(v.trial_number))
-        timed_goto_state('trial', randint(1, v.max_gap_duration))
 
 # State independent behaviour.
 def all_states(event):
@@ -144,8 +123,6 @@ def all_states(event):
     irrespective of the state the machine is in.
     Executes before the state code.
     """
-    if event == 'lick':
-        v.lick_n___ += 1
-    elif event == 'session_timer':
+    if event == 'session_timer':
         hw.motionSensor.stop()
         stop_framework()
