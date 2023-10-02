@@ -9,9 +9,9 @@ import math
 # States and events.
 # -------------------------------------------------------------------------
 
-states = ['intertrial',
-          'trial_start',
-          'stim_on',
+states = ['trial',
+          'disengaged',
+          'led_on',
           'reward',
           'penalty']
 
@@ -24,7 +24,7 @@ events = ['motion',
           'audio_freq'
           ]
 
-initial_state = 'intertrial'
+initial_state = 'trial'
 
 # -------------------------------------------------------------------------
 # Variables.
@@ -42,21 +42,22 @@ v.audio_f_range___ = (10000, 20000)  # between 10kHz and 20kHz, loosely based on
 # session params
 v.session_duration = 1 * hour
 v.reward_duration = 30 * ms
-v.penalty_duration = 10 * second
 v.trial_number = 0
 v.centre_led_p = 0.9  # probability of cueing the centre LED
 
 # intertrial params
 v.min_IT_movement = 10  # cm - must be a multiple of 5
-v.min_IT_duration = 1 * second
+v.min_IT_duration = 3 * second
 v.max_IT_duration = 15 * second
+v.n_lick___ = 5
+v.n_motion___ = 0
 v.IT_duration_done___ = False
 v.IT_distance_done___ = False
 v.x___ = 0
 v.y___ = 0
 
 # trial params
-v.stim_len = 10 * second
+v.max_led_duration = 10 * second
 v.distance_to_target = 20  # cm - must be a multiple of 5
 v.target_angle_tolerance = math.pi / 12  # deg_rad
 v.led_direction = -1
@@ -129,7 +130,7 @@ def run_start():
     "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
     hw.motionSensor.record()
-    hw.speaker.set_volume(90)
+    hw.speaker.set_volume(60)
     hw.speaker.off()
     hw.LED_Delivery.all_off()
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
@@ -147,80 +148,56 @@ def run_end():
     hw.off()
 
 # State behaviour functions.
-def intertrial(event):
-    "intertrial state behaviour"
-    if event == 'entry':
-        # coded so that at this point, there is clean air coming from every direction
-        set_timer('IT_timer', v.min_IT_duration)
-        set_timer('max_IT_timer', v.max_IT_duration)
-        hw.LED_Delivery.all_off()
-        v.IT_duration_done___ = False
-        v.IT_distance_done___ = False
-        hw.motionSensor.threshold = v.min_IT_movement # to issue an event only after enough movement
-    elif event == 'exit':
-        disarm_timer('IT_timer')
-        disarm_timer('max_IT_timer')
-    elif event == 'IT_timer':
-        v.IT_duration_done___ = True
-        if v.IT_distance_done___:
-            goto_state('trial_start')
-    elif event == 'motion':
-        v.IT_distance_done___ = True
-        if v.IT_duration_done___:
-            goto_state('trial_start')
-    elif event == 'max_IT_timer':
-        hw.LED_Delivery.all_on()
 
-
-def trial_start(event):
+def trial(event):
     "beginning of the trial"
     if event == 'entry':
+        hw.speaker.noise(20000)
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         hw.LED_Delivery.all_off()
-        timed_goto_state('stim_on', v.trial_start_len)
+        timed_goto_state('disengaged', v.max_IT_duration)
+    elif event == 'motion' or event == 'lick':  # any action will start the trial
+        goto_state('led_on')
 
 
-def stim_on(event):
+def led_on(event):
     "stimulation onset"
     if event == 'entry':
-        set_timer('stim_timer', v.stim_len)
+        timed_goto_state('penalty', v.max_led_duration)
         v.led_direction = cue_centre_led_p(hw.LED_Delivery, v.centre_led_p)
-        hw.motionSensor.threshold = v.distance_to_target
-    elif event == 'exit':
-        disarm_timer('stim_timer')
-        hw.speaker.off()
+        v.n_motion___ = 0
+        hw.motionSensor.threshold = 5
     elif event == 'motion':
-        arrived = arrived_to_target(v.x___, v.y___,
-                                    v.led_direction,
-                                    v.target_angle_tolerance)
+        if v.n_motion___ * 5 < v.distance_to_target:
+            arrived = arrived_to_target(v.x___, v.y___,
+                                        v.led_direction,
+                                        v.target_angle_tolerance)
 
-        audio_feedback(hw.speaker, v.x___, v.y___, v.led_direction)
+            audio_feedback(hw.speaker, v.x___, v.y___, v.led_direction)
 
-        if arrived is True:
-            goto_state('reward')
-        elif arrived is False:
+            if arrived is True:
+                goto_state('reward')
+        else:
             goto_state('penalty')
-    elif event == 'stim_timer':
-        goto_state('penalty')
-
 
 def reward(event):
     "reward state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
-        timed_goto_state('intertrial', v.max_IT_duration)
-    elif event == 'lick':  # any lick-related event during reward
-        hw.reward.release()
-        goto_state('intertrial')
+        if v.n_lick___ >= 3:
+            hw.reward.release()
+            v.n_lick___ = 0
+            v.reward_number += 1
+            print('{}, reward_number'.format(v.reward_number))
+        timed_goto_state('trial', randint(v.min_IT_duration, v.max_led_duration))
 
 
 def penalty(event):
     "penalty state"
     if event == 'entry':
-        hw.LED_Delivery.all_on()
-        print('{}, penalty_on'.format(get_current_time()))
-        timed_goto_state('intertrial', v.penalty_duration)
+        hw.LED_Delivery.all_all_offon()
+        timed_goto_state('trial', v.max_IT_duration)
 
 
 # State independent behaviour.
@@ -235,9 +212,9 @@ def all_states(event):
         v.x___ = hw.motionSensor.x #/ hw.motionSensor.sensor_x.CPI * 2.54
         v.y___ = hw.motionSensor.y #/ hw.motionSensor.sensor_x.CPI * 2.54
         print('{},{}, dM'.format(v.x___, v.y___))
+        v.n_motion___ += 1
     elif event == 'lick':
-        #TODO: handle the lick data better
-        pass
+        v.n_lick___ += 1
     elif event == 'session_timer':
         hw.motionSensor.stop()
         stop_framework()
