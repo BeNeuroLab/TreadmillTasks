@@ -88,7 +88,7 @@ def trial(event):
         v.stim_dir = None  # reset stim_dir, otherwise any lick will be rewarded, even before LED presentation
         hw.speaker.noise(20000)
         timed_goto_state('disengaged', v.max_IT_duration)
-    if event == 'motion' or event == 'lick':  # any action will start the trial
+    elif event == 'motion' or event == 'lick':  # any action will start the trial
         goto_state('led_on')
 
 def led_on(event):
