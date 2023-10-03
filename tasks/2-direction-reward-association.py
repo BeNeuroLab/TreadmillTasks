@@ -47,8 +47,6 @@ v.min_IT_duration = 3 * second
 v.max_IT_duration = 15 * second
 v.n_lick___ = 5
 v.n_motion___ = 0
-v.IT_duration_done___ = False
-v.IT_distance_done___ = False
 v.x___ = 0
 v.y___ = 0
 
@@ -57,7 +55,6 @@ v.max_led_duration = 10 * second
 v.distance_to_target = 20  # cm - must be a multiple of 5
 v.target_angle_tolerance = math.pi / 12  # deg_rad
 v.led_direction = -1
-v.trial_start_len = 100 * ms
 
 # -------------------------------------------------------------------------
 # State-independent Code
@@ -180,6 +177,7 @@ def reward(event):
     "reward state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
+        hw.speaker.all_off()
         if v.n_lick___ >= 3:
             hw.reward.release()
             v.n_lick___ = 0
@@ -191,13 +189,15 @@ def reward(event):
 def penalty(event):
     "penalty state"
     if event == 'entry':
-        hw.LED_Delivery.all_all_offon()
+        hw.LED_Delivery.all_off()
+        hw.speaker.clicks(5)
         timed_goto_state('trial', v.max_IT_duration)
 
 def disengaged(event):
     "disengaged state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
+        hw.speaker.all_off()
     elif event =='motion' or event == 'lick':
         goto_state('led_on')
 
