@@ -27,11 +27,11 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 
 # general parameters
-v.target_angle___ = {0: math.pi / 3,
-                     1: math.pi / 6,
-                     2: 0,
-                     3: - math.pi / 6,
-                     4: - math.pi / 3}
+v.target_angle___ = {0: math.pi / 6,
+                     1: math.pi / 3,
+                     2: math.pi / 2,
+                     3: 2 * math.pi / 3,
+                     4: 5 * math.pi / 6}
 
 v.audio_f_range___ = (10000, 20000)  # between 10kHz and 20kHz, loosely based on Heffner & Heffner 2007
 
@@ -92,8 +92,8 @@ def arrived_to_target(dX: float, dY: float,
     """
     assert stim_direction < 5, 'wrong direction value'
 
-    move_angle = math.atan2(dY, dX)
-    print('{}, run_angle'.format(move_angle))
+    move_angle = math.atan2(dX, dY)  # straight is pi/2
+    print('{}, run_angle_rad'.format(move_angle))
     if abs(move_angle - v.target_angle___[stim_direction]) < target_angle_tolerance:
         return True
     else:
@@ -213,9 +213,9 @@ def all_states(event):
     if event == 'motion':
         # read the motion registers
         # to convert to cm, divide by CPI and multiply by 2.54
-        v.x___ = hw.motionSensor.x #/ hw.motionSensor.sensor_x.CPI * 2.54
-        v.y___ = hw.motionSensor.y #/ hw.motionSensor.sensor_x.CPI * 2.54
-        print('{},{}, dM'.format(v.x___, v.y___))
+        v.x___ = hw.motionSensor.x / hw.motionSensor.sensor_x.CPI * 2.54
+        v.y___ = hw.motionSensor.y / hw.motionSensor.sensor_x.CPI * 2.54
+        # print('{},{}, dM'.format(v.x___, v.y___))
         v.n_motion___ += 1
     elif event == 'lick':
         v.n_lick___ += 1
