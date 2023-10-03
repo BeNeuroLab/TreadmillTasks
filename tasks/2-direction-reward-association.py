@@ -32,6 +32,7 @@ v.target_angle___ = {0: math.pi / 6,
                      2: math.pi / 2,
                      3: 2 * math.pi / 3,
                      4: 5 * math.pi / 6}
+v.led_cues___ = list(v.target_angle___.keys())
 
 v.audio_f_range___ = (10000, 20000)  # between 10kHz and 20kHz, loosely based on Heffner & Heffner 2007
 
@@ -39,7 +40,6 @@ v.audio_f_range___ = (10000, 20000)  # between 10kHz and 20kHz, loosely based on
 v.session_duration = 1 * hour
 v.reward_duration = 30 * ms
 v.trial_number = 0
-v.centre_led_p = 0.9  # probability of cueing the centre LED
 
 # intertrial params
 v.min_IT_movement = 10  # cm - must be a multiple of 5
@@ -64,21 +64,20 @@ v.trial_start_len = 100 * ms
 # -------------------------------------------------------------------------
 
 
-def cue_centre_led_p(LedDevice: LEDStim, p: float =0.9):
+def cue_left_right(LedDevice: LEDStim):
     """
-    Cues the central led at the probablity `p`, else cues another led randomly
+    Cues the right leds or the left leds, randomly.
+    centre led always cued
     """
-    assert p >= 0.2 and p <= 1, 'p must be between 0.2 and 1'
-    
-    if withprob(p):
-        stim_dir = 2
-    else:
-        cues = list(v.target_angle___.keys())
-        del cues[2]
-        stim_dir = choice(cues)
     LedDevice.all_off()
-    LedDevice.cue_led(stim_dir)
-    print('{}, LED_direction'.format(stim_dir))
+    if random() >= 0.5:
+        cues = v.led_cues___[:3]
+    else:
+        cues = v.led_cues___[-3:]
+
+    print('{}, LED_direction'.format(cues))
+    for cue in cues:
+        LedDevice.cue_led(cue)
 
     return stim_dir
 
@@ -161,7 +160,7 @@ def led_on(event):
     "stimulation onset"
     if event == 'entry':
         timed_goto_state('disengaged', v.max_led_duration)
-        v.led_direction = cue_centre_led_p(hw.LED_Delivery, v.centre_led_p)
+        v.led_direction = cue_left_right(hw.LED_Delivery)
         v.n_motion___ = 0
         hw.motionSensor.threshold = 5
     elif event == 'motion':
