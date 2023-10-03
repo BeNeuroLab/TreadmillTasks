@@ -17,11 +17,7 @@ states = ['trial',
 
 events = ['motion',
           'lick',
-          'session_timer',
-          'IT_timer',
-          'max_IT_timer',
-          'stim_timer',
-          'audio_freq'
+          'session_timer'
           ]
 
 initial_state = 'trial'
@@ -164,7 +160,7 @@ def trial(event):
 def led_on(event):
     "stimulation onset"
     if event == 'entry':
-        timed_goto_state('penalty', v.max_led_duration)
+        timed_goto_state('disengaged', v.max_led_duration)
         v.led_direction = cue_centre_led_p(hw.LED_Delivery, v.centre_led_p)
         v.n_motion___ = 0
         hw.motionSensor.threshold = 5
@@ -198,6 +194,14 @@ def penalty(event):
     if event == 'entry':
         hw.LED_Delivery.all_all_offon()
         timed_goto_state('trial', v.max_IT_duration)
+
+def disengaged(event):
+    "disengaged state"
+    if event == 'entry':
+        hw.LED_Delivery.all_off()
+    elif event =='motion' or event == 'lick':
+        goto_state('led_on')
+
 
 
 # State independent behaviour.
