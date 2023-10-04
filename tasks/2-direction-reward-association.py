@@ -53,8 +53,8 @@ v.y___ = 0
 
 # trial params
 v.max_led_duration = 10 * second
-v.distance_to_target = 20  # cm - must be a multiple of 5
-v.target_angle_tolerance = math.pi / 4  # deg_rad
+v.distance_to_target = 40  # cm - must be a multiple of 5
+v.target_angle_tolerance = math.pi / 4  # rad
 v.led_direction = -1
 
 # -------------------------------------------------------------------------
