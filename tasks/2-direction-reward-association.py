@@ -77,7 +77,7 @@ def cue_left_right(LedDevice: LEDStim):
 
     print('{}, LED_direction'.format(cues))
     LedDevice.cue_array(cues)
-        
+
     return out
 
 def arrived_to_target(dX: float, dY: float,
@@ -150,6 +150,7 @@ def trial(event):
         print('{}, trial_number'.format(v.trial_number))
         hw.LED_Delivery.all_off()
         timed_goto_state('disengaged', v.max_IT_duration)
+        hw.motionSensor.threshold = 5
     elif event == 'motion' or event == 'lick':  # any action will start the trial
         goto_state('led_on')
 
@@ -180,6 +181,7 @@ def reward(event):
     if event == 'entry':
         hw.LED_Delivery.all_off()
         hw.speaker.off()
+        hw.motionSensor.threshold = v.distance_to_target
         if v.n_lick___ >= 3:
             hw.reward.release()
             v.n_lick___ = 0
@@ -193,6 +195,7 @@ def penalty(event):
     if event == 'entry':
         hw.LED_Delivery.all_off()
         hw.speaker.clicks(5)
+        hw.motionSensor.threshold = v.distance_to_target
         timed_goto_state('trial', v.max_IT_duration)
 
 def disengaged(event):
