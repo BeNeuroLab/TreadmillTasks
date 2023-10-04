@@ -81,8 +81,7 @@ def cue_left_right(LedDevice: LEDStim):
     return out
 
 def arrived_to_target(dX: float, dY: float,
-                      stim_direction: int,
-                      target_angle_tolerance: float):
+                      stim_direction: int):
     """
     checks the motion direction against the target direction
     MUST have 5 stim directions
@@ -91,7 +90,7 @@ def arrived_to_target(dX: float, dY: float,
 
     move_angle = math.atan2(dX, dY)  # straight is pi/2
     print('{}, run_angle_rad'.format(move_angle))
-    if abs(move_angle - v.target_angle___[stim_direction]) < target_angle_tolerance:
+    if abs(move_angle - v.target_angle___[stim_direction]) < v.target_angle_tolerance:
         return True
     else:
         return False
@@ -166,10 +165,9 @@ def led_on(event):
     elif event == 'motion':
         if v.n_motion___ * 5 < v.distance_to_target:
             arrived = arrived_to_target(v.x___, v.y___,
-                                        v.led_direction,
-                                        v.target_angle_tolerance)
+                                        v.led_direction)
 
-            audio_feedback(hw.speaker, v.x___, v.y___, v.led_direction)
+            # audio_feedback(hw.speaker, v.x___, v.y___, v.led_direction)
 
             if arrived is True:
                 goto_state('reward')
@@ -205,7 +203,6 @@ def disengaged(event):
         hw.speaker.off()
     elif event =='motion' or event == 'lick':
         goto_state('led_on')
-
 
 
 # State independent behaviour.
