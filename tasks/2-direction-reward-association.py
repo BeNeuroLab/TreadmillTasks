@@ -29,7 +29,7 @@ initial_state = 'trial'
 # general parameters
 v.target_angle___ = {0: math.pi / 4,
                      1: math.pi / 4,
-                     2: math.pi / 2,
+                     2: math.pi / 4,
                      3: 3 * math.pi / 4,
                      4: 3 * math.pi / 4}
 v.led_cues___ = list(v.target_angle___.keys())
