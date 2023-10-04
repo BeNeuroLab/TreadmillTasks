@@ -27,11 +27,11 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 
 # general parameters
-v.target_angle___ = {0: math.pi / 6,
-                     1: math.pi / 3,
+v.target_angle___ = {0: math.pi / 4,
+                     1: math.pi / 4,
                      2: math.pi / 2,
-                     3: 2 * math.pi / 3,
-                     4: 5 * math.pi / 6}
+                     3: 3 * math.pi / 4,
+                     4: 3 * math.pi / 4}
 v.led_cues___ = list(v.target_angle___.keys())
 
 v.audio_f_range___ = (10000, 20000)  # between 10kHz and 20kHz, loosely based on Heffner & Heffner 2007
@@ -40,6 +40,7 @@ v.audio_f_range___ = (10000, 20000)  # between 10kHz and 20kHz, loosely based on
 v.session_duration = 1 * hour
 v.reward_duration = 30 * ms
 v.trial_number = 0
+v.reward_number = 0
 
 # intertrial params
 v.min_IT_movement = 10  # cm - must be a multiple of 5
@@ -53,7 +54,7 @@ v.y___ = 0
 # trial params
 v.max_led_duration = 10 * second
 v.distance_to_target = 20  # cm - must be a multiple of 5
-v.target_angle_tolerance = math.pi / 12  # deg_rad
+v.target_angle_tolerance = math.pi / 4  # deg_rad
 v.led_direction = -1
 
 # -------------------------------------------------------------------------
@@ -69,15 +70,15 @@ def cue_left_right(LedDevice: LEDStim):
     LedDevice.all_off()
     if random() >= 0.5:
         cues = v.led_cues___[:3]
+        out = 1
     else:
         cues = v.led_cues___[-3:]
+        out = 3
 
     print('{}, LED_direction'.format(cues))
-    for cue in cues:
-        LedDevice.cue_led(cue)
-
-    return stim_dir
-
+    LedDevice.cue_array(cues)
+        
+    return out
 
 def arrived_to_target(dX: float, dY: float,
                       stim_direction: int,
@@ -157,6 +158,7 @@ def led_on(event):
     "stimulation onset"
     if event == 'entry':
         timed_goto_state('disengaged', v.max_led_duration)
+        hw.speaker.noise(20000)
         v.led_direction = cue_left_right(hw.LED_Delivery)
         v.n_motion___ = 0
         hw.motionSensor.threshold = 5
@@ -177,7 +179,7 @@ def reward(event):
     "reward state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
-        hw.speaker.all_off()
+        hw.speaker.off()
         if v.n_lick___ >= 3:
             hw.reward.release()
             v.n_lick___ = 0
@@ -197,7 +199,7 @@ def disengaged(event):
     "disengaged state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
-        hw.speaker.all_off()
+        hw.speaker.off()
     elif event =='motion' or event == 'lick':
         goto_state('led_on')
 
