@@ -39,3 +39,10 @@ class LEDStim:
                 getattr(self, led).on()
             else:
                 getattr(self, led).off()
+
+    def cue_array(self, arr:list):
+        "turn on the LEDs corresponding to the given directions in `arr`"
+        self.all_off()
+        for d in arr:
+            led = 'led' + str(d)
+            getattr(self, led).on()
