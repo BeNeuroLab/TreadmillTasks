@@ -9,16 +9,15 @@ import math
 # States and events.
 # -------------------------------------------------------------------------
 
-states = ['trial',
-          'disengaged',
+states = ['disengaged',
+          'trial',
+          'penalty',
           'led_on',
-          'reward',
-          'penalty']
+          'reward']
 
 events = ['motion',
           'lick',
-          'session_timer'
-          ]
+          'session_timer']
 
 initial_state = 'trial'
 
