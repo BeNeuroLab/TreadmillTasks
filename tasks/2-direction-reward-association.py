@@ -53,6 +53,7 @@ v.y___ = 0
 
 # trial params
 v.max_led_duration = 10 * second
+v.min_motion = 5  # cm - minimum distance to trigger an event
 v.distance_to_target = 40  # cm - must be a multiple of 5
 v.target_angle_tolerance = math.pi / 4  # rad
 v.led_direction = -1
@@ -151,7 +152,7 @@ def trial(event):
         timed_goto_state('disengaged', v.max_IT_duration)
         hw.motionSensor.delta_x = 0
         hw.motionSensor.delta_y = 0
-        hw.motionSensor.threshold = 5
+        hw.motionSensor.threshold = v.min_motion
     elif event == 'motion' or event == 'lick':  # any action will start the trial
         goto_state('led_on')
 
@@ -165,9 +166,9 @@ def led_on(event):
         v.n_motion___ = 0
         hw.motionSensor.delta_x = 0
         hw.motionSensor.delta_y = 0
-        hw.motionSensor.threshold = 5
+        hw.motionSensor.threshold = v.min_motion
     elif event == 'motion':
-        if v.n_motion___ * 5 < v.distance_to_target:
+        if v.n_motion___ * v.min_motion < v.distance_to_target:
             arrived = arrived_to_target(v.x___, v.y___,
                                         v.led_direction)
 
