@@ -149,6 +149,8 @@ def trial(event):
         print('{}, trial_number'.format(v.trial_number))
         hw.LED_Delivery.all_off()
         timed_goto_state('disengaged', v.max_IT_duration)
+        hw.motionSensor.delta_x = 0
+        hw.motionSensor.delta_y = 0
         hw.motionSensor.threshold = 5
     elif event == 'motion' or event == 'lick':  # any action will start the trial
         goto_state('led_on')
@@ -161,6 +163,8 @@ def led_on(event):
         hw.speaker.noise(20000)
         v.led_direction = cue_left_right(hw.LED_Delivery)
         v.n_motion___ = 0
+        hw.motionSensor.delta_x = 0
+        hw.motionSensor.delta_y = 0
         hw.motionSensor.threshold = 5
     elif event == 'motion':
         if v.n_motion___ * 5 < v.distance_to_target:
