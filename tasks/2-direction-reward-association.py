@@ -44,7 +44,7 @@ v.reward_number = 0
 # intertrial params
 v.min_IT_movement = 10  # cm - must be a multiple of 5
 v.min_IT_duration = 3 * second
-v.max_IT_duration = 15 * second
+v.max_IT_duration = 25 * second
 v.n_lick___ = 5
 v.n_motion___ = 0
 v.x___ = 0
@@ -196,7 +196,7 @@ def penalty(event):
     "penalty state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
-        hw.speaker.clicks(5)
+        hw.speaker.clicks(10)
         hw.motionSensor.threshold = v.distance_to_target
         timed_goto_state('trial', v.max_IT_duration)
 
