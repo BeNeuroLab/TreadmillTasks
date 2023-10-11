@@ -159,7 +159,8 @@ def trial(event):
 def led_on(event):
     "stimulation onset"
     if event == 'entry':
-        timed_goto_state('disengaged', v.max_led_duration)
+        timed_goto_state('disengaged', v.max_IT_duration)
+        hw.speaker.set_volume(60)
         hw.speaker.noise(20000)
         v.led_direction = cue_left_right(hw.LED_Delivery)
         v.n_motion___ = 0
@@ -196,9 +197,11 @@ def penalty(event):
     "penalty state"
     if event == 'entry':
         hw.LED_Delivery.all_off()
-        hw.speaker.clicks(10)
+        hw.speaker.off()
+        hw.speaker.set_volume(50)
+        hw.speaker.sine(8000)
         hw.motionSensor.threshold = v.distance_to_target
-        timed_goto_state('trial', v.max_IT_duration)
+        timed_goto_state('trial', v.max_led_duration)
 
 def disengaged(event):
     "disengaged state"
