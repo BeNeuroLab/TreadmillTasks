@@ -88,7 +88,7 @@ def arrived_to_target(dX: float, dY: float,
     """
     assert stim_direction < 5, 'wrong direction value'
 
-    move_angle = math.atan2(dX, dY)  # straight is pi/2
+    move_angle = math.atan2(dX, -dY)  # straight is pi/2
     print('{}, run_angle_rad'.format(move_angle))
     if abs(move_angle - v.target_angle___[stim_direction]) < v.target_angle_tolerance:
         return True
@@ -107,7 +107,7 @@ def audio_feedback(speaker,
                    dX: float, dY: float,
                    stim_direction: int):
     """ Set the audio frequency based on the direction of the movement. """
-    angle = math.atan2(dY, dX)
+    angle = math.atan2(dX, -dY)
     audio_freq = audio_mapping(angle - v.target_angle___[stim_direction])
     speaker.sine(audio_freq)
 
