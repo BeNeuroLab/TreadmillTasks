@@ -40,6 +40,8 @@ v.session_duration = 1 * hour
 v.reward_duration = 30 * ms
 v.trial_number = 0
 v.reward_number = 0
+v.led_direction = -1
+
 
 # intertrial params
 v.min_IT_movement = 10  # cm - must be a multiple of 5
@@ -55,7 +57,7 @@ v.max_led_duration = 10 * second
 v.min_motion = 5  # cm - minimum distance to trigger an event
 v.distance_to_target = 40  # cm - must be a multiple of 5
 v.target_angle_tolerance = math.pi / 4  # rad
-v.led_direction = -1
+v.run_angle = 0
 
 # -------------------------------------------------------------------------
 # State-independent Code
@@ -223,8 +225,8 @@ def all_states(event):
         # to convert to cm, divide by CPI and multiply by 2.54
         v.x___ = hw.motionSensor.x / hw.motionSensor.sensor_x.CPI * 2.54
         v.y___ = hw.motionSensor.y / hw.motionSensor.sensor_x.CPI * 2.54
-        # print('{},{}, dM'.format(v.x___, v.y___))
         v.n_motion___ += 1
+        v.run_angle = math.atan2(dX, -dY)
     elif event == 'lick':
         v.n_lick___ += 1
     elif event == 'session_timer':
