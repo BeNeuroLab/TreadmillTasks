@@ -49,8 +49,6 @@ v.min_IT_duration = 3 * second
 v.max_IT_duration = 25 * second
 v.n_lick___ = 5
 v.n_motion___ = 0
-v.x___ = 0
-v.y___ = 0
 
 # trial params
 v.max_led_duration = 10 * second
@@ -82,17 +80,14 @@ def cue_left_right(LedDevice: LEDStim):
 
     return out
 
-def arrived_to_target(dX: float, dY: float,
-                      stim_direction: int):
+def arrived_to_target(stim_direction: int):
     """
     checks the motion direction against the target direction
     MUST have 5 stim directions
     """
     assert stim_direction < 5, 'wrong direction value'
 
-    move_angle = math.atan2(dX, -dY)  # straight is pi/2
-    print('{}, run_angle_rad'.format(move_angle))
-    if abs(move_angle - v.target_angle___[stim_direction]) < v.target_angle_tolerance:
+    if abs(v.run_angle - v.target_angle___[stim_direction]) < v.target_angle_tolerance:
         return True
     else:
         return False
@@ -105,12 +100,9 @@ def audio_mapping(d_a: float) -> float:
     return mean(v.audio_f_range___) - (v.audio_f_range___[0] * d_a / v.target_angle___[0] * 2)
 
 
-def audio_feedback(speaker,
-                   dX: float, dY: float,
-                   stim_direction: int):
+def audio_feedback(speaker, stim_direction: int):
     """ Set the audio frequency based on the direction of the movement. """
-    angle = math.atan2(dX, -dY)
-    audio_freq = audio_mapping(angle - v.target_angle___[stim_direction])
+    audio_freq = audio_mapping(v.run_angle - v.target_angle___[stim_direction])
     speaker.sine(audio_freq)
 
 
@@ -170,7 +162,7 @@ def led_on(event):
         hw.motionSensor.delta_y = 0
         hw.motionSensor.threshold = v.min_motion
     elif event == 'motion':
-        if v.n_motion___ * v.min_motion < v.distance_to_target:
+        if v.n_motion___ * v.min_motion <= v.distance_to_target:
             arrived = arrived_to_target(v.x___, v.y___,
                                         v.led_direction)
 
@@ -218,15 +210,17 @@ def disengaged(event):
 def all_states(event):
     """
     Code here will be executed when any event occurs,
-    irrespective of the state the machine is in.
+    irrespective of the state the machine is in - before the state function is run.
     """
     if event == 'motion':
         # read the motion registers
         # to convert to cm, divide by CPI and multiply by 2.54
-        v.x___ = hw.motionSensor.x / hw.motionSensor.sensor_x.CPI * 2.54
-        v.y___ = hw.motionSensor.y / hw.motionSensor.sensor_x.CPI * 2.54
+        # v.x___ = hw.motionSensor.x / hw.motionSensor.sensor_x.CPI * 2.54
+        # v.y___ = hw.motionSensor.y / hw.motionSensor.sensor_x.CPI * 2.54
         v.n_motion___ += 1
-        v.run_angle = math.atan2(dX, -dY)
+        v.run_angle = math.atan2(hw.motionSensor.x, -hw.motionSensor.y)
+        print('{}, run_angle_rad'.format(v.run_angle))
+
     elif event == 'lick':
         v.n_lick___ += 1
     elif event == 'session_timer':
