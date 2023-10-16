@@ -91,16 +91,9 @@ def arrived_to_target():
         return False
 
 
-def audio_mapping(d_a: float) -> float:
-    """
-    freq = (-10kHz/300)d_a + 15kHz
-    """
-    return mean(v.audio_f_range___) - (v.audio_f_range___[0] * d_a / v.target_angle___[0] * 2)
-
-
 def audio_feedback():
     """ Set the audio frequency based on the direction of the movement. """
-    audio_freq = audio_mapping(v.run_angle - v.target_angle___[v.led_direction])
+    audio_freq = v.audio_f_range___[0] + (v.audio_f_range___[0] * v.run_angle / math.pi)
     hw.speaker.sine(audio_freq)
 
 
