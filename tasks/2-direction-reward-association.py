@@ -80,14 +80,12 @@ def cue_left_right(LedDevice: LEDStim):
 
     return out
 
-def arrived_to_target(stim_direction: int):
+def arrived_to_target():
     """
     checks the motion direction against the target direction
     MUST have 5 stim directions
     """
-    assert stim_direction < 5, 'wrong direction value'
-
-    if abs(v.run_angle - v.target_angle___[stim_direction]) < v.target_angle_tolerance:
+    if abs(v.run_angle - v.target_angle___[v.led_direction]) < v.target_angle_tolerance:
         return True
     else:
         return False
@@ -100,10 +98,10 @@ def audio_mapping(d_a: float) -> float:
     return mean(v.audio_f_range___) - (v.audio_f_range___[0] * d_a / v.target_angle___[0] * 2)
 
 
-def audio_feedback(speaker, stim_direction: int):
+def audio_feedback():
     """ Set the audio frequency based on the direction of the movement. """
-    audio_freq = audio_mapping(v.run_angle - v.target_angle___[stim_direction])
-    speaker.sine(audio_freq)
+    audio_freq = audio_mapping(v.run_angle - v.target_angle___[v.led_direction])
+    hw.speaker.sine(audio_freq)
 
 
 # -------------------------------------------------------------------------
@@ -163,10 +161,9 @@ def led_on(event):
         hw.motionSensor.threshold = v.min_motion
     elif event == 'motion':
         if v.n_motion___ * v.min_motion <= v.distance_to_target:
-            arrived = arrived_to_target(v.x___, v.y___,
-                                        v.led_direction)
 
-            # audio_feedback(hw.speaker, v.x___, v.y___, v.led_direction)
+            arrived = arrived_to_target()
+            audio_feedback()
 
             if arrived is True:
                 goto_state('reward')
