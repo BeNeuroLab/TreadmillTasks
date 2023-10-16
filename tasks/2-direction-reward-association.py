@@ -54,6 +54,7 @@ v.n_motion___ = 0
 v.max_led_duration = 10 * second
 v.min_motion = 5  # cm - minimum distance to trigger an event
 v.distance_to_target = 40  # cm - must be a multiple of 5
+v.max_motion___ = int(v.distance_to_target / v.min_motion)
 v.target_angle_tolerance = math.pi / 4  # rad
 v.run_angle = 0
 
@@ -161,7 +162,7 @@ def led_on(event):
         hw.motionSensor.threshold = v.min_motion
 
     elif event == 'motion':
-        if v.n_motion___ * v.min_motion <= v.distance_to_target:
+        if v.n_motion___ <= v.max_motion___:
             arrived = arrived_to_target()
             audio_feedback()
             if arrived:
