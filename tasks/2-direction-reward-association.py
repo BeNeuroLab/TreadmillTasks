@@ -130,8 +130,7 @@ def led_on(event):
     "stimulation onset"
     if event == 'entry':
         timed_goto_state('disengaged', v.max_IT_duration)
-        hw.speaker.set_volume(60)
-        hw.speaker.noise(20000)
+        hw.speaker.set_volume(45)
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         timed_goto_state('disengaged', v.max_IT_duration)
@@ -169,8 +168,8 @@ def penalty(event):
     if event == 'entry':
         hw.LED_Delivery.all_off()
         hw.speaker.off()
-        hw.speaker.set_volume(50)
-        hw.speaker.sine(8000)
+        hw.speaker.set_volume(55)
+        hw.speaker.sine(5000)
         hw.motionSensor.threshold = v.distance_to_target
         timed_goto_state('led_on', v.max_led_duration)
 
