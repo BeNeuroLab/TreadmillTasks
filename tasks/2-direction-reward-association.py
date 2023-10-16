@@ -159,13 +159,12 @@ def led_on(event):
         hw.motionSensor.delta_x = 0
         hw.motionSensor.delta_y = 0
         hw.motionSensor.threshold = v.min_motion
+
     elif event == 'motion':
         if v.n_motion___ * v.min_motion <= v.distance_to_target:
-
             arrived = arrived_to_target()
             audio_feedback()
-
-            if arrived is True:
+            if arrived:
                 goto_state('reward')
         else:
             goto_state('penalty')
