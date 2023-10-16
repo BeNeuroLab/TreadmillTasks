@@ -10,7 +10,6 @@ import math
 # -------------------------------------------------------------------------
 
 states = ['disengaged',
-          'trial',
           'penalty',
           'led_on',
           'reward']
@@ -19,7 +18,7 @@ events = ['motion',
           'lick',
           'session_timer']
 
-initial_state = 'trial'
+initial_state = 'disengaged'
 
 # -------------------------------------------------------------------------
 # Variables.
@@ -134,27 +133,15 @@ def run_end():
 
 # State behaviour functions.
 
-def trial(event):
-    "beginning of the trial"
-    if event == 'entry':
-        hw.speaker.noise(20000)
-        v.trial_number += 1
-        print('{}, trial_number'.format(v.trial_number))
-        hw.LED_Delivery.all_off()
-        timed_goto_state('disengaged', v.max_IT_duration)
-        hw.motionSensor.delta_x = 0
-        hw.motionSensor.delta_y = 0
-        hw.motionSensor.threshold = v.min_motion
-    elif event == 'motion' or event == 'lick':  # any action will start the trial
-        goto_state('led_on')
-
-
 def led_on(event):
     "stimulation onset"
     if event == 'entry':
         timed_goto_state('disengaged', v.max_IT_duration)
         hw.speaker.set_volume(60)
         hw.speaker.noise(20000)
+        v.trial_number += 1
+        print('{}, trial_number'.format(v.trial_number))
+        timed_goto_state('disengaged', v.max_IT_duration)
         v.led_direction = cue_left_right(hw.LED_Delivery)
         v.n_motion___ = 0
         hw.motionSensor.delta_x = 0
@@ -181,7 +168,7 @@ def reward(event):
             v.n_lick___ = 0
             v.reward_number += 1
             print('{}, reward_number'.format(v.reward_number))
-        timed_goto_state('trial', randint(v.min_IT_duration, v.max_led_duration))
+        timed_goto_state('led_on', randint(v.min_IT_duration, v.max_led_duration))
 
 
 def penalty(event):
@@ -192,7 +179,7 @@ def penalty(event):
         hw.speaker.set_volume(50)
         hw.speaker.sine(8000)
         hw.motionSensor.threshold = v.distance_to_target
-        timed_goto_state('trial', v.max_led_duration)
+        timed_goto_state('led_on', v.max_led_duration)
 
 def disengaged(event):
     "disengaged state"
