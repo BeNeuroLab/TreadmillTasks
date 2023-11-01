@@ -122,6 +122,7 @@ def run_start():
     "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
     hw.motionSensor.record()
+    hw.cameraTrigger.start()
     hw.speaker.set_volume(90)
     hw.speaker.off()
     hw.LED_Delivery.all_off()
@@ -135,6 +136,7 @@ def run_end():
     Turn off all hardware outputs.
     """
     hw.LED_Delivery.all_off()
+    hw.cameraTrigger.stop()
     hw.reward.stop()
     hw.speaker.off()
     hw.motionSensor.off()

@@ -61,6 +61,7 @@ def cue_random_led(LedDevice: LEDStim):
 def run_start():
     "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
+    hw.cameraTrigger.start()
     hw.motionSensor.record()
     hw.LED_Delivery.all_off()
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
@@ -77,6 +78,7 @@ def run_end():
     hw.LED_Delivery.all_off()
     hw.reward.stop()
     hw.motionSensor.off()
+    hw.cameraTrigger.stop()
     hw.speaker.off()
     hw.off()
 
