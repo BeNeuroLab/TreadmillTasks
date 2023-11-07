@@ -10,9 +10,9 @@ class LEDStim:
         pins = ('W45',    # Dir0
                 'W43',    # Dir1
                 'W24',    # Dir2
-                'W10',    # Dir3
-                'W68')    # Dir4
-        powerlines = ('W16', 'W50', 'W60', 'W22')  # this variable indicates the POW pins used so that their logic level is inverted automatically.
+                'W32',    # Dir3
+                'W30')    # Dir4
+        powerlines = ('W16', 'W50', 'W60', 'W22','W30','W32')  # this variable indicates the POW pins used so that their logic level is inverted automatically.
 
         for d in range(self.n_directions):
             led = 'led' + str(d)
