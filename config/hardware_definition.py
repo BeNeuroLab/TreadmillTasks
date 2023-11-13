@@ -17,7 +17,7 @@ lickometer = Lickometer(port=board.port_6, rising_event_A='lick', falling_event_
                         rising_event_B='_lick_2___', falling_event_B='_lick_2_off___', debounce=5)
 reward = Reward(lickometer.SOL_1 , reward_duration=50)
 
-speaker = Audio_board(board.port_7)
+audio = AudioStim(board.port_11)
 
 cameraTrigger = CameraPulse(pin=board.port_1.POW_B, trigger_rate=100, duty_cycle=50)
 
