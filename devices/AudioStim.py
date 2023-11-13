@@ -45,6 +45,7 @@ class AudioStim(_h.Audio_player):
 
     def cue(self, direction:int):
         "turn on the Speaker corresponding to the given direction"
+        assert direction < self.n_directions, 'direction is too big'
         for d in range(self.n_directions):
             spk = 'spk' + str(d)
             if d == direction:

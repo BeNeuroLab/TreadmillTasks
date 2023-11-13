@@ -67,8 +67,7 @@ def run_start():
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = 10
-    hw.speaker.set_volume(60)
-    hw.speaker.noise(20000)
+    hw.audio.set_volume(20)
 
 def run_end():
     """ 
@@ -79,7 +78,8 @@ def run_end():
     hw.reward.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
-    hw.speaker.off()
+    hw.audio.all_off()
+    hw.audio.stop()
     hw.off()
 
 # State behaviour functions.
@@ -88,7 +88,7 @@ def trial(event):
     "beginning of the trial"
     if event == 'entry':
         v.stim_dir = None  # reset stim_dir, otherwise any lick will be rewarded, even before LED presentation
-        hw.speaker.noise(20000)
+        hw.audio.cue(3)
         timed_goto_state('disengaged', v.max_IT_duration)
     elif event == 'motion' or event == 'lick':  # any action will start the trial
         goto_state('led_on')

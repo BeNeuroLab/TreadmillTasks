@@ -56,8 +56,7 @@ def run_start():
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = v.min_IT_movement___
-    hw.speaker.set_volume(50)
-    hw.speaker.noise(freq=20000)
+    hw.audio.set_volume(20)
 
 def run_end():
     """ 
@@ -69,23 +68,23 @@ def run_end():
     hw.motionSensor.off()
     hw.motionSensor.stop()
     hw.cameraTrigger.stop()
-    hw.speaker.off()
+    hw.audio.all_off()
+    hw.audio.stop()
     hw.off()
 
 # State behaviour functions.
 def trial(event):
     "start state behaviour"
     if event == 'entry':
-        hw.speaker.noise(freq=20000)
+        hw.audio.cue(3)
     if event == 'lick':
         goto_state('led_on')
 
 def led_on(event):
     "gap for the LED cue"
     if event == 'entry':
-        hw.speaker.off()
+        hw.audio.all_off()
         hw.LED_Delivery.cue_led(2)
-        hw.speaker.click()
         hw.reward.release()
         timed_goto_state('intertrial', v.led_len)  # half a seconf of LED cue
 
