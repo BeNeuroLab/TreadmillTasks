@@ -2,47 +2,50 @@ import pyb, machine, time
 import pyControl.hardware as _h
 
 
-class LEDStim:
-    "LED stimuli."
-    def __init__(self):
+class AudioStim:
+    "Audio stimuli from 7 speakers using PyControl's `Audio_player`"
+    def __init__(self, port: _h.Port):
         """PINS should be exactly `Ndirections` strings"""
-        self.n_directions = 5
-        pins = ('W45',    # Dir0
-                'W43',    # Dir1
-                'W24',    # Dir2
-                'W32',    # Dir3
-                'W30')    # Dir4
-        powerlines = ('W16', 'W50', 'W60', 'W22','W30','W32')  # this variable indicates the POW pins used so that their logic level is inverted automatically.
+        self.n_directions = 7
+        pins = ('W10',    # Dir0
+                'W68',    # Dir1
+                'W66',    # Dir2
+                'W58',    # Dir3
+                'W14',    # Dir4
+                'W64',    # Dir5
+                'W62')    # Dir6
+        #the POW pins used so that their logic level is inverted automatically.
+        powerlines = ('W23', 'W25', 'W62', 'W64','W30','W32')
 
         for d in range(self.n_directions):
-            led = 'led' + str(d)
-            setattr(self, led, _h.Digital_output(pin=pins[d], inverted=pins[d] in powerlines))
-            getattr(self, led).off()
+            spk = 'spk' + str(d)
+            setattr(self, spk, _h.Digital_output(pin=pins[d], inverted=pins[d] in powerlines))
+            getattr(self, spk).off()
 
     def all_off(self):
-        "turn off all LEDs"
+        "turn off all Speakers"
         for d in range(self.n_directions):
-            led = 'led' + str(d)
-            getattr(self, led).off()
+            spk = 'spk' + str(d)
+            getattr(self, spk).off()
 
     def all_on(self):
-        "turn on all LEDs"
+        "turn on all the Speakers"
         for d in range(self.n_directions):
-            led = 'led' + str(d)
-            getattr(self, led).on()
+            spk = 'spk' + str(d)
+            getattr(self, spk).on()
 
-    def cue_led(self, direction:int):
-        "turn on the LED corresponding to the given direction"
+    def cue_spk(self, direction:int):
+        "turn on the Speaker corresponding to the given direction"
         for d in range(self.n_directions):
-            led = 'led' + str(d)
+            spk = 'spk' + str(d)
             if d == direction:
-                getattr(self, led).on()
+                getattr(self, spk).on()
             else:
-                getattr(self, led).off()
+                getattr(self, spk).off()
 
     def cue_array(self, arr:list):
-        "turn on the LEDs corresponding to the given directions in `arr`"
+        "turn on the all the speakers corresponding to the given directions in `arr`"
         self.all_off()
         for d in arr:
-            led = 'led' + str(d)
-            getattr(self, led).on()
+            spk = 'spk' + str(d)
+            getattr(self, spk).on()
