@@ -43,7 +43,6 @@ v.led_direction = -1
 
 
 # intertrial params
-v.min_IT_movement = 10  # cm - must be a multiple of 5
 v.min_IT_duration = 3 * second
 v.max_IT_duration = 25 * second
 v.n_lick___ = 5
@@ -51,8 +50,8 @@ v.n_motion___ = 0
 
 # trial params
 v.max_led_duration = 10 * second
-v.min_motion = 5  # cm - minimum distance to trigger an event
-v.distance_to_target = 40  # cm - must be a multiple of 5
+v.min_motion = 10  # cm - minimum distance to trigger an event
+v.distance_to_target = 50  # cm - must be a multiple of 5
 v.max_motion___ = int(v.distance_to_target / v.min_motion)
 v.target_angle_tolerance = math.pi / 4  # rad
 v.run_angle = 0
