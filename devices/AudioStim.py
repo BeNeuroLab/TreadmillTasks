@@ -7,7 +7,7 @@ class AudioStim(Audio_player):
     def __init__(self, port: _h.Port):
         """PINS should be exactly `Ndirections` strings"""
         super().__init__(port)
-        self.set_enabled(self, left=True, right=False)  # only left channel is soldered to the speakers
+        self.set_enabled(left=True, right=False)  # only left channel is soldered to the speakers
         self.set_volume(25)  # Between 1 - 30
         utime.sleep_ms(20)  # wait for the audio player to be ready
 
