@@ -1,6 +1,6 @@
 import utime
 import pyControl.hardware as _h
-
+from devices._audio_player import Audio_player
 
 class AudioStim(_h.Audio_player):
     "Audio stimuli from 7 speakers using PyControl's `Audio_player`"
