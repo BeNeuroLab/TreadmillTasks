@@ -16,7 +16,7 @@ class AudioStim(Audio_player):
                 'W68',    # Dir1
                 'W66',    # Dir2
                 'W58',    # Dir3
-                'W14',    # Dir4
+                'W56',    # Dir4
                 'W64',    # Dir5
                 'W62')    # Dir6
         #the POW pins used so that their logic level is inverted automatically.
