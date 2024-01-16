@@ -33,6 +33,7 @@ class AudioStim(Audio_player):
 
     def start(self):
         "start playing"
+        self.all_off()
         self.command(0x0D)
 
     def stop(self):
