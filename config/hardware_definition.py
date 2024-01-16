@@ -12,12 +12,12 @@ motionSensor = MotionDetector(name='MotSen1', event='motion',
                               calib_coef=1, threshold=1, sampling_rate=100)
 
 LED_Delivery = LEDStim()
+LED_Delivery.all_off()
 
 lickometer = Lickometer(lick_port=board.port_6, sol_port=board.port_4, rising_event_A='lick', debounce=5)
 reward = Reward(lickometer.SOL_1 , reward_duration=50)
 
 audio = AudioStim(board.port_11)
-speaker = Audio_board(board.port_7) 
 
 cameraTrigger = CameraPulse(pin=board.port_1.POW_B, trigger_rate=100, duty_cycle=50)
 
