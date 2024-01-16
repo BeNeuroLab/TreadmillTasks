@@ -31,6 +31,14 @@ class AudioStim(Audio_player):
         self.play(folder_num = 1, file_num = 3)  # Play file 1 from folder 1.
         utime.sleep_ms(20)  # wait for the audio player to be ready
 
+    def start(self):
+        "start playing"
+        self.command(0x0D)
+
+    def stop(self):
+        "stop the playback"
+        self.command(0x0C)  # reset the module
+
     def all_off(self):
         "turn off all Speakers"
         for d in range(self.n_directions):
