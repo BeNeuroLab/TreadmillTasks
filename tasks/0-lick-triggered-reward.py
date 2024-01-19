@@ -14,7 +14,6 @@ states = ['intertrial',
           'led_on']
 
 events = ['lick',
-          'motion',
           'session_timer']
 
 initial_state = 'trial'
@@ -37,7 +36,7 @@ v.y___ = 0
 
 # trial params
 v.trial_len = 3 * second
-v.led_len = 500 * ms
+v.led_len = 1 * second
 
 
 
@@ -84,18 +83,18 @@ def led_on(event):
     "gap for the LED cue"
     if event == 'entry':
         hw.audio.cue(3)
-        hw.led.cue(2)
         hw.reward.release()
-        timed_goto_state('intertrial', v.led_len)  # half a seconf of LED cue
+        timed_goto_state('intertrial', v.led_len)  # half a second of cues aligned
 
 def intertrial(event):
     "intertrial"
     if event == 'entry':
         hw.led.all_off()
+        hw.audio.all_off()
         v.trial_number += 1
 
         print('{}, reward_number'.format(v.trial_number))
-        timed_goto_state('trial', v.trial_len)  # enforcing min 1s between rewards
+        timed_goto_state('trial', v.trial_len)  # enforcing min 3s between rewards
 
 # State independent behaviour.
 def all_states(event):
