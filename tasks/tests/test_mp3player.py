@@ -65,7 +65,7 @@ def trial(event):
         timed_goto_state('gap', 2*second)
         hw.audio.cue(v.n_lick___)
         try:
-            hw.led.cue_led(v.n_lick___)
+            hw.led.cue(v.n_lick___)
         except: pass
 
 def gap(event):

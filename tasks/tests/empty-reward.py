@@ -49,7 +49,7 @@ def cue_random_led(LedDevice: LEDStim):
     """
     stim_dir = randint(0, LedDevice.n_directions - 1)
     LedDevice.all_off()
-    LedDevice.cue_led(stim_dir)
+    LedDevice.cue(stim_dir)
     print('{}, LED_direction'.format(stim_dir))
 
     return stim_dir

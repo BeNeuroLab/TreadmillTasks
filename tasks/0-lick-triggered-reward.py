@@ -75,15 +75,16 @@ def run_end():
 def trial(event):
     "start state behaviour"
     if event == 'entry':
-        hw.audio.cue(3)
+        hw.audio.all_off()
+        hw.led.cue(3)
     if event == 'lick':
         goto_state('led_on')
 
 def led_on(event):
     "gap for the LED cue"
     if event == 'entry':
-        hw.audio.all_off()
-        hw.led.cue_led(2)
+        hw.audio.cue(3)
+        hw.led.cue(2)
         hw.reward.release()
         timed_goto_state('intertrial', v.led_len)  # half a seconf of LED cue
 

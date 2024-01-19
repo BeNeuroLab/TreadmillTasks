@@ -31,7 +31,7 @@ class LEDStim:
             led = 'led' + str(d)
             getattr(self, led).on()
 
-    def cue_led(self, direction:int):
+    def cue(self, direction:int):
         "turn on the LED corresponding to the given direction"
         for d in range(self.n_directions):
             led = 'led' + str(d)

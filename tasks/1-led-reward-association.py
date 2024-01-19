@@ -46,7 +46,7 @@ def cue_random_led(LedDevice: LEDStim):
     """
     stim_dir = randint(0, LedDevice.n_directions - 1)
     LedDevice.all_off()
-    LedDevice.cue_led(stim_dir)
+    LedDevice.cue(stim_dir)
     print('{}, LED_direction'.format(stim_dir))
 
     return stim_dir
@@ -96,7 +96,7 @@ def trial(event):
 def led_on(event):
     "turn on the led"
     if event == 'entry':
-        hw.led.cue_led(2)
+        hw.led.cue(2)
         timed_goto_state('gap', v.max_led_duration)
         if v.n_lick___ >= 3:
             hw.reward.release()
