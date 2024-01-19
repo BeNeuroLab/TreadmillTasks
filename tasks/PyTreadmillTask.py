@@ -125,7 +125,7 @@ def run_start():
     hw.cameraTrigger.start()
     hw.speaker.set_volume(90)
     hw.speaker.off()
-    hw.LED_Delivery.all_off()
+    hw.led.all_off()
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
 
@@ -135,7 +135,7 @@ def run_end():
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.LED_Delivery.all_off()
+    hw.led.all_off()
     hw.cameraTrigger.stop()
     hw.reward.stop()
     hw.speaker.off()
@@ -149,7 +149,7 @@ def intertrial(event):
         # coded so that at this point, there is clean air coming from every direction
         set_timer('IT_timer', v.min_IT_duration)
         set_timer('max_IT_timer', v.max_IT_duration)
-        hw.LED_Delivery.all_off()
+        hw.led.all_off()
         v.IT_duration_done___ = False
         v.IT_distance_done___ = False
         hw.motionSensor.threshold = v.min_IT_movement # to issue an event only after enough movement
@@ -164,7 +164,7 @@ def intertrial(event):
         if v.IT_duration_done___:
             goto_state('trial_start')
     elif event == 'max_IT_timer':
-        hw.LED_Delivery.all_on()
+        hw.led.all_on()
 
 
 def trial_start(event):
@@ -172,7 +172,7 @@ def trial_start(event):
     if event == 'entry':
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
-        hw.LED_Delivery.all_off()
+        hw.led.all_off()
         timed_goto_state('stim_on', v.trial_start_len)
 
 
@@ -180,7 +180,7 @@ def stim_on(event):
     "stimulation onset"
     if event == 'entry':
         set_timer('stim_timer', v.stim_len)
-        v.led_direction = cue_random_led(hw.LED_Delivery)
+        v.led_direction = cue_random_led(hw.led)
         hw.motionSensor.threshold = v.distance_to_target
     elif event == 'exit':
         disarm_timer('stim_timer')
@@ -203,7 +203,7 @@ def stim_on(event):
 def reward(event):
     "reward state"
     if event == 'lick':  # any lick-related event during reward
-        hw.LED_Delivery.all_off()
+        hw.led.all_off()
         hw.reward.release()
         goto_state('intertrial')
 
@@ -211,7 +211,7 @@ def reward(event):
 def penalty(event):
     "penalty state"
     if event == 'entry':
-        hw.LED_Delivery.all_on()
+        hw.led.all_on()
         print('{}, penalty_on'.format(get_current_time()))
         timed_goto_state('intertrial', v.penalty_duration)
 

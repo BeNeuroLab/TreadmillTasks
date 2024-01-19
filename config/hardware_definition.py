@@ -11,8 +11,8 @@ motionSensor = MotionDetector(name='MotSen1', event='motion',
                               cs2=board.port_2.DIO_B,
                               calib_coef=1, threshold=1, sampling_rate=100)
 
-LED_Delivery = LEDStim()
-LED_Delivery.all_off()
+led = LEDStim()
+led.all_off()
 
 lickometer = Lickometer(lick_port=board.port_6, sol_port=board.port_4, rising_event_A='lick', debounce=5)
 reward = Reward(lickometer.SOL_1 , reward_duration=50)

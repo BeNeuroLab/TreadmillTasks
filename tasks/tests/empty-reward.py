@@ -70,7 +70,7 @@ def run_end():
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.LED_Delivery.all_off()
+    hw.led.all_off()
     hw.reward.sol.off()
     hw.motionSensor.off()
     hw.off()

@@ -53,7 +53,7 @@ def run_start():
     hw.audio.start()
     hw.motionSensor.record()
     hw.cameraTrigger.start()
-    hw.LED_Delivery.all_off()
+    hw.led.all_off()
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = v.min_IT_movement___
@@ -63,7 +63,7 @@ def run_end():
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.LED_Delivery.all_off()
+    hw.led.all_off()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.motionSensor.stop()
@@ -83,14 +83,14 @@ def led_on(event):
     "gap for the LED cue"
     if event == 'entry':
         hw.audio.all_off()
-        hw.LED_Delivery.cue_led(2)
+        hw.led.cue_led(2)
         hw.reward.release()
         timed_goto_state('intertrial', v.led_len)  # half a seconf of LED cue
 
 def intertrial(event):
     "intertrial"
     if event == 'entry':
-        hw.LED_Delivery.all_off()
+        hw.led.all_off()
         v.trial_number += 1
 
         print('{}, reward_number'.format(v.trial_number))

@@ -63,7 +63,7 @@ def run_start():
     set_timer('session_timer', v.session_duration, True)
     hw.cameraTrigger.start()
     hw.motionSensor.record()
-    hw.LED_Delivery.all_off()
+    hw.led.all_off()
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = 10
@@ -74,7 +74,7 @@ def run_end():
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.LED_Delivery.all_off()
+    hw.led.all_off()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
@@ -96,7 +96,7 @@ def trial(event):
 def led_on(event):
     "turn on the led"
     if event == 'entry':
-        hw.LED_Delivery.cue_led(2)
+        hw.led.cue_led(2)
         timed_goto_state('gap', v.max_led_duration)
         if v.n_lick___ >= 3:
             hw.reward.release()
@@ -104,19 +104,19 @@ def led_on(event):
             v.reward_number += 1
             print('{}, reward_number'.format(v.reward_number))
     elif event == 'exit':
-        hw.LED_Delivery.all_off()
+        hw.led.all_off()
 
 def disengaged(event):
     "disengaged state"
     if event == 'entry':
-        hw.LED_Delivery.all_off()
+        hw.led.all_off()
     elif event =='motion' or event == 'lick':
         goto_state('led_on')
 
 def gap(event):
     "penalty state"
     if event == 'entry':
-        hw.LED_Delivery.all_off()
+        hw.led.all_off()
         timed_goto_state('trial', randint(v.max_led_duration, v.max_IT_duration))
 
 
