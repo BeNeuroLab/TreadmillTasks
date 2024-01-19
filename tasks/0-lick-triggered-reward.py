@@ -50,13 +50,13 @@ v.led_len = 500 * ms
 def run_start():
     "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
+    hw.audio.start()
     hw.motionSensor.record()
     hw.cameraTrigger.start()
     hw.LED_Delivery.all_off()
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = v.min_IT_movement___
-    hw.audio.set_volume(20)
 
 def run_end():
     """ 
@@ -68,7 +68,6 @@ def run_end():
     hw.motionSensor.off()
     hw.motionSensor.stop()
     hw.cameraTrigger.stop()
-    hw.audio.all_off()
     hw.audio.stop()
     hw.off()
 

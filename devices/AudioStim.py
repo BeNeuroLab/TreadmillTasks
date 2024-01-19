@@ -38,6 +38,7 @@ class AudioStim(Audio_player):
 
     def stop(self):
         "stop the playback"
+        self.all_off()
         self.command(0x0C)  # reset the module
 
     def all_off(self):
