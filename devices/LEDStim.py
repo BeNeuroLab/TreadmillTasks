@@ -6,43 +6,39 @@ class LEDStim:
     "LED stimuli."
     def __init__(self):
         """PINS should be exactly `Ndirections` strings"""
-        self.n_directions = 5
-        pins = ('W45',    # Dir0
-                'W43',    # Dir1
-                'W24',    # Dir2
-                'W32',    # Dir3
-                'W30')    # Dir4
-        powerlines = ('W16', 'W50', 'W60', 'W22','W30','W32')  # this variable indicates the POW pins used so that their logic level is inverted automatically.
 
-        for d in range(self.n_directions):
-            led = 'led' + str(d)
-            setattr(self, led, _h.Digital_output(pin=pins[d], inverted=pins[d] in powerlines))
-            getattr(self, led).off()
+        pins = {1:'W45',    # Dir1
+                2:'W43',    # Dir2
+                3:'W24',    # Dir3
+                4:'W32',    # Dir4
+                5:'W30'}    # Dir5
+        # this variable indicates the POW pins used so that their logic level is inverted automatically.
+        powerlines = ('W16', 'W50', 'W60', 'W22','W30','W32')
+        self.LEDs = {}
+        for direction, pin in pins.items():
+            self.LEDs[direction] = _h.Digital_output(pin=pin, inverted=pin in powerlines)
+            self.LEDs[direction].off()
 
     def all_off(self):
         "turn off all LEDs"
-        for d in range(self.n_directions):
-            led = 'led' + str(d)
-            getattr(self, led).off()
+        for led in self.LEDs.values():
+            led.off()
 
     def all_on(self):
         "turn on all LEDs"
-        for d in range(self.n_directions):
-            led = 'led' + str(d)
-            getattr(self, led).on()
+        for led in self.LEDs.values():
+            led.on()
 
     def cue(self, direction:int):
         "turn on the LED corresponding to the given direction"
-        for d in range(self.n_directions):
-            led = 'led' + str(d)
+        for d, led in self.LEDs.items():
             if d == direction:
-                getattr(self, led).on()
+                led.on()
             else:
-                getattr(self, led).off()
+                led.off()
 
     def cue_array(self, arr:list):
         "turn on the LEDs corresponding to the given directions in `arr`"
         self.all_off()
         for d in arr:
-            led = 'led' + str(d)
-            getattr(self, led).on()
+            self.LEDs[d].on()
