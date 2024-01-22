@@ -44,7 +44,7 @@ def run_end():
 
 # State behaviour functions.
 def intertrial(event):
-    # hw.led.all_off()
+    # hw.visual.all_off()
     set_timer('timer', 5 * second, True)
 
 

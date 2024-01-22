@@ -1,4 +1,4 @@
-# PyTreadmillTask
+# 1-led-reward-association: lining speakers with the mid LED and release the reward.
 
 from pyControl.utility import *
 import hardware_definition as hw
@@ -34,22 +34,6 @@ v.n_lick___ = 5
 v.max_IT_duration = 10 * second
 v.max_led_duration = 3 * second
 
-# -------------------------------------------------------------------------
-# State-independent Code
-# -------------------------------------------------------------------------
-
-
-def cue_random_led(LedDevice: LEDStim):
-    """
-    Cues 1 LED at a random direction
-    """
-    stim_dir = randint(0, LedDevice.n_directions - 1)
-    LedDevice.all_off()
-    LedDevice.cue(stim_dir)
-    print('{}, LED_direction'.format(stim_dir))
-
-    return stim_dir
-
 
 # -------------------------------------------------------------------------
 # Define behaviour.
@@ -60,20 +44,20 @@ def cue_random_led(LedDevice: LEDStim):
 def run_start():
     "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
+    hw.audio.start()
     hw.cameraTrigger.start()
     hw.motionSensor.record()
-    hw.led.all_off()
+    hw.visual.all_off()
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = 10
-    hw.audio.set_volume(20)
 
 def run_end():
     """ 
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.led.all_off()
+    hw.visual.all_off()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
@@ -95,7 +79,7 @@ def trial(event):
 def led_on(event):
     "turn on the led"
     if event == 'entry':
-        hw.led.cue(2)
+        hw.visual.cue(2)
         timed_goto_state('gap', v.max_led_duration)
         if v.n_lick___ >= 3:
             hw.reward.release()
@@ -103,19 +87,19 @@ def led_on(event):
             v.reward_number += 1
             print('{}, reward_number'.format(v.reward_number))
     elif event == 'exit':
-        hw.led.all_off()
+        hw.visual.all_off()
 
 def disengaged(event):
     "disengaged state"
     if event == 'entry':
-        hw.led.all_off()
+        hw.visual.all_off()
     elif event =='motion' or event == 'lick':
         goto_state('led_on')
 
 def gap(event):
     "penalty state"
     if event == 'entry':
-        hw.led.all_off()
+        hw.visual.all_off()
         timed_goto_state('trial', randint(v.max_led_duration, v.max_IT_duration))
 
 

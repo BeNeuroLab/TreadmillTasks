@@ -109,7 +109,7 @@ def run_start():
     hw.cameraTrigger.start()
     hw.speaker.set_volume(60)
     hw.speaker.off()
-    hw.led.all_off()
+    hw.visual.all_off()
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
 
@@ -118,7 +118,7 @@ def run_end():
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.led.all_off()
+    hw.visual.all_off()
     hw.reward.stop()
     hw.cameraTrigger.stop()
     hw.speaker.off()
@@ -135,7 +135,7 @@ def led_on(event):
         v.trial_number += 1
         print('{}, trial_number'.format(v.trial_number))
         timed_goto_state('disengaged', v.max_IT_duration)
-        v.led_direction = cue_left_right(hw.led)
+        v.led_direction = cue_left_right(hw.visual)
         v.n_motion___ = 0
         hw.motionSensor.delta_x = 0
         hw.motionSensor.delta_y = 0
@@ -153,7 +153,7 @@ def led_on(event):
 def reward(event):
     "reward state"
     if event == 'entry':
-        hw.led.all_off()
+        hw.visual.all_off()
         hw.speaker.off()
         hw.motionSensor.threshold = v.distance_to_target
         if v.n_lick___ >= 3:
@@ -167,7 +167,7 @@ def reward(event):
 def penalty(event):
     "penalty state"
     if event == 'entry':
-        hw.led.all_off()
+        hw.visual.all_off()
         hw.speaker.off()
         hw.speaker.set_volume(55)
         hw.speaker.sine(5000)
@@ -177,7 +177,7 @@ def penalty(event):
 def disengaged(event):
     "disengaged state"
     if event == 'entry':
-        hw.led.all_off()
+        hw.visual.all_off()
         hw.speaker.off()
     elif event =='motion' or event == 'lick':
         goto_state('led_on')
