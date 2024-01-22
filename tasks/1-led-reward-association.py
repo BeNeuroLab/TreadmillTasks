@@ -3,7 +3,6 @@
 from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
-import math
 
 # -------------------------------------------------------------------------
 # States and events.
