@@ -26,7 +26,7 @@ initial_state = 'trial'
 # general parameters
 
 # session params
-v.session_duration = 20 * minute
+v.session_duration = 15 * minute
 v.reward_duration = 30 * ms
 v.trial_number = 0
 
