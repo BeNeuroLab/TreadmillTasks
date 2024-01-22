@@ -11,7 +11,7 @@ import math
 
 states = ['intertrial',
           'trial',
-          'led_on']
+          'reward']
 
 events = ['lick',
           'session_timer']
@@ -77,9 +77,9 @@ def trial(event):
         hw.audio.all_off()
         hw.visual.cue(3)
     if event == 'lick':
-        goto_state('led_on')
+        goto_state('reward')
 
-def led_on(event):
+def reward(event):
     "gap for the visual cue"
     if event == 'entry':
         hw.audio.cue(3)
