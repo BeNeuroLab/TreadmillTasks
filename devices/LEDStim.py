@@ -5,8 +5,7 @@ import pyControl.hardware as _h
 class LEDStim:
     "LED stimuli."
     def __init__(self):
-        """PINS should be exactly `Ndirections` strings"""
-
+        "initialise the LED pins"
         pins = {1:'W45',    # Dir1
                 2:'W43',    # Dir2
                 3:'W24',    # Dir3
