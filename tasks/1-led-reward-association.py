@@ -13,6 +13,7 @@ states = ['trial',
           'reward']
 
 events = ['lick',
+          'motion',
           'session_timer',
           'spk_update']
 
