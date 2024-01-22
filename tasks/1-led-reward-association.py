@@ -9,13 +9,12 @@ from devices import *
 # -------------------------------------------------------------------------
 
 states = ['trial',
-          'led_on',
-          'disengaged',
-          'gap']
+          'rand_spk',
+          'reward']
 
 events = ['lick',
           'session_timer',
-          'motion']
+          'spk_update']
 
 initial_state = 'trial'
 
@@ -29,10 +28,10 @@ initial_state = 'trial'
 v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
 v.reward_number = 0
-v.stim_dir = None
+v.spk_dir = 0
 v.n_lick___ = 5
-v.max_IT_duration = 10 * second
-v.max_led_duration = 3 * second
+v.IT_duration = 3 * second
+v.audio_bin = 500 * ms
 
 
 # -------------------------------------------------------------------------
@@ -70,37 +69,34 @@ def run_end():
 def trial(event):
     "beginning of the trial"
     if event == 'entry':
-        v.stim_dir = None  # reset stim_dir, otherwise any lick will be rewarded, even before LED presentation
-        hw.audio.cue(3)
-        timed_goto_state('disengaged', v.max_IT_duration)
-    elif event == 'motion' or event == 'lick':  # any action will start the trial
-        goto_state('led_on')
+        hw.visual.cue(3)
+        v.spk_dir = 0
+        timed_goto_state('rand_spk', v.audio_bin)
 
-def led_on(event):
+def rand_spk(event):
     "turn on the led"
     if event == 'entry':
-        hw.visual.cue(2)
-        timed_goto_state('gap', v.max_led_duration)
+        hw.audio.cue(v.spk_dir)
+        set_timer('spk_update', v.audio_bin, False)
+    elif event == 'spk_update':
+        if v.spk_dir == 3:  # speaker lines up with LED
+            timed_goto_state('reward', v.audio_bin)
+        else:
+            set_timer('spk_update', v.audio_bin, False)
+
+
+def reward (event):
+    "reward state"
+    if event == 'entry':
+        hw.audio.all_off()
+        hw.visual.all_off()
         if v.n_lick___ >= 3:
             hw.reward.release()
             v.n_lick___ = 0
             v.reward_number += 1
             print('{}, reward_number'.format(v.reward_number))
-    elif event == 'exit':
-        hw.visual.all_off()
-
-def disengaged(event):
-    "disengaged state"
-    if event == 'entry':
-        hw.visual.all_off()
-    elif event =='motion' or event == 'lick':
-        goto_state('led_on')
-
-def gap(event):
-    "penalty state"
-    if event == 'entry':
-        hw.visual.all_off()
-        timed_goto_state('trial', randint(v.max_led_duration, v.max_IT_duration))
+        v.n_lick___ = 0
+        timed_goto_state('trial', v.IT_duration)
 
 
 # State independent behaviour.
@@ -112,6 +108,9 @@ def all_states(event):
     """
     if event == "lick":
         v.n_lick___ += 1
+    elif event == 'spk_update':
+        v.spk_dir = randint(0,6)
+        print('{}, spk_direction'.format(v.spk_dir))
+        hw.audio.cue(v.spk_dir)
     elif event == 'session_timer':
-        hw.motionSensor.stop()
         stop_framework()
