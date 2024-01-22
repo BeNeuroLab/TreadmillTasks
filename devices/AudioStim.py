@@ -10,7 +10,6 @@ class AudioStim(Audio_player):
         self.set_volume(25)  # Between 1 - 30
         utime.sleep_ms(20)  # wait for the audio player to be ready
 
-        self.n_directions = 7
         pins = ('W10',    # Dir0
                 'W68',    # Dir1
                 'W66',    # Dir2
