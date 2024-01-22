@@ -26,7 +26,7 @@ class AudioStim(Audio_player):
             self.speakers[direction].off()
 
         # Start playing the audio file
-        self.play(folder_num = 1, file_num = 3)  # Play file 1 from folder 3.
+        self.play(folder_num = 1, file_num = 1)  # Play file 1 from folder 3.
         utime.sleep_ms(20)  # wait for the audio player to be ready
 
     def start(self):
