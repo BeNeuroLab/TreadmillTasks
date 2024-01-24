@@ -26,6 +26,8 @@ initial_state = 'trial'
 
 # session params
 v.session_duration = 45 * minute
+v.leave_out_trials_delay = 20 * minute
+v.start_leave_out_trials = False
 v.reward_duration = 30 * ms
 v.reward_number = 0
 v.n_lick___ = 5
@@ -72,7 +74,10 @@ def trial(event):
         set_timer('spk_update', v.audio_bin, False)
     elif event == 'spk_update':
         if hw.audio.active == hw.visual.active:  # speaker lines up with LED
-            timed_goto_state('reward', v.audio_bin)
+            if v.start_leave_out_trials is False:
+                timed_goto_state('reward', v.audio_bin)
+            else:
+                timed_goto_state('cond_reward', v.audio_bin)
         else:
             set_timer('spk_update', v.audio_bin, False)
 
@@ -89,6 +94,8 @@ def reward (event):
         v.n_lick___ = 0
         timed_goto_state('trial', v.IT_duration)
 
+def cond_reward(event):
+    
 
 # State independent behaviour.
 def all_states(event):
@@ -100,6 +107,9 @@ def all_states(event):
     if event == "lick":
         v.n_lick___ += 1
     elif event == 'spk_update':
+        if v.start_leave_out_trials if False:
+            if v.session_duration - timer_remaining('session_timer') > v.leave_out_trials_delay:
+                v.start_leave_out_trials = True
         spk_dir = randint(0,6)
         print('{}, spk_direction'.format(spk_dir))
         hw.audio.cue(spk_dir)
