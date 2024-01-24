@@ -14,6 +14,8 @@ class LEDStim:
         # this variable indicates the POW pins used so that their logic level is inverted automatically.
         powerlines = ('W16', 'W50', 'W60', 'W22','W30','W32')
         self.LEDs = {}
+        self.active = []
+
         for direction, pin in pins.items():
             self.LEDs[direction] = _h.Digital_output(pin=pin, inverted=pin in powerlines)
             self.LEDs[direction].off()
@@ -22,22 +24,23 @@ class LEDStim:
         "turn off all LEDs"
         for led in self.LEDs.values():
             led.off()
+        self.active = []
 
     def all_on(self):
         "turn on all LEDs"
         for led in self.LEDs.values():
             led.on()
+        self.active = list(self.LEDs.keys())
 
     def cue(self, direction:int):
         "turn on the LED corresponding to the given direction"
-        for d, led in self.LEDs.items():
-            if d == direction:
-                led.on()
-            else:
-                led.off()
+        self.all_off()
+        self.LEDs[direction].on()
+        self.active = [direction]
 
     def cue_array(self, arr:list):
         "turn on the LEDs corresponding to the given directions in `arr`"
         self.all_off()
         for d in arr:
             self.LEDs[d].on()
+            self.active.append(d)

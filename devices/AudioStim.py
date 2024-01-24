@@ -20,7 +20,7 @@ class AudioStim(Audio_player):
         #the POW pins used so that their logic level is inverted automatically.
         powerlines = ('W23', 'W25', 'W62', 'W64','W30','W32')
         self.speakers = {}
-
+        self.active = []
         for direction, pin in pins.items():
             self.speakers[direction] = _h.Digital_output(pin=pin, inverted=pin in powerlines)
             self.speakers[direction].off()
@@ -43,23 +43,24 @@ class AudioStim(Audio_player):
         "turn off all Speakers"
         for spk in self.speakers.values():
             spk.off()
+        self.active = []
 
     def all_on(self):
         "turn on all the Speakers"
         for spk in self.speakers.values():
             spk.on()
-
+        self.active = list(self.speakers.keys())
 
     def cue(self, direction:int):
         "turn on the Speaker corresponding to the given direction"
-        for d, spk in self.speakers.items():
-            if d == direction:
-                spk.on()
-            else:
-                spk.off()
+        self.all_off()
+        self.speakers[direction].on()
+        self.active = [direction]
 
     def cue_array(self, arr:list):
         "turn on the all the speakers corresponding to the given directions in `arr`"
         self.all_off()
+        self.active = []
         for d in arr:
             self.speakers[d].on()
+            self.active.append(d)

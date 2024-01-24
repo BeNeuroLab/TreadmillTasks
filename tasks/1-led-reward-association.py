@@ -93,7 +93,6 @@ def reward (event):
         hw.visual.all_off()
         if v.n_lick___ >= 3:
             hw.reward.release()
-            v.n_lick___ = 0
             v.reward_number += 1
             print('{}, reward_number'.format(v.reward_number))
         v.n_lick___ = 0
