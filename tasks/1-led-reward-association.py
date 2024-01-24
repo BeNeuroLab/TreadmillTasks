@@ -9,7 +9,6 @@ from devices import *
 # -------------------------------------------------------------------------
 
 states = ['trial',
-          'rand_spk',
           'reward']
 
 events = ['lick',
@@ -29,7 +28,6 @@ initial_state = 'trial'
 v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
 v.reward_number = 0
-v.spk_dir = 0
 v.n_lick___ = 5
 v.IT_duration = 3 * second
 v.audio_bin = 500 * ms
@@ -68,19 +66,12 @@ def run_end():
 # State behaviour functions.
 
 def trial(event):
-    "beginning of the trial"
+    "led at first, and spk update at later bins"
     if event == 'entry':
         hw.visual.cue(3)
-        v.spk_dir = 0
-        timed_goto_state('rand_spk', v.audio_bin)
-
-def rand_spk(event):
-    "turn on the led"
-    if event == 'entry':
-        hw.audio.cue(v.spk_dir)
         set_timer('spk_update', v.audio_bin, False)
     elif event == 'spk_update':
-        if v.spk_dir == 3:  # speaker lines up with LED
+        if hw.audio.active == hw.visual.active:  # speaker lines up with LED
             timed_goto_state('reward', v.audio_bin)
         else:
             set_timer('spk_update', v.audio_bin, False)
@@ -109,8 +100,8 @@ def all_states(event):
     if event == "lick":
         v.n_lick___ += 1
     elif event == 'spk_update':
-        v.spk_dir = randint(0,6)
-        print('{}, spk_direction'.format(v.spk_dir))
-        hw.audio.cue(v.spk_dir)
+        spk_dir = randint(0,6)
+        print('{}, spk_direction'.format(spk_dir))
+        hw.audio.cue(spk_dir)
     elif event == 'session_timer':
         stop_framework()
