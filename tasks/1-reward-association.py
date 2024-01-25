@@ -29,6 +29,7 @@ v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
 v.reward_number = 0
 v.n_lick___ = 5
+v.n_avail_reward___ = 0
 v.IT_duration = 3 * second
 v.audio_bin = 500 * ms
 
@@ -82,8 +83,9 @@ def reward (event):
     if event == 'entry':
         hw.audio.all_off()
         hw.visual.all_off()
-        if v.n_lick___ >= 3:
+        if v.n_avail_reward___ <= 5:
             hw.reward.release()
+            v.n_avail_reward___ += 1
             v.reward_number += 1
             print('{}, reward_number'.format(v.reward_number))
         v.n_lick___ = 0
@@ -99,6 +101,8 @@ def all_states(event):
     """
     if event == "lick":
         v.n_lick___ += 1
+        if v.n_lick___ > 2:
+            v.n_avail_reward___ = 0
     elif event == 'spk_update':
         spk_dir = randint(0,6)
         print('{}, spk_direction'.format(spk_dir))
