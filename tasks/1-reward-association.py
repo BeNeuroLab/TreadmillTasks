@@ -9,7 +9,8 @@ from devices import *
 # -------------------------------------------------------------------------
 
 states = ['trial',
-          'reward']
+          'reward',
+          'penalty']
 
 events = ['lick',
           'motion',
@@ -30,6 +31,8 @@ v.reward_duration = 30 * ms
 v.reward_number = 0
 v.n_lick___ = 5
 v.n_avail_reward___ = 0
+v.max_bin = 8  # no reward after 8 rand speakers are activated (~30% trials)
+v.consecutive_bins___ = 0
 v.IT_duration = 3 * second
 v.audio_bin = 500 * ms
 
@@ -71,9 +74,12 @@ def trial(event):
     if event == 'entry':
         hw.visual.cue(3)
         set_timer('spk_update', v.audio_bin, False)
+        v.consecutive_bins___ = 0
     elif event == 'spk_update':
         if hw.audio.active == hw.visual.active:  # speaker lines up with LED
             timed_goto_state('reward', v.audio_bin)
+        elif v.consecutive_bins___ >= v.max_bin:  # no reward after 8 rand speakers are activated
+            timed_goto_state('penalty', v.audio_bin)
         else:
             set_timer('spk_update', v.audio_bin, False)
 
@@ -91,6 +97,13 @@ def reward (event):
         v.n_lick___ = 0
         timed_goto_state('trial', v.IT_duration)
 
+def penalty (event):
+    "penalty state"
+    if event == 'entry':
+        hw.audio.all_off()
+        hw.visual.all_off()
+        v.n_lick___ = 0
+        timed_goto_state('trial', v.IT_duration)
 
 # State independent behaviour.
 def all_states(event):
@@ -107,5 +120,6 @@ def all_states(event):
         spk_dir = randint(0,6)
         print('{}, spk_direction'.format(spk_dir))
         hw.audio.cue(spk_dir)
+        v.consecutive_bins___ += 1
     elif event == 'session_timer':
         stop_framework()
