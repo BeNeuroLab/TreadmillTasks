@@ -49,14 +49,16 @@ def next_spk():
     """
     assert len(hw.audio.active)==1, 'one one speaker can be active'
     spks = sorted(list(hw.audio.speakers.keys()))
+    active_led = hw.visual.active[0]
+
     now = hw.audio.active[0]
     out = [now]  # current one
     if now == spks[-1]:  # last spk is active
-        out.extend([spks[-2], spks[-2]])
+        out.append(spks[-2])
     elif now == spks[0]:
-        out.extend([spks[1], spks[1]])  # first spk is active
+        out.append(spks[1])  # first spk is active
     else:
-        out.extend([spks[now - 1], spks[now + 1]])
+        out.append(now + 1 if active_led > now else now - 1)
     return out
 
 
