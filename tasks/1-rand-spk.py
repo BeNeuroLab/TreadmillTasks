@@ -37,10 +37,31 @@ v.IT_duration = 3 * second
 v.audio_bin = 500 * ms
 
 
+
+# -------------------------------------------------------------------------
+# State-independent Code
+# -------------------------------------------------------------------------
+
+def next_spk():
+    """
+    returns the possible next speakers, [same, before, after]
+    """
+    assert len(hw.audio.active)==1, 'one one speaker can be active'
+    spks = sorted(list(hw.audio.speakers.keys()))
+    now = hw.audio.active[0]
+    out = [now]  # current one
+    if now == spk[-1]:  # last spk is active
+        out.append(spk[-2])
+    elif now == spk[0]:
+        out.append(spks[1])  # first spk is active
+    else:
+        out.extend([spks[now - 1], spks[now + 1]])
+    return out
+
+
 # -------------------------------------------------------------------------
 # Define behaviour.
 # -------------------------------------------------------------------------
-
 
 # Run start and stop behaviour.
 def run_start():
@@ -117,7 +138,7 @@ def all_states(event):
         if v.n_lick___ > 2:
             v.n_avail_reward___ = 0
     elif event == 'spk_update':
-        spk_dir = randint(0,6)
+        spk_dir = choice(next_spk())
         print('{}, spk_direction'.format(spk_dir))
         hw.audio.cue(spk_dir)
         v.consecutive_bins___ += 1
