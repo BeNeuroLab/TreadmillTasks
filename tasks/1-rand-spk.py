@@ -51,9 +51,9 @@ def next_spk():
     now = hw.audio.active[0]
     out = [now]  # current one
     if now == spk[-1]:  # last spk is active
-        out.append(spk[-2])
+        out.extend([spk[-2], spk[-2]])
     elif now == spk[0]:
-        out.append(spks[1])  # first spk is active
+        out.extend([spks[1], spks[1]])  # first spk is active
     else:
         out.extend([spks[now - 1], spks[now + 1]])
     return out
