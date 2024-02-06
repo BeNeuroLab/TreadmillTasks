@@ -33,7 +33,8 @@ v.n_lick___ = 5
 v.n_avail_reward___ = 0
 v.max_bin = 8  # no reward after 8 rand speakers are activated (~30% trials)
 v.consecutive_bins___ = 0
-v.IT_duration = 3 * second
+v.IT_duration = 5 * second
+v.penalty_duration = 10 * second
 v.audio_bin = 500 * ms
 
 
@@ -125,7 +126,7 @@ def penalty (event):
         hw.audio.all_off()
         hw.visual.all_off()
         v.n_lick___ = 0
-        timed_goto_state('trial', v.IT_duration)
+        timed_goto_state('trial', v.penalty_duration)
 
 # State independent behaviour.
 def all_states(event):
