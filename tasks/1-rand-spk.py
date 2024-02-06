@@ -94,9 +94,8 @@ def run_end():
 def trial(event):
     "led at first, and spk update at later bins"
     if event == 'entry':
-        v_cue = choice([2,4])  # choose from led 2 or 4 as the cue
-        hw.visual.cue(v_cue)
-        hw.audio.cue(0 if v_cue==2 else 6)  # start the trial from one of the end speakers, near the led
+        hw.visual.cue(choice([2,4]))  # choose from led 2 or 4 as the cue
+        hw.audio.cue(choice([0,6]))  # start the trial from one of the end speakers
         set_timer('spk_update', v.audio_bin, False)
         v.consecutive_bins___ = 0
     elif event == 'spk_update':
