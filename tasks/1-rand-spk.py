@@ -32,11 +32,12 @@ v.reward_number = 0
 v.n_lick___ = 5
 v.n_avail_reward___ = 0
 v.max_bin = 8  # no reward after 8 rand speakers are activated (~30% trials)
-v.consecutive_bins___ = 0
+v.last_spk___ = 0
 v.IT_duration = 5 * second
 v.penalty_duration = 10 * second
 v.audio_bin = 500 * ms
 
+v.spks___ = sorted(list(hw.audio.speakers.keys()))
 
 
 # -------------------------------------------------------------------------
@@ -45,20 +46,18 @@ v.audio_bin = 500 * ms
 
 def next_spk():
     """
-    returns the possible next speakers, [same, before, after]
+    returns the next speakers, in either direction of the sweep
     """
     assert len(hw.audio.active)==1, 'one one speaker can be active'
-    spks = sorted(list(hw.audio.speakers.keys()))
-    active_led = hw.visual.active[0]
+    active_spk = hw.audio.active[0]
 
-    now = hw.audio.active[0]
-    out = [now]  # current one
-    if now == spks[-1]:  # last spk is active
-        out.append(spks[-2])
-    elif now == spks[0]:
-        out.append(spks[1])  # first spk is active
+    if active_spk > v.last_spk___:
+        out = active_spk + 1 if active_spk < v.spks___[-1] else active_spk - 1
+        v.last_spk___ = active_spk
     else:
-        out.append(now + 1 if active_led > now else now - 1)
+        out = active_spk - 1 if active_spk > v.spks___[0] else active_spk + 1
+        v.last_spk___ = active_spk
+
     return out
 
 
