@@ -76,7 +76,7 @@ def trial(event):
     "start state behaviour"
     if event == 'entry':
         hw.audio.all_off()
-        hw.visual.cue(3)
+        hw.visual.all_off()
     if event == 'lick':
         goto_state('reward')
 
@@ -84,6 +84,7 @@ def reward(event):
     "gap for the visual cue"
     if event == 'entry':
         hw.audio.cue(3)
+        hw.visual.cue(3)
         hw.reward.release()
         timed_goto_state('intertrial', v.led_len)  # half a second of cues aligned
 
