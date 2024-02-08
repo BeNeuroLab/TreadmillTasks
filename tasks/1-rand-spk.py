@@ -33,8 +33,9 @@ v.n_lick___ = 5
 v.n_avail_reward___ = 0
 v.max_bin = 8  # no reward after 8 rand speakers are activated (~30% trials)
 v.last_spk___ = 0
+v.next_spk___ = 6
+v.next_led___ = 2
 v.IT_duration = 5 * second
-v.penalty_duration = 10 * second
 v.audio_bin = 500 * ms
 
 v.spks___ = sorted(list(hw.audio.speakers.keys()))
@@ -53,10 +54,10 @@ def next_spk():
 
     if active_spk > v.last_spk___:
         out = active_spk + 1 if active_spk < v.spks___[-1] else active_spk - 1
-        v.last_spk___ = active_spk
     else:
         out = active_spk - 1 if active_spk > v.spks___[0] else active_spk + 1
-        v.last_spk___ = active_spk
+    
+    v.last_spk___ = active_spk
 
     return out
 
@@ -95,15 +96,12 @@ def run_end():
 def trial(event):
     "led at first, and spk update at later bins"
     if event == 'entry':
-        hw.visual.cue(choice([2,4]))  # choose from led 2 or 4 as the cue
-        hw.audio.cue(choice([0,6]))  # start the trial from one of the end speakers
+        hw.visual.cue(v.next_led___)  # choose from led 2 or 4 as the cue
+        hw.audio.cue(v.next_spk___)  # start the trial from one of the end speakers
         set_timer('spk_update', v.audio_bin, False)
-        v.consecutive_bins___ = 0
     elif event == 'spk_update':
         if hw.audio.active == hw.visual.active:  # speaker lines up with LED
-            timed_goto_state('reward', v.audio_bin)
-        elif v.consecutive_bins___ >= v.max_bin:  # no reward after 8 rand speakers are activated
-            timed_goto_state('penalty', v.audio_bin)
+            goto_state('reward')
         else:
             set_timer('spk_update', v.audio_bin, False)
 
@@ -111,23 +109,23 @@ def trial(event):
 def reward (event):
     "reward state"
     if event == 'entry':
-        hw.audio.all_off()
-        hw.visual.all_off()
-        if v.n_avail_reward___ <= 5:
-            hw.reward.release()
-            v.n_avail_reward___ += 1
-            v.reward_number += 1
-            print('{}, reward_number'.format(v.reward_number))
-        v.n_lick___ = 0
         timed_goto_state('trial', v.IT_duration)
+        v.next_spk___ = next_spk()  # in case of no lick, sweep continues
+        v.next_led___ = hw.visual.active[0]
+    elif event == 'lick':
+        hw.reward.release()
+        v.reward_number += 1
+        print('{}, reward_number'.format(v.reward_number))
+        goto_state('intertrial')
 
-def penalty (event):
-    "penalty state"
+def intertrial (event):
+    "intertrial state"
     if event == 'entry':
         hw.audio.all_off()
         hw.visual.all_off()
-        v.n_lick___ = 0
-        timed_goto_state('trial', v.penalty_duration)
+        timed_goto_state('trial', v.IT_duration)
+        v.next_spk___ = choice([0,6])  # in case of lick, restart sweep
+        v.next_led___ = choice([2,4])
 
 # State independent behaviour.
 def all_states(event):
@@ -136,14 +134,9 @@ def all_states(event):
     irrespective of the state the machine is in.
     Executes before the state code.
     """
-    if event == "lick":
-        v.n_lick___ += 1
-        if v.n_lick___ > 2:
-            v.n_avail_reward___ = 0
-    elif event == 'spk_update':
-        spk_dir = choice(next_spk())
+    if event == 'spk_update':
+        spk_dir = next_spk()
         print('{}, spk_direction'.format(spk_dir))
         hw.audio.cue(spk_dir)
-        v.consecutive_bins___ += 1
     elif event == 'session_timer':
         stop_framework()
