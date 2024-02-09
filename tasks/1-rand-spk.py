@@ -95,7 +95,11 @@ def trial(event):
     if event == 'entry':
         hw.visual.cue(v.next_led___)  # choose from led 2 or 4 as the cue
         hw.audio.cue(v.next_spk___)  # start the trial from one of the end speakers
+        print('{}, spk_direction'.format(v.next_spk___))
+        print('{}, led_direction'.format(v.next_led___))
         set_timer('spk_update', v.audio_bin, False)
+    elif event == 'lick':  # lick during the trial delays the sweep
+        reset_timer('spk_update', 2 * v.audio_bin, False)
     elif event == 'spk_update':
         if hw.audio.active == hw.visual.active:  # speaker lines up with LED
             goto_state('reward')
