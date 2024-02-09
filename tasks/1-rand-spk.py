@@ -10,6 +10,7 @@ from devices import *
 
 states = ['trial',
           'reward',
+          'intertrial',
           'penalty']
 
 events = ['lick',
