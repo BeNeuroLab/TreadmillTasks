@@ -129,7 +129,7 @@ def intertrial (event):
         hw.visual.all_off()
         timed_goto_state('trial', v.IT_duration)
         v.next_spk___ = choice([0,6])  # in case of lick, restart sweep
-        v.next_led___ = choice([2,4])
+        v.next_led___ = choice(v.leds___)  # led chosen randomly, use `choice([2,4])` for a simpler version
 
 # State independent behaviour.
 def all_states(event):
