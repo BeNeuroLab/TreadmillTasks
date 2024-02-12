@@ -36,8 +36,8 @@ v.x___ = 0
 v.y___ = 0
 
 # trial params
-v.trial_len = 3 * second
-v.led_len = 1 * second
+v.trial_len = 4 * second
+v.led_len = 2 * second
 
 
 
