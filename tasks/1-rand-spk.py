@@ -28,7 +28,7 @@ initial_state = 'trial'
 
 # session params
 v.session_duration = 45 * minute
-v.reward_duration = 30 * ms
+v.reward_duration = 25 * ms
 v.reward_number = 0
 v.last_spk___ = 0
 v.next_spk___ = 6
