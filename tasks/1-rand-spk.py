@@ -37,6 +37,7 @@ v.IT_duration = 5 * second
 v.audio_bin = 500 * ms
 
 v.spks___ = sorted(list(hw.audio.speakers.keys()))
+v.leds___ = sorted(list(hw.visual.LEDs.keys()))
 
 
 # -------------------------------------------------------------------------
