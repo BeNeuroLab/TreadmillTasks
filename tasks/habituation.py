@@ -25,14 +25,12 @@ initial_state = 'trial'
 
 # session params
 v.session_duration = 15 * minute
-v.IT_duration = 1 * second
+v.IT_duration = 0.5 * second
 v.trial_len = 10 * second
 
 v.last_spk___ = 1
 v.next_spk___ = 5
 v.next_led___ = 5
-
-# v.audio_bin = 500 * ms
 
 v.spks___ = sorted(list(hw.audio.speakers.keys()))
 v.leds___ = sorted(list(hw.visual.LEDs.keys()))
@@ -74,7 +72,6 @@ def run_start():
     hw.motionSensor.record()
     hw.visual.all_off()
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
-    hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = 10
 
 def run_end():
@@ -83,7 +80,6 @@ def run_end():
     Turn off all hardware outputs.
     """
     hw.visual.all_off()
-    hw.reward.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
     hw.audio.all_off()
@@ -101,15 +97,14 @@ def trial(event):
         print('{}, led_direction'.format(v.next_led___))
         timed_goto_state('intertrial', v.trial_len)
     
-        
 def intertrial (event):
     "gap between stimulus"
     if event == 'entry':
-        hw.audio.all_off()
-        hw.visual.all_off()
         # Continue sweep
         v.next_spk___ = next_spk()  # sweep continues
         v.next_led___ = v.next_spk___ # turn on the same LED
+        hw.audio.all_off()
+        hw.visual.all_off()
         timed_goto_state('trial', v.IT_duration)
 
 
