@@ -33,7 +33,7 @@ v.reward_number = 0
 v.last_spk___ = 0
 v.next_spk___ = 6
 v.next_led___ = 2
-v.reward_duration = 2 * second
+v.reward_len = 2 * second
 v.IT_duration = 7 * second
 v.timeout = 3 * second
 v.audio_bin = 500 * ms
@@ -115,7 +115,7 @@ def trial(event):
 def reward (event):
     "reward state"
     if event == 'entry':
-        timed_goto_state('trial', v.reward_duration)
+        timed_goto_state('trial', v.reward_len)
         v.next_spk___ = next_spk()  # in case of no lick, sweep continues
         v.next_led___ = hw.visual.active[0]
     elif event == 'lick':
