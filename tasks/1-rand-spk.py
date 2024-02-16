@@ -33,11 +33,12 @@ v.reward_number = 0
 v.last_spk___ = 0
 v.next_spk___ = 6
 v.next_led___ = 2
-v.IT_duration = 5 * second
-v.audio_bin = 500 * ms
+v.IT_duration = 7 * second
+v.sound_bins = (500 * ms, 1 * second, 1.5 * second, 2 * second, 2.5 * second, 3 * second)
 
 v.spks___ = sorted(list(hw.audio.speakers.keys()))
 v.leds___ = sorted(list(hw.visual.LEDs.keys()))
+
 
 
 # -------------------------------------------------------------------------
@@ -99,21 +100,21 @@ def trial(event):
         hw.audio.cue(v.next_spk___)  # start the trial from one of the end speakers
         print('{}, spk_direction'.format(v.next_spk___))
         print('{}, led_direction'.format(v.next_led___))
-        set_timer('spk_update', v.audio_bin, False)
+        set_timer('spk_update', choice(v.sound_bins), False)
     
     elif event == 'lick':  # lick during the trial delays the sweep
-        reset_timer('spk_update', 2 * v.audio_bin, False)
+        reset_timer('spk_update', v.sound_bins[-1], False)
     
     elif event == 'spk_update':
         if hw.audio.active == hw.visual.active:  # speaker lines up with LED
             goto_state('reward')
         else:
-            set_timer('spk_update', v.audio_bin, False)
+            set_timer('spk_update', choice(v.sound_bins), False)
 
 def reward (event):
     "reward state"
     if event == 'entry':
-        timed_goto_state('trial', v.IT_duration)
+        timed_goto_state('trial', v.sound_bins[-1])
         v.next_spk___ = next_spk()  # in case of no lick, sweep continues
         v.next_led___ = hw.visual.active[0]
     elif event == 'lick':
