@@ -103,7 +103,7 @@ def trial(event):
         set_timer('spk_update', choice(v.sound_bins), False)
     
     elif event == 'lick':  # lick during the trial delays the sweep
-        reset_timer('spk_update', v.sound_bins[-1], False)
+        reset_timer('spk_update', v.sound_bins[1], False)
     
     elif event == 'spk_update':
         if hw.audio.active == hw.visual.active:  # speaker lines up with LED
