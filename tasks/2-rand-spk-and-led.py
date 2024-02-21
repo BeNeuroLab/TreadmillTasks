@@ -10,8 +10,7 @@ from devices import *
 
 states = ['trial',
           'reward',
-          'intertrial',
-          'penalty']
+          'intertrial']
 
 events = ['lick',
           'motion',
@@ -36,9 +35,9 @@ v.next_led___ = 2
 v.IT_duration = 7 * second
 v.sound_bins = (500 * ms, 1 * second, 1.5 * second, 2 * second, 2.5 * second, 3 * second)
 
-
 v.spks___ = sorted(list(hw.audio.speakers.keys()))
 v.leds___ = sorted(list(hw.visual.LEDs.keys()))
+
 
 
 # -------------------------------------------------------------------------
