@@ -3,6 +3,7 @@
 from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
+import utime
 
 # -------------------------------------------------------------------------
 # States and events.
@@ -66,13 +67,15 @@ def next_spk():
 # Run start and stop behaviour.
 def run_start():
     "Code here is executed when the framework starts running."
-    set_timer('session_timer', v.session_duration, True)
+    hw.audio.set_volume(20)  # Between 1 - 30
+    utime.sleep_ms(20)  # wait for the audio player to be ready
     hw.audio.start()
     hw.cameraTrigger.start()
     hw.motionSensor.record()
     hw.visual.all_off()
-    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.motionSensor.threshold = 10
+    set_timer('session_timer', v.session_duration, True)
+    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
 
 def run_end():
     """ 
