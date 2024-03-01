@@ -54,7 +54,7 @@ def next_spk():
         out = active_spk + 1 if active_spk < v.spks___[-1] else active_spk - 1
     else:
         out = active_spk - 1 if active_spk > v.spks___[0] else active_spk + 1
-
+    
     v.last_spk___ = active_spk
 
     return out
