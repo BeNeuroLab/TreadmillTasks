@@ -54,7 +54,7 @@ def next_spk():
         out = active_spk + 1 if active_spk < v.spks___[-1] else active_spk - 1
     else:
         out = active_spk - 1 if active_spk > v.spks___[0] else active_spk + 1
-    
+
     v.last_spk___ = active_spk
 
     return out
@@ -67,15 +67,18 @@ def next_spk():
 # Run start and stop behaviour.
 def run_start():
     "Code here is executed when the framework starts running."
-    hw.audio.set_volume(20)  # Between 1 - 30
+    hw.audio.set_volume(15)  # Between 1 - 30
     utime.sleep_ms(20)  # wait for the audio player to be ready
-    hw.audio.start()
-    hw.cameraTrigger.start()
     hw.motionSensor.record()
-    hw.visual.all_off()
     hw.motionSensor.threshold = 10
+    hw.audio.start()
+    hw.visual.all_off()
+    hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
+    print('{}, before_camera_trigger'.format(get_current_time()))
+    hw.cameraTrigger.start()
+
 
 def run_end():
     """ 
