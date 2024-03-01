@@ -36,7 +36,7 @@ v.last_spk___ = 0
 v.next_spk___ = 6
 v.next_led___ = 2
 v.IT_duration = 7 * second
-v.sound_bins = (500 * ms, 1 * second, 1.5 * second, 2 * second, 2.5 * second, 3 * second)
+v.sound_bins = (2 * second, 2.5 * second, 3 * second)
 
 v.spks___ = [1, 3, 5]  # 3 spread-out speaker
 v.leds___ = v.spks___
