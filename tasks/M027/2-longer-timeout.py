@@ -35,7 +35,7 @@ v.next_led___ = 2
 v.IT_duration = 7 * second
 v.sound_bins = (500 * ms, 1 * second, 1.5 * second, 2 * second, 2.5 * second, 3 * second)
 
-v.spks___ = sorted(list(hw.audio.speakers.keys()))
+v.spks___ = sorted(list(hw.sound.speakers.keys()))
 v.leds___ = sorted(list(hw.light.LEDs.keys()))
 
 
@@ -48,8 +48,8 @@ def next_spk():
     """
     returns the next speakers, in either direction of the sweep
     """
-    assert len(hw.audio.active)==1, 'one one speaker can be active'
-    active_spk = hw.audio.active[0]
+    assert len(hw.sound.active)==1, 'one one speaker can be active'
+    active_spk = hw.sound.active[0]
 
     if active_spk > v.last_spk___:
         out = active_spk + 1 if active_spk < v.spks___[-1] else active_spk - 1
@@ -69,7 +69,7 @@ def next_spk():
 def run_start():
     "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
-    hw.audio.start()
+    hw.sound.start()
     hw.cameraTrigger.start()
     hw.motionSensor.record()
     hw.light.all_off()
@@ -86,8 +86,8 @@ def run_end():
     hw.reward.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
-    hw.audio.all_off()
-    hw.audio.stop()
+    hw.sound.all_off()
+    hw.sound.stop()
     hw.off()
 
 # State behaviour functions.
@@ -96,7 +96,7 @@ def trial(event):
     "led at first, and spk update at later bins"
     if event == 'entry':
         hw.light.cue(v.next_led___)  # choose from led 2 or 4 as the cue
-        hw.audio.cue(v.next_spk___)  # start the trial from one of the end speakers
+        hw.sound.cue(v.next_spk___)  # start the trial from one of the end speakers
         print('{}, spk_direction'.format(v.next_spk___))
         print('{}, led_direction'.format(v.next_led___))
         set_timer('spk_update', choice(v.sound_bins), False)
@@ -105,7 +105,7 @@ def trial(event):
         reset_timer('spk_update', v.sound_bins[1], False)
     
     elif event == 'spk_update':
-        if hw.audio.active == hw.light.active:  # speaker lines up with LED
+        if hw.sound.active == hw.light.active:  # speaker lines up with LED
             goto_state('reward')
         else:
             set_timer('spk_update', choice(v.sound_bins), False)
@@ -125,7 +125,7 @@ def reward (event):
 def intertrial (event):
     "intertrial state"
     if event == 'entry':
-        hw.audio.all_off()
+        hw.sound.all_off()
         hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
         v.next_spk___ = choice([0,6])  # in case of lick, restart sweep
@@ -141,6 +141,6 @@ def all_states(event):
     if event == 'spk_update':
         spk_dir = next_spk()
         print('{}, spk_direction'.format(spk_dir))
-        hw.audio.cue(spk_dir)
+        hw.sound.cue(spk_dir)
     elif event == 'session_timer':
         stop_framework()

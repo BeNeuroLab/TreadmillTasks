@@ -42,7 +42,7 @@ v.max_led_duration = 3 * second
 def run_start():
     "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
-    hw.audio.command(0x0D)
+    hw.sound.command(0x0D)
 
 def run_end():
     """ 
@@ -53,8 +53,8 @@ def run_end():
     hw.reward.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
-    hw.audio.all_off()
-    hw.audio.stop()
+    hw.sound.all_off()
+    hw.sound.stop()
     hw.off()
 
 # State behaviour functions.
@@ -63,7 +63,7 @@ def trial(event):
     "beginning of the trial"
     if event == 'entry':
         timed_goto_state('gap', 2*second)
-        hw.audio.cue(v.n_lick___)
+        hw.sound.cue(v.n_lick___)
         try:
             hw.light.cue(v.n_lick___)
         except: pass
@@ -75,7 +75,7 @@ def gap(event):
         if  v.n_lick___ >=6:
             v.n_lick___ =0
         else:  v.n_lick___ +=1
-        hw.audio.all_off()
+        hw.sound.all_off()
 
 
 # State independent behaviour.

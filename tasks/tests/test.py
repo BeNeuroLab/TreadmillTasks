@@ -34,7 +34,7 @@ def run_start():
     print('internal th={}'.format(hw.motionSensor._threshold))
     print('external th={}'.format(hw.motionSensor.threshold))
     print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
-    hw.audio.set_volume(29)
+    hw.sound.set_volume(29)
 def run_end():
     # Code here is executed when the framework stops running.
     # Turn off all hardware outputs.
@@ -56,7 +56,7 @@ def all_states(event):
         # read the motion registers and and append the variables
         print('dX={}; dY={}'.format(hw.motionSensor.x / hw.motionSensor.sensor_x.CPI * 2.54, hw.motionSensor.y / hw.motionSensor.sensor_x.CPI * 2.54))
     elif event == 'timer':
-            hw.audio.set_volume(0)
+            hw.sound.set_volume(0)
             set_timer('timer', 5 * second, True)
     elif event == 'session_timer':
         hw.motionSensor.stop()

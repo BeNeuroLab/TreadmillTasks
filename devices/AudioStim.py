@@ -3,7 +3,7 @@ import pyControl.hardware as _h
 from devices._audio_player import Audio_player
 
 class AudioStim(Audio_player):
-    "Audio stimuli from 7 speakers using PyControl's `Audio_player`"
+    "sound stimuli from 7 speakers using PyControl's `Audio_player`"
     def __init__(self, port: _h.Port):
         "initialise the audio player"
         super().__init__(port)

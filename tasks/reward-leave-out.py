@@ -44,7 +44,7 @@ v.audio_bin = 500 * ms
 def run_start():
     "Code here is executed when the framework starts running."
     set_timer('session_timer', v.session_duration, True)
-    hw.audio.start()
+    hw.sound.start()
     hw.cameraTrigger.start()
     hw.motionSensor.record()
     hw.light.all_off()
@@ -61,8 +61,8 @@ def run_end():
     hw.reward.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
-    hw.audio.all_off()
-    hw.audio.stop()
+    hw.sound.all_off()
+    hw.sound.stop()
     hw.off()
 
 # State behaviour functions.
@@ -73,7 +73,7 @@ def trial(event):
         hw.light.cue(3)
         set_timer('spk_update', v.audio_bin, False)
     elif event == 'spk_update':
-        if hw.audio.active == hw.light.active:  # speaker lines up with LED
+        if hw.sound.active == hw.light.active:  # speaker lines up with LED
             if v.start_leave_out_trials is False:
                 timed_goto_state('reward', v.audio_bin)
             else:
@@ -85,7 +85,7 @@ def trial(event):
 def reward (event):
     "reward state"
     if event == 'entry':
-        hw.audio.all_off()
+        hw.sound.all_off()
         hw.light.all_off()
         if v.n_lick___ >= 3:
             hw.reward.release()
@@ -112,6 +112,6 @@ def all_states(event):
                 v.start_leave_out_trials = True
         spk_dir = randint(0,6)
         print('{}, spk_direction'.format(spk_dir))
-        hw.audio.cue(spk_dir)
+        hw.sound.cue(spk_dir)
     elif event == 'session_timer':
         stop_framework()

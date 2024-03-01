@@ -49,11 +49,11 @@ v.led_len = 500 * ms
 # Run start and stop behaviour.
 def run_start():
     "Code here is executed when the framework starts running."
-    hw.audio.set_volume(15)  # Between 1 - 30
+    hw.sound.set_volume(15)  # Between 1 - 30
     utime.sleep_ms(20)  # wait for the audio player to be ready
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.min_IT_movement___
-    hw.audio.start()
+    hw.sound.start()
     hw.light.all_off()
     hw.reward.reward_duration = v.reward_duration
     hw.cameraTrigger.start()
@@ -72,18 +72,18 @@ def run_end():
     hw.motionSensor.off()
     hw.motionSensor.stop()
     hw.cameraTrigger.stop()
-    hw.audio.stop()
+    hw.sound.stop()
     hw.off()
 
 # State behaviour functions.
 def trial(event):
     "start state behaviour"
     if event == 'entry':
-        hw.audio.all_off()
+        hw.sound.all_off()
         hw.light.all_off()
     if event == 'lick':
         if withprob(0.5):
-            hw.audio.cue(3)
+            hw.sound.cue(3)
         else:
             hw.light.cue(3)
         timed_goto_state('reward', v.led_len)
@@ -98,7 +98,7 @@ def intertrial(event):
     "intertrial"
     if event == 'entry':
         hw.light.all_off()
-        hw.audio.all_off()
+        hw.sound.all_off()
         v.trial_number += 1
 
         print('{}, reward_number'.format(v.trial_number))

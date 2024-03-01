@@ -106,7 +106,7 @@ def audio_mapping(d_a: float) -> float:
 def audio_feedback(speaker,
                    dX: float, dY: float,
                    stim_direction: int):
-    """ Set the audio frequency based on the direction of the movement. """
+    """ Set the sound frequency based on the direction of the movement. """
     angle = math.atan2(dY, dX)
     audio_freq = audio_mapping(angle - v.target_angle___[stim_direction])
     speaker.sine(audio_freq)
