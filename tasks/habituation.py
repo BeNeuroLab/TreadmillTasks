@@ -26,17 +26,15 @@ initial_state = 'trial'
 
 # session params
 v.session_duration = 15 * minute
-v.IT_duration = 0.5 * second
-v.trial_len = 10 * second
+v.IT_duration = 2 * second
+v.trial_len = 5 * second
 
 v.last_spk___ = 1
 v.next_spk___ = 5
 v.next_led___ = 5
 
-v.spks___ = sorted(list(hw.sound.speakers.keys()))
-v.leds___ = sorted(list(hw.light.LEDs.keys()))
-# Remove side speakers
-v.spks___ = v.spks___[1:-1]
+v.spks___ = [1, 3, 5]  # 3 spread-out speaker
+v.leds___ = v.spks___
 
 
 # -------------------------------------------------------------------------
