@@ -10,13 +10,13 @@ from devices import *
 
 states = ['trial',
           'reward',
-          'intertrial',
-          'penalty']
+          'intertrial']
 
 events = ['lick',
           'motion',
           'session_timer',
-          'spk_update']
+          'spk_update',
+          'trial_timeout']
 
 initial_state = 'trial'
 
@@ -109,15 +109,22 @@ def trial(event):
         print('{}, spk_direction'.format(v.next_spk___))
         print('{}, led_direction'.format(v.next_led___))
         set_timer('spk_update', choice(v.sound_bins), False)
-    
+        set_timer('trial_timeout', 20 * second, False)  # timeout in case of no engagement
+
+    elif event == 'exit':
+        disarm_timer('trial_timeout')
+
     elif event == 'lick':  # lick during the trial delays the sweep
         reset_timer('spk_update', v.sound_bins[0], False)
-    
+
     elif event == 'spk_update':
         if hw.audio.active == hw.visual.active:  # speaker lines up with LED
             goto_state('reward')
         else:
             set_timer('spk_update', choice(v.sound_bins), False)
+
+    elif event == 'trial_timeout':
+        goto_state('intertrial')
 
 def reward (event):
     "reward state"
@@ -137,10 +144,9 @@ def intertrial (event):
         hw.audio.all_off()
         hw.visual.all_off()
         timed_goto_state('trial', v.IT_duration)
-        v.next_spk___ = choice([0,6])  # in case of lick, restart sweep
+        v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])  # in case of lick, restart sweep
         v.next_led___ = choice(v.leds___)  # led chosen randomly, use `choice([2,4])` for a simpler version
 
-# State independent behaviour.
 def all_states(event):
     """
     Code here will be executed when any event occurs,
