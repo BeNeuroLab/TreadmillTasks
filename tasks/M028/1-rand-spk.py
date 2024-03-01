@@ -29,6 +29,8 @@ initial_state = 'trial'
 # session params
 v.session_duration = 45 * minute
 v.reward_duration = 25 * ms
+v.min_IT_movement___ = 10  # cm - must be a multiple of 5
+
 v.reward_number = 0
 v.last_spk___ = 0
 v.next_spk___ = 6
@@ -36,8 +38,8 @@ v.next_led___ = 2
 v.IT_duration = 7 * second
 v.sound_bins = (500 * ms, 1 * second, 1.5 * second, 2 * second, 2.5 * second, 3 * second)
 
-v.spks___ = sorted(list(hw.audio.speakers.keys()))
-v.leds___ = sorted(list(hw.visual.LEDs.keys()))
+v.spks___ = [1, 3, 5]  # 3 spread-out speaker
+v.leds___ = v.spks___
 
 
 
@@ -51,15 +53,16 @@ def next_spk():
     """
     assert len(hw.audio.active)==1, 'one one speaker can be active'
     active_spk = hw.audio.active[0]
+    active_spk_idx = v.spks___.index(active_spk)
 
     if active_spk > v.last_spk___:
-        out = active_spk + 1 if active_spk < v.spks___[-1] else active_spk - 1
+        out = active_spk_idx + 1 if active_spk < v.spks___[-1] else active_spk_idx - 1
     else:
-        out = active_spk - 1 if active_spk > v.spks___[0] else active_spk + 1
+        out = active_spk_idx - 1 if active_spk > v.spks___[0] else active_spk_idx + 1
     
     v.last_spk___ = active_spk
 
-    return out
+    return v.spks___[out]
 
 
 # -------------------------------------------------------------------------
@@ -69,14 +72,19 @@ def next_spk():
 # Run start and stop behaviour.
 def run_start():
     "Code here is executed when the framework starts running."
-    set_timer('session_timer', v.session_duration, True)
-    hw.audio.start()
-    hw.cameraTrigger.start()
+    hw.audio.set_volume(15)  # Between 1 - 30
+    utime.sleep_ms(20)  # wait for the audio player to be ready
     hw.motionSensor.record()
+    hw.motionSensor.threshold = v.min_IT_movement___
+    hw.audio.start()
     hw.visual.all_off()
-    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
-    hw.motionSensor.threshold = 10
+    hw.cameraTrigger.start()
+    set_timer('session_timer', v.session_duration, True)
+    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
+    print('{}, before_camera_trigger'.format(get_current_time()))
+    hw.cameraTrigger.start()
+
 
 def run_end():
     """ 
