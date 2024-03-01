@@ -54,7 +54,7 @@ def run_start():
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.min_IT_movement___
     hw.audio.start()
-    hw.visual.all_off()
+    hw.light.all_off()
     hw.reward.reward_duration = v.reward_duration
     hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
@@ -67,7 +67,7 @@ def run_end():
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.visual.all_off()
+    hw.light.all_off()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.motionSensor.stop()
@@ -80,16 +80,16 @@ def trial(event):
     "start state behaviour"
     if event == 'entry':
         hw.audio.all_off()
-        hw.visual.all_off()
+        hw.light.all_off()
     if event == 'lick':
         if withprob(0.5):
             hw.audio.cue(3)
         else:
-            hw.visual.cue(3)
+            hw.light.cue(3)
         timed_goto_state('reward', v.led_len)
 
 def reward(event):
-    "gap for the visual cue"
+    "gap for the light cue"
     if event == 'entry':
         hw.reward.release()
         timed_goto_state('intertrial', v.led_len)
@@ -97,7 +97,7 @@ def reward(event):
 def intertrial(event):
     "intertrial"
     if event == 'entry':
-        hw.visual.all_off()
+        hw.light.all_off()
         hw.audio.all_off()
         v.trial_number += 1
 

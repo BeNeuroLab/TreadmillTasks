@@ -47,7 +47,7 @@ def run_start():
     hw.audio.start()
     hw.cameraTrigger.start()
     hw.motionSensor.record()
-    hw.visual.all_off()
+    hw.light.all_off()
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = 10
@@ -57,7 +57,7 @@ def run_end():
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.visual.all_off()
+    hw.light.all_off()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
@@ -70,10 +70,10 @@ def run_end():
 def trial(event):
     "led at first, and spk update at later bins"
     if event == 'entry':
-        hw.visual.cue(3)
+        hw.light.cue(3)
         set_timer('spk_update', v.audio_bin, False)
     elif event == 'spk_update':
-        if hw.audio.active == hw.visual.active:  # speaker lines up with LED
+        if hw.audio.active == hw.light.active:  # speaker lines up with LED
             if v.start_leave_out_trials is False:
                 timed_goto_state('reward', v.audio_bin)
             else:
@@ -86,7 +86,7 @@ def reward (event):
     "reward state"
     if event == 'entry':
         hw.audio.all_off()
-        hw.visual.all_off()
+        hw.light.all_off()
         if v.n_lick___ >= 3:
             hw.reward.release()
             v.reward_number += 1

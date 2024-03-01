@@ -77,7 +77,7 @@ def run_start():
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.min_IT_movement___
     hw.audio.start()
-    hw.visual.all_off()
+    hw.light.all_off()
     hw.reward.reward_duration = v.reward_duration
     hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
@@ -91,7 +91,7 @@ def run_end():
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.visual.all_off()
+    hw.light.all_off()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
@@ -104,7 +104,7 @@ def run_end():
 def trial(event):
     "led at first, and spk update at later bins"
     if event == 'entry':
-        hw.visual.cue(v.next_led___)  # choose from led 2 or 4 as the cue
+        hw.light.cue(v.next_led___)  # choose from led 2 or 4 as the cue
         hw.audio.cue(v.next_spk___)  # start the trial from one of the end speakers
         print('{}, spk_direction'.format(v.next_spk___))
         print('{}, led_direction'.format(v.next_led___))
@@ -118,7 +118,7 @@ def trial(event):
         reset_timer('spk_update', v.sound_bins[0], False)
 
     elif event == 'spk_update':
-        if hw.audio.active == hw.visual.active:  # speaker lines up with LED
+        if hw.audio.active == hw.light.active:  # speaker lines up with LED
             goto_state('reward')
         else:
             set_timer('spk_update', choice(v.sound_bins), False)
@@ -131,7 +131,7 @@ def reward (event):
     if event == 'entry':
         timed_goto_state('trial', v.sound_bins[-1])
         v.next_spk___ = next_spk()  # in case of no lick, sweep continues
-        v.next_led___ = hw.visual.active[0]
+        v.next_led___ = hw.light.active[0]
     elif event == 'lick':
         hw.reward.release()
         v.reward_number += 1
@@ -142,7 +142,7 @@ def intertrial (event):
     "intertrial state"
     if event == 'entry':
         hw.audio.all_off()
-        hw.visual.all_off()
+        hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
         v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])  # in case of lick, restart sweep
         v.next_led___ = choice(v.leds___)  # led chosen randomly, use `choice([2,4])` for a simpler version

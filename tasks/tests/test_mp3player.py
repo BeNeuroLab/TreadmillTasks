@@ -49,7 +49,7 @@ def run_end():
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.visual.all_off()
+    hw.light.all_off()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
@@ -65,7 +65,7 @@ def trial(event):
         timed_goto_state('gap', 2*second)
         hw.audio.cue(v.n_lick___)
         try:
-            hw.visual.cue(v.n_lick___)
+            hw.light.cue(v.n_lick___)
         except: pass
 
 def gap(event):

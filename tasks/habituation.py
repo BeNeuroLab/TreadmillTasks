@@ -34,7 +34,7 @@ v.next_spk___ = 5
 v.next_led___ = 5
 
 v.spks___ = sorted(list(hw.audio.speakers.keys()))
-v.leds___ = sorted(list(hw.visual.LEDs.keys()))
+v.leds___ = sorted(list(hw.light.LEDs.keys()))
 # Remove side speakers
 v.spks___ = v.spks___[1:-1]
 
@@ -72,7 +72,7 @@ def run_start():
     hw.motionSensor.record()
     hw.motionSensor.threshold = 10
     hw.audio.start()
-    hw.visual.all_off()
+    hw.light.all_off()
     hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
@@ -85,7 +85,7 @@ def run_end():
     Code here is executed when the framework stops running.
     Turn off all hardware outputs.
     """
-    hw.visual.all_off()
+    hw.light.all_off()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
     hw.audio.all_off()
@@ -95,9 +95,9 @@ def run_end():
 # State behaviour functions.
 
 def trial(event):
-    "visual and auditory stimulus"
+    "light and auditory stimulus"
     if event == 'entry':
-        hw.visual.cue(v.next_led___)
+        hw.light.cue(v.next_led___)
         hw.audio.cue(v.next_spk___)
         print('{}, spk_direction'.format(v.next_spk___))
         print('{}, led_direction'.format(v.next_led___))
@@ -110,7 +110,7 @@ def intertrial (event):
         v.next_spk___ = next_spk()  # sweep continues
         v.next_led___ = v.next_spk___ # turn on the same LED
         hw.audio.all_off()
-        hw.visual.all_off()
+        hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
 
 
