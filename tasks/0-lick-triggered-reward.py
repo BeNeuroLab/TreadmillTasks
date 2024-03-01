@@ -26,7 +26,7 @@ initial_state = 'trial'
 # general parameters
 
 # session params
-v.session_duration = 15 * minute
+v.session_duration = 20 * minute
 v.reward_duration = 30 * ms
 v.trial_number = 0
 
@@ -36,8 +36,8 @@ v.x___ = 0
 v.y___ = 0
 
 # trial params
-v.trial_len = 4 * second
-v.led_len = 2 * second
+v.trial_len = 5 * second
+v.led_len = 500 * ms
 
 
 
@@ -49,14 +49,18 @@ v.led_len = 2 * second
 # Run start and stop behaviour.
 def run_start():
     "Code here is executed when the framework starts running."
-    set_timer('session_timer', v.session_duration, True)
-    hw.audio.start()
+    hw.audio.set_volume(15)  # Between 1 - 30
+    utime.sleep_ms(20)  # wait for the audio player to be ready
     hw.motionSensor.record()
-    hw.cameraTrigger.start()
-    hw.visual.all_off()
-    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
-    hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.threshold = v.min_IT_movement___
+    hw.audio.start()
+    hw.visual.all_off()
+    hw.reward.reward_duration = v.reward_duration
+    hw.cameraTrigger.start()
+    set_timer('session_timer', v.session_duration, True)
+    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
+    print('{}, before_camera_trigger'.format(get_current_time()))
+    hw.cameraTrigger.start()
 
 def run_end():
     """ 
@@ -78,15 +82,17 @@ def trial(event):
         hw.audio.all_off()
         hw.visual.all_off()
     if event == 'lick':
-        goto_state('reward')
+        if withprob(0.5):
+            hw.audio.cue(3)
+        else:
+            hw.visual.cue(3)
+        timed_goto_state('reward', v.led_len)
 
 def reward(event):
     "gap for the visual cue"
     if event == 'entry':
-        hw.audio.cue(3)
-        hw.visual.cue(3)
         hw.reward.release()
-        timed_goto_state('intertrial', v.led_len)  # half a second of cues aligned
+        timed_goto_state('intertrial', v.led_len)
 
 def intertrial(event):
     "intertrial"
