@@ -33,8 +33,8 @@ v.min_IT_movement___ = 10  # cm - must be a multiple of 5
 
 v.reward_number = 0
 v.last_spk___ = 0
-v.next_spk___ = 6
-v.next_led___ = 2
+v.next_spk___ = 5
+v.next_led___ = 1
 v.IT_duration = 7 * second
 v.sound_bins = (2 * second, 2.5 * second, 3 * second)
 
