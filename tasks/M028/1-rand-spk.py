@@ -16,7 +16,7 @@ events = ['lick',
           'motion',
           'session_timer',
           'spk_update',
-          'trial_timeout']
+          'trialt_imeout']
 
 initial_state = 'trial'
 
@@ -79,8 +79,8 @@ def run_start():
     hw.sound.start()
     hw.light.all_off()
     hw.reward.reward_duration = v.reward_duration
-    hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
+    set_timer('trial_timeout', 20 * second, False)  # timeout in case of no engagement
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
@@ -109,13 +109,10 @@ def trial(event):
         print('{}, spk_direction'.format(v.next_spk___))
         print('{}, led_direction'.format(v.next_led___))
         set_timer('spk_update', choice(v.sound_bins), False)
-        set_timer('trial_timeout', 20 * second, False)  # timeout in case of no engagement
-
-    elif event == 'exit':
-        disarm_timer('trial_timeout')
 
     elif event == 'lick':  # lick during the trial delays the sweep
         reset_timer('spk_update', v.sound_bins[0], False)
+        reset_timer('trial_timeout', 20 * second, False)
 
     elif event == 'spk_update':
         if hw.sound.active == hw.light.active:  # speaker lines up with LED
@@ -138,6 +135,9 @@ def reward (event):
         print('{}, reward_number'.format(v.reward_number))
         goto_state('intertrial')
 
+    elif event == 'trial_timeout':
+        reset_timer('trial_timeout', 5 * second, False)  # to delay the timeout so the state changes
+
 def intertrial (event):
     "intertrial state"
     if event == 'entry':
@@ -146,6 +146,8 @@ def intertrial (event):
         timed_goto_state('trial', v.IT_duration)
         v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])  # in case of lick, restart sweep
         v.next_led___ = choice(v.leds___)  # led chosen randomly, use `choice([2,4])` for a simpler version
+    elif event == 'exit':
+        reset_timer('trial_timeout', 20 * second, False)
 
 def all_states(event):
     """
