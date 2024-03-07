@@ -104,24 +104,23 @@ def run_end():
 def trial(event):
     "led at first, and spk update at later bins"
     if event == 'entry':
-        hw.light.cue(v.next_led___)  # choose from led 2 or 4 as the cue
-        hw.sound.cue(v.next_spk___)  # start the trial from one of the end speakers
+        hw.light.cue(v.next_led___)
+        hw.sound.cue(v.next_spk___)
         print('{}, spk_direction'.format(v.next_spk___))
         print('{}, led_direction'.format(v.next_led___))
         set_timer('spk_update', choice(v.sound_bins), False)
-
     elif event == 'lick':  # lick during the trial delays the sweep
         reset_timer('spk_update', v.sound_bins[0], False)
         reset_timer('trial_timeout', 20 * second, False)
-
     elif event == 'spk_update':
         if hw.sound.active == hw.light.active:  # speaker lines up with LED
             goto_state('reward')
         else:
             set_timer('spk_update', choice(v.sound_bins), False)
-
     elif event == 'trial_timeout':
         goto_state('intertrial')
+    elif event == 'exit':
+        disarm_timer('spk_update')
 
 def reward (event):
     "reward state"
@@ -134,9 +133,8 @@ def reward (event):
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
         goto_state('intertrial')
-
     elif event == 'trial_timeout':
-        reset_timer('trial_timeout', 5 * second, False)  # to delay the timeout so the state changes
+        reset_timer('trial_timeout', v.sound_bins[-1] + 1, False)  # to delay the timeout so the state changes
 
 def intertrial (event):
     "intertrial state"
@@ -145,7 +143,7 @@ def intertrial (event):
         hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
         v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])  # in case of lick, restart sweep
-        v.next_led___ = choice(v.leds___)  # led chosen randomly, use `choice([2,4])` for a simpler version
+        v.next_led___ = choice(v.leds___)  # use `choice([2,4])` for a simpler version
     elif event == 'exit':
         reset_timer('trial_timeout', 20 * second, False)
 
