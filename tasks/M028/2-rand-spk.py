@@ -16,7 +16,7 @@ events = ['lick',
           'motion',
           'session_timer',
           'spk_update',
-          'trialt_imeout']
+          'trial_timeout']
 
 initial_state = 'trial'
 
