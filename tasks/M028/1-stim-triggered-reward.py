@@ -1,4 +1,4 @@
-# 1-led-reward-association: lining speakers with the mid LED and release the reward.
+# 1-stim-triggered-reward.py lick at the stimulus to get extra reward, then stop licking for the next stimulus
 
 from pyControl.utility import *
 import hardware_definition as hw
@@ -9,13 +9,11 @@ from devices import *
 # -------------------------------------------------------------------------
 
 states = ['trial',
-          'reward',
           'intertrial']
 
 events = ['lick',
           'motion',
           'session_timer',
-          'spk_update',
           'trial_timeout']
 
 initial_state = 'trial'
@@ -27,42 +25,15 @@ initial_state = 'trial'
 # general parameters
 
 # session params
-v.session_duration = 45 * minute
-v.reward_duration = 25 * ms
+v.session_duration = 20 * minute
+v.reward_duration = 30 * ms
 v.min_IT_movement___ = 10  # cm - must be a multiple of 5
+v.reward_gap___ = 500 * ms
 
 v.reward_number = 0
-v.last_spk___ = 0
-v.next_spk___ = 5
-v.next_led___ = 1
 v.IT_duration = 7 * second
-v.sound_bins = (2 * second, 2.5 * second, 3 * second)
 
 v.spks___ = [1, 3, 5]  # 3 spread-out speaker
-v.leds___ = v.spks___
-
-
-
-# -------------------------------------------------------------------------
-# State-independent Code
-# -------------------------------------------------------------------------
-
-def next_spk():
-    """
-    returns the next speakers, in either direction of the sweep
-    """
-    assert len(hw.sound.active)==1, 'one speaker can be active'
-    active_spk = hw.sound.active[0]
-    active_spk_idx = v.spks___.index(active_spk)
-
-    if active_spk > v.last_spk___:
-        out = active_spk_idx + 1 if active_spk < v.spks___[-1] else active_spk_idx - 1
-    else:
-        out = active_spk_idx - 1 if active_spk > v.spks___[0] else active_spk_idx + 1
-
-    v.last_spk___ = active_spk
-
-    return v.spks___[out]
 
 
 # -------------------------------------------------------------------------
@@ -80,11 +51,9 @@ def run_start():
     hw.light.all_off()
     hw.reward.reward_duration = v.reward_duration
     set_timer('session_timer', v.session_duration, True)
-    set_timer('trial_timeout', 20 * second, False)  # timeout in case of no engagement
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
-
 
 def run_end():
     """ 
@@ -104,48 +73,40 @@ def run_end():
 def trial(event):
     "led at first, and spk update at later bins"
     if event == 'entry':
-        hw.light.cue(v.next_led___)
-        hw.sound.cue(v.next_spk___)
-        print('{}, spk_direction'.format(v.next_spk___))
-        print('{}, led_direction'.format(v.next_led___))
-        set_timer('spk_update', choice(v.sound_bins), False)
-    elif event == 'lick':  # lick during the trial delays the sweep
-        reset_timer('spk_update', v.sound_bins[0], False)
-        reset_timer('trial_timeout', 20 * second, False)
-    elif event == 'spk_update':
-        if hw.sound.active == hw.light.active:  # speaker lines up with LED
-            goto_state('reward')
+        stim_chance = random()
+        next_dir = choice(v.spks___)
+        if stim_chance > 0.5:
+            hw.light.cue(next_dir)
+            hw.sound.cue(next_dir)
+            print('{}, spk_direction'.format(next_dir))
+            print('{}, led_direction'.format(next_dir))
+        elif stim_chance <= 0.25:
+            hw.light.cue(next_dir)
+            hw.sound.all_off()
+            print('{}, led_direction'.format(next_dir))
         else:
-            set_timer('spk_update', choice(v.sound_bins), False)
-    elif event == 'trial_timeout':
-        goto_state('intertrial')
-    elif event == 'exit':
-        disarm_timer('spk_update')
+            hw.light.all_off()
+            hw.sound.cue(next_dir)
+            print('{}, spk_direction'.format(next_dir))
 
-def reward (event):
-    "reward state"
-    if event == 'entry':
-        timed_goto_state('trial', v.sound_bins[-1])
-        v.next_spk___ = next_spk()  # in case of no lick, sweep continues
-        v.next_led___ = hw.light.active[0]
-    elif event == 'lick':
-        hw.reward.release()
-        v.reward_number += 1
-        print('{}, reward_number'.format(v.reward_number))
-        goto_state('intertrial')
-    elif event == 'trial_timeout':
-        reset_timer('trial_timeout', v.sound_bins[-1] + 1, False)  # to delay the timeout so the state changes
+    elif event == 'lick':  # lick during the trial delays the sweep
+        timed_goto_state('intertrial', v.reward_gap___)
 
 def intertrial (event):
     "intertrial state"
     if event == 'entry':
+        set_timer('trial_timeout', v.IT_duration, False)  # timeout in case of no engagement
         hw.sound.all_off()
         hw.light.all_off()
-        timed_goto_state('trial', v.IT_duration)
-        v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])  # in case of lick, restart sweep
-        v.next_led___ = choice(v.leds___)  # use `choice([2,4])` for a simpler version
-    elif event == 'exit':
-        reset_timer('trial_timeout', 20 * second, False)
+        hw.reward.release()
+        v.reward_number += 1
+        print('{}, reward_number'.format(v.reward_number))
+
+    elif event == 'lick':
+        reset_timer('trial_timeout', v.IT_duration, False)
+
+    elif event == 'trial_timeout':
+        goto_state('trial')
 
 def all_states(event):
     """
@@ -153,9 +114,5 @@ def all_states(event):
     irrespective of the state the machine is in.
     Executes before the state code.
     """
-    if event == 'spk_update':
-        spk_dir = next_spk()
-        print('{}, spk_direction'.format(spk_dir))
-        hw.sound.cue(spk_dir)
-    elif event == 'session_timer':
+    if event == 'session_timer':
         stop_framework()
