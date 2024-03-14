@@ -56,7 +56,6 @@ def run_start():
     hw.sound.start()
     hw.light.all_off()
     hw.reward.reward_duration = v.reward_duration
-    hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     print('{}, before_camera_trigger'.format(get_current_time()))
