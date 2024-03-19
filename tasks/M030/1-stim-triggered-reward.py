@@ -33,7 +33,7 @@ v.reward_gap___ = 500 * ms
 v.reward_number = 0
 v.IT_duration = 7 * second
 
-v.spks___ = [1, 3, 5]  # 3 spread-out speaker
+v.spks___ = [1, 5]  # 3 spread-out speaker
 
 
 # -------------------------------------------------------------------------
