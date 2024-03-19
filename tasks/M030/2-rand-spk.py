@@ -10,6 +10,7 @@ from devices import *
 
 states = ['trial',
           'reward',
+          'free_reward',
           'intertrial']
 
 events = ['lick',
@@ -36,9 +37,9 @@ v.last_spk___ = 0
 v.next_spk___ = 5
 v.next_led___ = 1
 v.IT_duration = 7 * second
-v.sound_bins = (2 * second, 2.5 * second, 3 * second)
+v.sound_bins = (1 * second, 2 * second, 3 * second)
 
-v.spks___ = [1, 3, 5]  # 3 spread-out speaker
+v.spks___ = [1, 5]  # 2 spread-out speaker
 v.leds___ = v.spks___
 
 
@@ -110,17 +111,33 @@ def trial(event):
         print('{}, led_direction'.format(v.next_led___))
         set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'lick':  # lick during the trial delays the sweep
-        reset_timer('spk_update', v.sound_bins[0], False)
+        reset_timer('spk_update', v.sound_bins[1], False)
         reset_timer('trial_timeout', 20 * second, False)
     elif event == 'spk_update':
         if hw.sound.active == hw.light.active:  # speaker lines up with LED
-            goto_state('reward')
+            if random () > 0.7:  # 30% chance of free reward
+                goto_state('free_reward')
+            else:
+                goto_state('reward')
         else:
             set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'trial_timeout':
         goto_state('intertrial')
     elif event == 'exit':
         disarm_timer('spk_update')
+
+def free_reward(event):
+    "free reward state"
+    if event == 'entry':
+        timed_goto_state('intertrial', 1 * minute)
+        disarm_timer('trial_timeout')
+        v.next_spk___ = next_spk()  # in case of no lick, sweep continues
+        v.next_led___ = hw.light.active[0]
+        hw.reward.release()
+        v.reward_number += 1
+        print('{}, reward_number'.format(v.reward_number))
+    elif event == 'lick':
+        goto_state('intertrial')
 
 def reward (event):
     "reward state"
