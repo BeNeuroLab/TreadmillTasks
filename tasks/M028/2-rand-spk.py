@@ -143,7 +143,7 @@ def intertrial (event):
         hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
         v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])
-        v.next_led___ = choice([el for el in v.leds___ if el not v.next_spk___])
+        v.next_led___ = choice([el for el in v.leds___ if el != v.next_spk___])
     elif event == 'exit':
         reset_timer('trial_timeout', 20 * second, False)
 
