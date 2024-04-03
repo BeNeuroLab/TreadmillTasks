@@ -10,7 +10,8 @@ from devices import *
 
 states = ['trial',
           'reward',
-          'intertrial']
+          'intertrial',
+          'penalty']
 
 events = ['lick',
           'motion',
@@ -35,8 +36,9 @@ v.reward_number = 0
 v.last_spk___ = 0
 v.next_spk___ = 5
 v.next_led___ = 1
-v.IT_duration = 7 * second
-v.sound_bins = (2 * second, 2.5 * second, 3 * second)
+v.IT_duration = 5 * second
+v.penalty_duration = 10 * second
+v.sound_bins = (1 * second, 1.5 * second, 2 * second)
 
 v.spks___ = [1, 5]  # 2 spread-out speaker
 v.leds___ = v.spks___
@@ -110,8 +112,7 @@ def trial(event):
         print('{}, led_direction'.format(v.next_led___))
         set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'lick':  # lick during the trial delays the sweep
-        reset_timer('spk_update', v.sound_bins[0], False)
-        reset_timer('trial_timeout', 20 * second, False)
+        goto_state('penalty')
     elif event == 'spk_update':
         if hw.sound.active == hw.light.active:  # speaker lines up with LED
             goto_state('reward')
@@ -142,6 +143,18 @@ def intertrial (event):
         hw.sound.all_off()
         hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
+        v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])
+        v.next_led___ = choice([el for el in v.leds___ if el != v.next_spk___])
+    elif event == 'exit':
+        reset_timer('trial_timeout', 20 * second, False)
+
+def penalty(event):
+    "penalty state"
+    if event == 'entry':
+        hw.sound.all_off()
+        hw.light.all_off()
+        timed_goto_state('trial', v.penalty_duration)
+        hw.light.blink(v.next_led___, freq=10, n_pulses=20)
         v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])
         v.next_led___ = choice([el for el in v.leds___ if el != v.next_spk___])
     elif event == 'exit':
