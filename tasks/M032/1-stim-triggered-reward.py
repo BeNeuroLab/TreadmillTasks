@@ -33,7 +33,7 @@ v.reward_gap___ = 500 * ms
 v.reward_number = 0
 v.IT_duration = 7 * second
 
-v.spks___ = [1, 5]  # 3 spread-out speaker
+v.spks___ = [1, 3, 5]  # 3 spread-out speaker
 
 
 # -------------------------------------------------------------------------
@@ -77,12 +77,12 @@ def trial(event):
         next_dir = choice(v.spks___)
         if stim_chance > 0.5:
             hw.light.cue(next_dir)
-            hw.sound.cue(next_dir)
-            print('{}, spk_direction'.format(next_dir))
+            hw.sound.all_off()
             print('{}, led_direction'.format(next_dir))
         elif stim_chance <= 0.25:
             hw.light.cue(next_dir)
-            hw.sound.all_off()
+            hw.sound.cue(next_dir)
+            print('{}, spk_direction'.format(next_dir))
             print('{}, led_direction'.format(next_dir))
         else:
             hw.light.all_off()

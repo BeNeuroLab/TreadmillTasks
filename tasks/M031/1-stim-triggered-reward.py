@@ -77,12 +77,12 @@ def trial(event):
         next_dir = choice(v.spks___)
         if stim_chance > 0.5:
             hw.light.cue(next_dir)
-            hw.sound.cue(next_dir)
-            print('{}, spk_direction'.format(next_dir))
+            hw.sound.all_off()
             print('{}, led_direction'.format(next_dir))
         elif stim_chance <= 0.25:
             hw.light.cue(next_dir)
-            hw.sound.all_off()
+            hw.sound.cue(next_dir)
+            print('{}, spk_direction'.format(next_dir))
             print('{}, led_direction'.format(next_dir))
         else:
             hw.light.all_off()
