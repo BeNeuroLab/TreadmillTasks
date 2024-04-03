@@ -44,3 +44,7 @@ class LEDStim:
         for d in arr:
             self.LEDs[d].on()
             self.active.append(d)
+
+    def blink(self, direction:int, freq=10, n_pulses:int =20):
+        "blink the LED corresponding to the given direction for the given number of pulses"
+        self.LEDs[direction].pulse(freq=freq, duty_cycle=50, n_pulses=n_pulses)
