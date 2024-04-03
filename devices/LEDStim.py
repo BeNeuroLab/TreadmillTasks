@@ -17,7 +17,7 @@ class LEDStim:
         self.active = []
 
         for direction, pin in pins.items():
-            self.LEDs[direction] = _h.Digital_output(pin=pin, inverted=pin in powerlines)
+            self.LEDs[direction] = _h.Digital_output(pin=pin, inverted=pin in powerlines, pulse_enabled=True)
             self.LEDs[direction].off()
 
     def all_off(self):
