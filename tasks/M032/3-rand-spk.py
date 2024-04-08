@@ -39,7 +39,7 @@ v.next_led___ = 1
 v.IT_duration = 7 * second
 v.sound_bins = (1 * second, 2 * second, 3 * second)
 
-v.spks___ = [1, 5]  # 2 spread-out speaker
+v.spks___ = [1, 3, 5]  # 2 spread-out speaker
 v.leds___ = v.spks___
 
 
@@ -115,7 +115,7 @@ def trial(event):
         reset_timer('trial_timeout', 20 * second, False)
     elif event == 'spk_update':
         if hw.sound.active == hw.light.active:  # speaker lines up with LED
-            if random () > 0.7:  # 30% chance of free reward
+            if random () > 0.8:  # 20% chance of free reward
                 goto_state('free_reward')
             else:
                 goto_state('reward')
