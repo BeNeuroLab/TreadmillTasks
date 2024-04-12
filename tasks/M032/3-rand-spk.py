@@ -115,7 +115,7 @@ def trial(event):
         reset_timer('trial_timeout', 20 * second, False)
     elif event == 'spk_update':
         if hw.sound.active == hw.light.active:  # speaker lines up with LED
-            if random() > 0.8:  # 20% chance of free reward
+            if random() > 0.9:  # 10% chance of free reward
                 goto_state('free_reward')
             else:
                 goto_state('reward')
