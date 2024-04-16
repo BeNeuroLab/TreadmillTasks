@@ -11,6 +11,7 @@ from devices import *
 states = ['trial',
           'reward',
           'free_reward',
+          'penalty',
           'intertrial']
 
 events = ['lick',
@@ -37,6 +38,7 @@ v.last_spk___ = 0
 v.next_spk___ = 5
 v.next_led___ = 1
 v.IT_duration = 7 * second
+v.penalty_duration = 10 * second
 v.sound_bins = (1 * second, 2 * second, 3 * second)
 
 v.spks___ = [1, 3, 5]  # 2 spread-out speaker
@@ -111,8 +113,7 @@ def trial(event):
         print('{}, led_direction'.format(v.next_led___))
         set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'lick':  # lick during the trial delays the sweep
-        reset_timer('spk_update', v.sound_bins[-1], False)
-        reset_timer('trial_timeout', 20 * second, False)
+        goto_state('penalty')
     elif event == 'spk_update':
         if hw.sound.active == hw.light.active:  # speaker lines up with LED
             if random() > 0.9:  # 10% chance of free reward
@@ -129,10 +130,8 @@ def trial(event):
 def free_reward(event):
     "free reward state"
     if event == 'entry':
-        timed_goto_state('intertrial', 1 * minute)
+        timed_goto_state('penalty', 1 * minute)
         disarm_timer('trial_timeout')
-        v.next_spk___ = next_spk()  # in case of no lick, sweep continues
-        v.next_led___ = hw.light.active[0]
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
@@ -161,6 +160,19 @@ def intertrial (event):
         timed_goto_state('trial', v.IT_duration)
         v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])  # in case of lick, restart sweep
         v.next_led___ = choice(v.leds___)  # use `choice([2,4])` for a simpler version
+    elif event == 'exit':
+        reset_timer('trial_timeout', 20 * second, False)
+
+def penalty(event):
+    "penalty state"
+    if event == 'entry':
+        hw.sound.all_off()
+        hw.light.all_off()
+        timed_goto_state('trial', v.penalty_duration)
+        hw.light.blink(v.next_led___, freq=10, n_pulses=50)
+        v.next_spk___ = v.spks___[-1]
+        v.next_led___ = choice([el for el in v.leds___ if el != v.next_spk___])
+        hw.sound.cue(v.next_spk___)
     elif event == 'exit':
         reset_timer('trial_timeout', 20 * second, False)
 
