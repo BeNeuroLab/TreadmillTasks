@@ -158,7 +158,7 @@ def intertrial (event):
         hw.sound.all_off()
         hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
-        v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])  # in case of lick, restart sweep
+        v.next_spk___ = v.spks___[-1]
         v.next_led___ = choice(v.leds___)  # use `choice([2,4])` for a simpler version
     elif event == 'exit':
         reset_timer('trial_timeout', 20 * second, False)
