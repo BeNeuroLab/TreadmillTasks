@@ -39,7 +39,7 @@ v.next_spk___ = 5
 v.next_led___ = 1
 v.IT_duration = 7 * second
 v.penalty_duration = 10 * second
-v.sound_bins = (1 * second, 2 * second, 3 * second)
+v.sound_bins = (1 * second, 1.5 * second, 2 * second)
 
 v.spks___ = [1, 2, 3, 4, 5]
 v.leds___ = [1, 3, 5]
