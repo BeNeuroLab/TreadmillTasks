@@ -42,7 +42,7 @@ v.penalty_duration = 10 * second
 v.sound_bins = (1 * second, 2 * second, 3 * second)
 
 v.spks___ = [1, 2, 3, 4, 5]
-v.leds___ = v.spks___
+v.leds___ = [1, 3, 5]
 
 
 
