@@ -159,7 +159,7 @@ def intertrial (event):
         hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
         v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])
-        v.next_led___ = choice(v.leds___)  # use `choice([2,4])` for a simpler version
+        v.next_led___ = choice([el for el in v.leds___ if el != v.next_spk___])
     elif event == 'exit':
         reset_timer('trial_timeout', 20 * second, False)
 
@@ -172,7 +172,7 @@ def penalty(event):
         hw.light.blink(v.next_led___, freq=10, n_pulses=50)
         v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])
         v.next_led___ = choice([el for el in v.leds___ if el != v.next_spk___])
-        hw.sound.cue_array([v.spks___[0],v.spks___[-1]])
+        hw.sound.cue_array([0,6])
     elif event == 'exit':
         reset_timer('trial_timeout', 20 * second, False)
 
