@@ -41,23 +41,6 @@ v.leds___ = v.spks___
 # State-independent Code
 # -------------------------------------------------------------------------
 
-# def next_spk():
-    # """
-    # returns the next speakers, in either direction of the sweep
-    # """
-    # assert len(hw.sound.active)==1, 'one one speaker can be active'
-    # active_spk = hw.sound.active[0]
-
-    # if active_spk > v.last_spk___:
-        # out = active_spk + 1 if active_spk < v.spks___[-1] else active_spk - 1
-    # else:
-        # out = active_spk - 1 if active_spk > v.spks___[0] else active_spk + 1
-    
-    # v.last_spk___ = active_spk
-
-    # return out
-    
-
 def next_spk():
     """
     returns the next speakers, in either direction of the sweep
