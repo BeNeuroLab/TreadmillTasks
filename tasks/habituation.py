@@ -30,11 +30,11 @@ v.IT_duration = 2 * second
 v.trial_len = 5 * second
 
 v.last_spk___ = 1
-v.next_spk___ = 5
-v.next_led___ = 5
+v.next_spk___ = 0
+v.next_led___ = 3
 
-v.spks___ = [1, 3, 5]  # 3 spread-out speaker
-v.leds___ = v.spks___
+v.spks___ = [0, 1, 2, 3, 4, 5, 6]
+v.leds___ = [1, 2, 3, 4, 5]
 
 
 # -------------------------------------------------------------------------
@@ -72,7 +72,6 @@ def run_start():
     hw.motionSensor.threshold = 10
     hw.sound.start()
     hw.light.all_off()
-    hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     print('{}, before_camera_trigger'.format(get_current_time()))
