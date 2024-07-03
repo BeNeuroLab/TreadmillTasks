@@ -53,13 +53,11 @@ def next_spk():
             out = active_spk_idx + 1
         else:
             out = active_spk_idx - 1
-            switch_leds()
     else:
         if active_spk > v.spks___[0]:
             out = active_spk_idx - 1
         else:
             out = active_spk_idx + 1
-            switch_leds()
 
     v.last_spk___ = active_spk
 
