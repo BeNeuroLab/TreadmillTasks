@@ -118,6 +118,7 @@ def trial(event):
 def intertrial (event):
     "gap between stimulus"
     if event == 'entry':
+        hw.audio.all_off()
         # Continue sweep
         v.next_spk___ = next_spk()  # sweep continues
         timed_goto_state('trial', v.IT_duration)
