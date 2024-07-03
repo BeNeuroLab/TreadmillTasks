@@ -122,8 +122,6 @@ def intertrial (event):
     if event == 'entry':
         # Continue sweep
         v.next_spk___ = next_spk()  # sweep continues
-        hw.sound.all_off()
-        hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
 
 
