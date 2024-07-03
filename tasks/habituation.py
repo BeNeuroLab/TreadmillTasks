@@ -31,7 +31,6 @@ v.trial_len = 5 * second
 
 v.last_spk___ = 1
 v.next_spk___ = 0
-v.next_led___ = 3
 
 v.spks___ = [0, 1, 2, 3, 4, 5, 6]
 v.leds___ = [1, 2, 3, 4, 5]
@@ -50,13 +49,35 @@ def next_spk():
     active_spk_idx = v.spks___.index(active_spk)
 
     if active_spk > v.last_spk___:
-        out = active_spk_idx + 1 if active_spk < v.spks___[-1] else active_spk_idx - 1
+        if active_spk < v.spks___[-1]:
+            out = active_spk_idx + 1
+        else:
+            out = active_spk_idx - 1
+            switch_leds()
     else:
-        out = active_spk_idx - 1 if active_spk > v.spks___[0] else active_spk_idx + 1
+        if active_spk > v.spks___[0]:
+            out = active_spk_idx - 1
+        else:
+            out = active_spk_idx + 1
+            switch_leds()
 
     v.last_spk___ = active_spk
 
     return v.spks___[out]
+
+def switch_leds():
+    """
+    switch which half of LEDs to turn on on each call
+    """
+    if v.leds___[0] in hw.light.active:
+        out = v.leds___[:3]
+    elif v.leds___[-1] in hw.light.active:
+        out = v.leds___[-3:]
+    else:
+        out = v.leds___[:3]
+
+    print('{}, led_direction'.format(out))
+    hw.light.cue_array(out)
 
 
 # -------------------------------------------------------------------------
@@ -77,7 +98,6 @@ def run_start():
     print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
 
-
 def run_end():
     """ 
     Code here is executed when the framework stops running.
@@ -90,23 +110,18 @@ def run_end():
     hw.sound.stop()
     hw.off()
 
-# State behaviour functions.
-
 def trial(event):
     "light and auditory stimulus"
     if event == 'entry':
-        hw.light.cue(v.next_led___)
         hw.sound.cue(v.next_spk___)
         print('{}, spk_direction'.format(v.next_spk___))
-        print('{}, led_direction'.format(v.next_led___))
         timed_goto_state('intertrial', v.trial_len)
-    
+
 def intertrial (event):
     "gap between stimulus"
     if event == 'entry':
         # Continue sweep
         v.next_spk___ = next_spk()  # sweep continues
-        v.next_led___ = v.next_spk___ # turn on the same LED
         hw.sound.all_off()
         hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
