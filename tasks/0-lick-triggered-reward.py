@@ -7,8 +7,7 @@ import utime
 
 
 # -------------------------------------------------------------------------
-states = ['intertrial',
-          'trial',
+states = ['trial',
           'reward']
 
 events = ['lick',
@@ -22,12 +21,9 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 v.session_duration = 20 * minute
 v.reward_duration = 30 * ms
-v.trial_number = 0
-v.min_IT_movement___ = 10  # cm - must be a multiple of 5
 v.sound_bins = (0.5 * second, 1 * second, 1.5 * second)
 
 v.trial_len = 5 * second
-v.led_len = 500 * ms
 
 v.last_spk___ = 1
 v.next_spk___ = 0
@@ -120,7 +116,7 @@ def trial(event):
 def reward (event):
     "reward state"
     if event == 'entry':
-        timed_goto_state('trial', v.sound_bins[-1])
+        timed_goto_state('trial', v.trial_len)
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
