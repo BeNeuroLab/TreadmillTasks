@@ -76,7 +76,7 @@ def next_spk():
 # -------------------------------------------------------------------------
 def run_start():
     "Code here is executed when the framework starts running."
-    hw.sound.set_volume(15)  # Between 1 - 30
+    hw.sound.set_volume(8)  # Between 1 - 30
     utime.sleep_ms(20)  # wait for the sound player to be ready
     hw.motionSensor.record()
     hw.motionSensor.threshold = 10
@@ -120,6 +120,7 @@ def reward (event):
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
+        v.next_spk___ = next_spk()
 
 
 def all_states(event):
