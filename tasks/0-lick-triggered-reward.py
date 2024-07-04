@@ -38,9 +38,9 @@ def switch_leds():
     switch which half of LEDs to turn on on each call
     """
     if v.leds___[0] in hw.light.active:
-        out = v.leds___[:3]
-    elif v.leds___[-1] in hw.light.active:
         out = v.leds___[-3:]
+    elif v.leds___[-1] in hw.light.active:
+        out = v.leds___[:3]
     else:
         out = v.leds___[:3]
 
