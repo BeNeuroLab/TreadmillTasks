@@ -78,19 +78,16 @@ def run_end():
 def trial(event):
     "start state behaviour"
     if event == 'entry':
-        hw.sound.all_off()
-        hw.light.all_off()
+        hw.light.cue(3)
     if event == 'lick':
-        if withprob(0.5):
-            hw.sound.cue(3)
-        else:
-            hw.light.cue(3)
+        hw.sound.cue(3)
         timed_goto_state('reward', v.led_len)
 
 def reward(event):
     "gap for the light cue"
     if event == 'entry':
         hw.reward.release()
+        print('{}, reward_number'.format(v.trial_number))
         timed_goto_state('intertrial', v.led_len)
 
 def intertrial(event):
@@ -99,8 +96,6 @@ def intertrial(event):
         hw.light.all_off()
         hw.sound.all_off()
         v.trial_number += 1
-
-        print('{}, reward_number'.format(v.trial_number))
         timed_goto_state('trial', v.trial_len)  # enforcing min 3s between rewards
 
 # State independent behaviour.
