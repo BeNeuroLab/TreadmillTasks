@@ -5,10 +5,8 @@ import hardware_definition as hw
 from devices import *
 import math
 
-# -------------------------------------------------------------------------
-# States and events.
-# -------------------------------------------------------------------------
 
+# -------------------------------------------------------------------------
 states = ['intertrial',
           'trial',
           'reward']
@@ -19,13 +17,8 @@ events = ['lick',
 
 initial_state = 'trial'
 
-# -------------------------------------------------------------------------
-# Variables.
-# -------------------------------------------------------------------------
 
-# general parameters
-
-# session params
+# -------------------------------------------------------------------------
 v.session_duration = 20 * minute
 v.reward_duration = 30 * ms
 v.trial_number = 0
@@ -40,13 +33,7 @@ v.trial_len = 5 * second
 v.led_len = 500 * ms
 
 
-
 # -------------------------------------------------------------------------
-# Define behaviour.
-# -------------------------------------------------------------------------
-
-
-# Run start and stop behaviour.
 def run_start():
     "Code here is executed when the framework starts running."
     hw.sound.set_volume(15)  # Between 1 - 30
@@ -74,7 +61,8 @@ def run_end():
     hw.sound.stop()
     hw.off()
 
-# State behaviour functions.
+
+# -------------------------------------------------------------------------
 def trial(event):
     "start state behaviour"
     if event == 'entry':
@@ -98,11 +86,10 @@ def intertrial(event):
         v.trial_number += 1
         timed_goto_state('trial', v.trial_len)  # enforcing min 3s between rewards
 
-# State independent behaviour.
+
 def all_states(event):
     """
-    Code here will be executed when any event occurs,
-    irrespective of the state the machine is in.
+    Executes before the state code.
     """
     if event == 'session_timer':
         stop_framework()
