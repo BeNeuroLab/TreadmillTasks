@@ -5,10 +5,8 @@ import hardware_definition as hw
 from devices import *
 import utime
 
-# -------------------------------------------------------------------------
-# States and events.
-# -------------------------------------------------------------------------
 
+# -------------------------------------------------------------------------
 states = ['trial',
           'intertrial']
 
@@ -18,13 +16,8 @@ events = ['motion',
 
 initial_state = 'trial'
 
-# -------------------------------------------------------------------------
-# Variables.
-# -------------------------------------------------------------------------
 
-# general parameters
-
-# session params
+# -------------------------------------------------------------------------
 v.session_duration = 15 * minute
 v.IT_duration = 2 * second
 v.trial_len = 5 * second
@@ -37,9 +30,6 @@ v.leds___ = [1, 2, 3, 4, 5]
 
 
 # -------------------------------------------------------------------------
-# State-independent Code
-# -------------------------------------------------------------------------
-
 def next_spk():
     """
     returns the next speakers, in either direction of the sweep
@@ -79,10 +69,6 @@ def switch_leds():
 
 
 # -------------------------------------------------------------------------
-# Define behaviour.
-# -------------------------------------------------------------------------
-
-# Run start and stop behaviour.
 def run_start():
     "Code here is executed when the framework starts running."
     hw.sound.set_volume(15)  # Between 1 - 30
@@ -123,14 +109,8 @@ def intertrial (event):
         timed_goto_state('trial', v.IT_duration)
 
 
-
-
-# State independent behaviour.
-        
 def all_states(event):
     """
-    Code here will be executed when any event occurs,
-    irrespective of the state the machine is in.
     Executes before the state code.
     """
     if event == 'session_timer':
