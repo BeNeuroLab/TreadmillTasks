@@ -24,7 +24,7 @@ v.sound_bins = (0.5 * second, 0.75 * second, 1 * second)
 v.reward_number = 0
 
 v.trial_len = 3 * second
-v.led_len = 750 * ms
+v.led_len = 500 * ms
 
 v.last_spk___ = 2
 v.next_spk___ = 1
