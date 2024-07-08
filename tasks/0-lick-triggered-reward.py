@@ -21,31 +21,20 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 v.session_duration = 30 * minute
 v.reward_duration = 30 * ms
-v.sound_bins = (0.5 * second, 1 * second, 1.5 * second)
+v.sound_bins = (0.5 * second, 0.75 * second, 1 * second)
 v.reward_number = 0
-v.trial_len = 5 * second
+
+v.trial_len = 3 * second
+v.led_len = 750 * ms
 
 v.last_spk___ = 1
 v.next_spk___ = 0
 
-v.spks___ = [0, 1, 2, 3, 4, 5, 6]
+v.spks___ = [1, 2, 3, 4, 5]
 v.leds___ = [1, 2, 3, 4, 5]
 
 
 # -------------------------------------------------------------------------
-def switch_leds():
-    """
-    switch which half of LEDs to turn on on each call
-    """
-    if v.leds___[0] in hw.light.active:
-        out = v.leds___[-3:]
-    elif v.leds___[-1] in hw.light.active:
-        out = v.leds___[:3]
-    else:
-        out = v.leds___[:3]
-
-    print('{}, led_direction'.format(out))
-    hw.light.cue_array(out)
 
 def next_spk():
     """
@@ -60,13 +49,11 @@ def next_spk():
             out = active_spk_idx + 1
         else:
             out = active_spk_idx - 1
-            switch_leds()
     else:
         if active_spk > v.spks___[0]:
             out = active_spk_idx - 1
         else:
             out = active_spk_idx + 1
-            switch_leds()
 
     v.last_spk___ = active_spk
 
@@ -102,12 +89,13 @@ def run_end():
 def trial(event):
     "led at first, and spk update at later bins"
     if event == 'entry':
+        hw.light.all_off()
         hw.sound.cue(v.next_spk___)
         print('{}, spk_direction'.format(v.next_spk___))
         set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'lick':  # lick during the trial delays the sweep
-        if hw.sound.active[0] in hw.light.active:  # speaker lines up with LED
-            goto_state('reward')  # reward
+        hw.light.cue(hw.sound.active[0])
+        timed_goto_state('reward', v.led_len)
     elif event == 'spk_update':
         set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'exit':
