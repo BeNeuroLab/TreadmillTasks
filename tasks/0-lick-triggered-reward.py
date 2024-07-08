@@ -26,8 +26,8 @@ v.reward_number = 0
 v.trial_len = 3 * second
 v.led_len = 750 * ms
 
-v.last_spk___ = 1
-v.next_spk___ = 0
+v.last_spk___ = 2
+v.next_spk___ = 1
 
 v.spks___ = [1, 2, 3, 4, 5]
 v.leds___ = [1, 2, 3, 4, 5]
@@ -95,6 +95,7 @@ def trial(event):
     elif event == 'lick':  # lick during the trial delays the sweep
         hw.light.cue(hw.sound.active[0])
         timed_goto_state('reward', v.led_len)
+        disarm_timer('spk_update')
     elif event == 'spk_update':
         set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'exit':
