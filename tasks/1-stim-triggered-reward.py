@@ -14,8 +14,7 @@ states = ['trial',
 
 events = ['lick',
           'motion',
-          'session_timer',
-          'trial_timeout']
+          'session_timer']
 
 initial_state = 'trial'
 
@@ -25,13 +24,39 @@ v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
 v.min_IT_movement___ = 10  # cm - must be a multiple of 5
 
-v.reward_gap___ = 500 * ms
+v.block_reward = 0
+v.max_reward = 15
 
 v.reward_number = 0
 v.IT_duration = 7 * second
 
 v.spks___ = [0, 1, 2, 3, 4, 5, 6]
 v.leds___ = [1, 2, 3, 4, 5]
+
+
+# -------------------------------------------------------------------------
+def next_spk():
+    """
+    returns the next speakers, in either direction of the sweep
+    """
+    assert len(hw.sound.active)==1, 'one speaker can be active'
+    active_spk = hw.sound.active[0]
+    active_spk_idx = v.spks___.index(active_spk)
+
+    if active_spk > v.last_spk___:
+        if active_spk < v.spks___[-1]:
+            out = active_spk_idx + 1
+        else:
+            out = active_spk_idx - 1
+    else:
+        if active_spk > v.spks___[0]:
+            out = active_spk_idx - 1
+        else:
+            out = active_spk_idx + 1
+
+    v.last_spk___ = active_spk
+
+    return v.spks___[out]
 
 
 # -------------------------------------------------------------------------
@@ -75,8 +100,6 @@ def trial(event):
             goto_state('reward')
         else:
             set_timer('spk_update', choice(v.sound_bins), False)
-    elif event == 'trial_timeout':
-        goto_state('intertrial')
     elif event == 'exit':
         disarm_timer('spk_update')
 
@@ -85,22 +108,19 @@ def reward (event):
     if event == 'entry':
         timed_goto_state('trial', v.sound_bins[-1])
         v.next_spk___ = next_spk()  # in case of no lick, sweep continues
-        #v.next_led___ = hw.light.active[0]
     elif event == 'lick':
         hw.reward.release()
         v.reward_number += 1
-        v.relative_reward_number += 1
+        v.block_reward += 1
         print('{}, reward_number'.format(v.reward_number))
-        if v.relative_reward_number == v.max_reward: # Change LED
-            v.relative_reward_number = 0
+        if v.block_reward >= v.max_reward: # Change LED
+            v.block_reward = 0
             index = v.leds___.index(v.next_led___)
             if index < len(v.leds___):
                 v.next_led___ = v.leds___[index + 1]
             else:
                 v.next_led___ = v.leds___[0]  # If reached the end
         goto_state('intertrial')
-    elif event == 'trial_timeout':
-        reset_timer('trial_timeout', v.sound_bins[-1] + 1, False)  # to delay the timeout so the state changes
 
 def intertrial (event):
     "intertrial state"
@@ -110,8 +130,6 @@ def intertrial (event):
         timed_goto_state('trial', v.IT_duration)
         v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])
         #v.next_led___ = 2  # choice([el for el in v.leds___ if el != v.next_spk___])
-    elif event == 'exit':
-        reset_timer('trial_timeout', v.time_to_timeout, False)
 
 def penalty(event): # First part of the penalty: Mantain spk, blinking LED
     "penalty state"
@@ -128,8 +146,6 @@ def penalty_reset(event): # Second part of the penalty: spk off, LED on
         v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])    
         #v.next_led___ = 2  # choice([el for el in v.leds___ if el != v.next_spk___])
         #hw.sound.cue_array([0,6])
-    elif event == 'exit':
-        reset_timer('trial_timeout', v.time_to_timeout, False)    
 
 def all_states(event):
     """
