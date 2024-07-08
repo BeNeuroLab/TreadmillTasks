@@ -1,5 +1,4 @@
-# reward on lick, half of the time, when sound and light match
-
+"reward on lick, half of the time, when sound and light match"
 from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
