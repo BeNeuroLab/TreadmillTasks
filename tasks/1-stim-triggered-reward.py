@@ -22,16 +22,18 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
+v.sound_bins = (0.5 * second, 0.75 * second, 1 * second)
 v.min_IT_movement___ = 10  # cm - must be a multiple of 5
 
-v.block_reward = 0
-v.max_reward = 15
-
 v.reward_number = 0
-v.IT_duration = 7 * second
+v.IT_duration = 5 * second
+
+v.last_spk___ = 1
+v.next_spk___ = 0
 
 v.spks___ = [0, 1, 2, 3, 4, 5, 6]
-v.leds___ = [1, 2, 3, 4, 5]
+v.leds___ = [2, 4]
+v.next_led___ = v.leds___[-1]
 
 
 # -------------------------------------------------------------------------
@@ -88,15 +90,16 @@ def run_end():
 def trial(event):
     "led at first, and spk update at later bins"
     if event == 'entry':
-        hw.light.cue(v.next_led___)
+        hw.light.all_off()
         hw.sound.cue(v.next_spk___)
         print('{}, spk_direction'.format(v.next_spk___))
-        print('{}, led_direction'.format(v.next_led___))
         set_timer('spk_update', choice(v.sound_bins), False)
+        v.next_led___ = choice(v.leds___)
     elif event == 'lick':  # lick during the trial delays the sweep
-        goto_state('penalty')
+        reset_timer('spk_update', v.sound_bins[-1])
     elif event == 'spk_update':
-        if hw.sound.active == hw.light.active:  # speaker lines up with LED
+        if hw.sound.active == v.next_led___:
+            hw.light.cue(v.next_led___)
             goto_state('reward')
         else:
             set_timer('spk_update', choice(v.sound_bins), False)
@@ -111,46 +114,17 @@ def reward (event):
     elif event == 'lick':
         hw.reward.release()
         v.reward_number += 1
-        v.block_reward += 1
         print('{}, reward_number'.format(v.reward_number))
-        if v.block_reward >= v.max_reward: # Change LED
-            v.block_reward = 0
-            index = v.leds___.index(v.next_led___)
-            if index < len(v.leds___):
-                v.next_led___ = v.leds___[index + 1]
-            else:
-                v.next_led___ = v.leds___[0]  # If reached the end
         goto_state('intertrial')
 
 def intertrial (event):
     "intertrial state"
     if event == 'entry':
-        hw.sound.all_off()
-        hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
-        v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])
-        #v.next_led___ = 2  # choice([el for el in v.leds___ if el != v.next_spk___])
 
-def penalty(event): # First part of the penalty: Mantain spk, blinking LED
-    "penalty state"
-    if event == 'entry':
-        timed_goto_state('penalty_reset', v.penalty_duration/2)
-        hw.light.blink(v.next_led___, freq=10, n_pulses=50)
-         
-def penalty_reset(event): # Second part of the penalty: spk off, LED on
-    "penalty state"
-    if event == 'entry':
-        timed_goto_state('trial', v.penalty_duration/2)
-        hw.sound.all_off()    
-        hw.light.cue(v.next_led___)
-        v.next_spk___ = choice([v.spks___[0],v.spks___[-1]])    
-        #v.next_led___ = 2  # choice([el for el in v.leds___ if el != v.next_spk___])
-        #hw.sound.cue_array([0,6])
 
 def all_states(event):
     """
-    Code here will be executed when any event occurs,
-    irrespective of the state the machine is in.
     Executes before the state code.
     """
     if event == 'spk_update':
