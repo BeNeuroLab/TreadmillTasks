@@ -10,10 +10,12 @@ from devices import *
 # -------------------------------------------------------------------------
 
 states = ['trial',
-          'intertrial']
+          'led_on',
+          'reward']
 
 events = ['lick',
           'motion',
+          'spk_update',
           'session_timer']
 
 initial_state = 'trial'
@@ -23,7 +25,6 @@ initial_state = 'trial'
 v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
 v.sound_bins = (0.5 * second, 0.75 * second, 1 * second)
-v.min_IT_movement___ = 10  # cm - must be a multiple of 5
 
 v.reward_number = 0
 v.IT_duration = 5 * second
@@ -99,27 +100,27 @@ def trial(event):
         reset_timer('spk_update', v.sound_bins[-1])
     elif event == 'spk_update':
         if hw.sound.active == v.next_led___:
-            hw.light.cue(v.next_led___)
             goto_state('reward')
         else:
             set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'exit':
         disarm_timer('spk_update')
 
-def reward (event):
+def led_on (event):
     "reward state"
     if event == 'entry':
+        hw.light.cue(v.next_led___)
         timed_goto_state('trial', v.sound_bins[-1])
         v.next_spk___ = next_spk()  # in case of no lick, sweep continues
     elif event == 'lick':
+        goto_state('reward')
+
+def reward (event):
+    "intertrial state"
+    if event == 'entry':
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
-        goto_state('intertrial')
-
-def intertrial (event):
-    "intertrial state"
-    if event == 'entry':
         timed_goto_state('trial', v.IT_duration)
 
 
