@@ -100,7 +100,7 @@ def trial(event):
         reset_timer('spk_update', v.sound_bins[-1])
     elif event == 'spk_update':
         if hw.sound.active == v.next_led___:
-            goto_state('reward')
+            goto_state('led_on')
         else:
             set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'exit':
