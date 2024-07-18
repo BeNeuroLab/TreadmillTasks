@@ -25,6 +25,7 @@ initial_state = 'trial'
 v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
 v.sound_bins = (0.5 * second, 0.6 * second, 0.7 * second, 2 * second)
+v.offlick_penalty = v.sound_bins[-1] + 1 * second
 
 v.reward_number = 0
 v.IT_duration = 5 * second
@@ -97,7 +98,7 @@ def trial(event):
         set_timer('spk_update', choice(v.sound_bins), False)
         v.next_led___ = choice(v.leds___)
     elif event == 'lick':  # lick during the trial delays the sweep
-        reset_timer('spk_update', v.sound_bins[-1])
+        reset_timer('spk_update', v.offlick_penalty)
     elif event == 'spk_update':
         if hw.sound.active[0] == v.next_led___:
             goto_state('led_on')
