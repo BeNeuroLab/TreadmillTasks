@@ -111,6 +111,7 @@ def led_on (event):
     "reward state"
     if event == 'entry':
         hw.light.cue(v.next_led___)
+        print('{}, led_direction'.format(v.next_led___))
         timed_goto_state('trial', v.sound_bins[-1])
         v.next_spk___ = next_spk()  # in case of no lick, sweep continues
     elif event == 'lick':

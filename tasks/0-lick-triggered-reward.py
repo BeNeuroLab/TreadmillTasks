@@ -94,6 +94,7 @@ def trial(event):
         set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'lick':  # lick during the trial delays the sweep
         hw.light.cue(hw.sound.active[0])
+        print('{}, led_direction'.format(hw.light.active[0]))
         timed_goto_state('reward', v.led_len)
         disarm_timer('spk_update')
     elif event == 'spk_update':
