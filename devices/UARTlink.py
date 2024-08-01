@@ -3,7 +3,7 @@ from pyb import UART
 from machine import Timer
 
 
-class USB_UART(IO_object):
+class UARTlink(IO_object):
     def __init__(self, name, timer_freq = 100):
         """
         UART device class for Port12
