@@ -106,7 +106,7 @@ class PAA5100JE():
     def config(self):
         # Need ID for interrupting queue when sending data to computer
         self.select.value(0)
-        ID = self.flo.get_id()
+        ID = self.register(0x01)
         time.sleep_us(50)
         self.select.value(1)
         time.sleep_ms(1)
