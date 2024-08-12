@@ -11,7 +11,6 @@ def twos_comp(val, bits=16):
         val = val - (1 << bits)         # compute negative value
     return val                          # return positive value as is
 
-
 class PAA5100JE():
     def __init__(self,
                  SPI_type: str,
@@ -37,7 +36,7 @@ class PAA5100JE():
                                        **SPIparams
                                        )
         
-        self.select = Digital_output(pin=CS, inverted=True)
+        self.select = Digital_output(pin=cs, inverted=True)
         self.reset = Digital_output(pin=reset, inverted=True)
         
         self.reset.off()
@@ -102,15 +101,31 @@ class PAA5100JE():
         delta_y = twos_comp(delta_y)
 
         return delta_x, delta_y
-    
-    def config(self):
-        # Need ID for interrupting queue when sending data to computer
-        self.select.value(0)
-        ID = self.register(0x01)
-        time.sleep_us(50)
-        self.select.value(1)
-        time.sleep_ms(1)
         
+    def read_register_buff(self, addrs: bytes, buff: bytes):
+        """
+        addrs < 128
+        """
+        self.select.on()
+        self.spi.write(addrs)
+        utime.sleep_us(100)  # tSRAD
+        self.spi.readinto(buff)
+        utime.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
+        self.select.off()
+        utime.sleep_us(19)  # tSRW/tSRR (=20us) minus tSCLK-NCS
+
+    def write_register_buff(self, addrs: bytes, data: bytes):
+        """
+        addrs < 128
+        """
+        # flip the MSB to 1:...
+        self.select.on()
+        self.spi.write(addrs)
+        self.spi.write(data)
+        utime.sleep_us(20)  # tSCLK-NCS for write operation
+        self.select.off()
+        utime.sleep_us(100)  # tSWW/tSWR (=120us) minus tSCLK-NCS. Could be shortened, but is looks like a safe lower bound
+
     def shut_down(self, deinitSPI=True):
         self.select.off()
         time.sleep_ms(1)
@@ -123,7 +138,7 @@ class PAA5100JE():
         if deinitSPI:
             self.spi.deinit()
         
-class MotionDetector():
+class MotionDetector(Analog_input):
     def __init__(self, reset, cs1, cs2,
                  name='MotDet', threshold=1, calib_coef=1,
                  sampling_rate=100, event='motion'):
@@ -131,10 +146,6 @@ class MotionDetector():
         # Create SPI objects
         self.motSen_x = PAA5100JE('SPI2', reset, cs1)
         self.motSen_y = PAA5100JE('SPI2', reset, cs2)
-        
-        self.motSen_x.config()
-        self.motSen_y.config()
-        print(f"Sensor X ID: {self.motSen_x.config()} | Sensor Y ID: {self.motSen_y.config()}")
 
         self._threshold = threshold
         self.calib_coef = calib_coef
@@ -169,12 +180,7 @@ class MotionDetector():
     @property
     def threshold(self):
         # return the value in cms
-        return math.sqrt(self._threshold / 10)
-    
-    @threshold.setter
-    def threshold(self, new_threshold):
-        self._threshold = int((new_threshold)**2) * self.calib_coef
-        self.reset_delta()
+        return math.sqrt((self._threshold**2)* self.calib_coef / 10)
     
     def reset_delta(self):
         # reset the accumulated position data
@@ -251,9 +257,3 @@ class MotionDetector():
         self.data_chy.record()
         if not self.acquiring:
             self._start_acquisition()
-
-# --------------------------------------------------------
-if __name__ == "__main__":    
-    motion_sensor = MotionDetector(2, 17, 9)
-    while True:
-        motion_sensor.read_sample()
