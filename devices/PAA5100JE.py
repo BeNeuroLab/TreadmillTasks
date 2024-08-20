@@ -41,7 +41,6 @@ class PAA5100JE():
                                        )
             
         # Handle Chip Select (CS) pin
-        self._spi_cs_gpio = None
         if spi_cs_gpio is not None:
             self.select = Digital_output(pin=spi_cs_gpio, inverted=True)
             self.reset = Digital_output(pin=reset, inverted=True)
