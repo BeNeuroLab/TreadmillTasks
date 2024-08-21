@@ -23,7 +23,14 @@ REG_RAWDATA_GRAB = 0x58
 REG_RAWDATA_GRAB_STATUS = 0x59
 
 class PAA5100JE():
-    def __init__(self, spi_port=None, reset=None, spi_cs_gpio=None, sck=None, mosi=None, miso=None):
+    """Optical tracking sensor."""
+    def __init__(self, spi_port: str, 
+                 reset: str = None, 
+                 spi_cs_gpio: str, 
+                 sck: str = None, 
+                 mosi: str =None, 
+                 miso: str =None):
+                     
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
         SPIparams = {'baudrate': 400000, 'polarity': 0, 'phase': 0,
@@ -42,32 +49,22 @@ class PAA5100JE():
                                        )
             
         # Handle Chip Select (CS) pin
-        if spi_cs_gpio is not None:
-            self.select = Digital_output(pin=spi_cs_gpio, inverted=True)
-            self.reset = Digital_output(pin=reset, inverted=True)
-            self.select.off()  # Deselect the device by setting CS high
-            self.reset.off()
-            time.sleep(0.05)
+        self.select = Digital_output(pin=spi_cs_gpio, inverted=True)
+        self.reset = Digital_output(pin=reset, inverted=True)
+        self.select.off()  # Deselect the device by setting CS high
+        self.reset.off()
+        time.sleep_ms(50)
 
         # Reset the sensor
         self._write(REG_POWER_UP_RESET, 0x5A)
-        time.sleep(0.02)
+        time.sleep_ms(20)
         for offset in range(5):
             self._read(REG_DATA_READY + offset)
        
         # Initiate registers using firmware
         init_registers()
-
-        # Validate device ID
-        product_id = self.get_id()
-        if product_id != 0x49:
-            raise RuntimeError(f"Invalid Product ID for PAA5100: 0x{product_id:02x}")
-
-    def get_id(self):
-        """Get chip ID from PAA5100."""
-        return self._read(REG_ID, 1)
     
-    def set_rotation(self, degrees=0):
+    def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
         if degrees == 0:
             self.set_orientation(invert_x=True, invert_y=True, swap_xy=True)
@@ -80,7 +77,7 @@ class PAA5100JE():
         else:
             raise TypeError("Degrees must be one of 0, 90, 180 or 270")
 
-    def set_orientation(self, invert_x=True, invert_y=True, swap_xy=True):
+    def set_orientation(self, invert_x:bool =True, invert_y:bool =True, swap_xy:bool =True):
         """Set orientation of PAA5100 manually."""
         value = 0
         if swap_xy:
@@ -92,6 +89,7 @@ class PAA5100JE():
         self._write(REG_ORIENTATION, value)
     
     def get_motion(self):
+        """Retrieve motion from registers"""
         buf = bytearray(12)
         self.read_registers(REG_MOTION_BURST, buf, 12)
         dr = buf[0]
@@ -107,37 +105,37 @@ class PAA5100JE():
 
         return x_out, y_out
     
-    def _write(self, register, value):
-        if self._spi_cs_gpio:
-            self.select.on()
+    def _write(self, register: bytes, value: bytes):
+        """Write into register"""
+        self.select.on()
         self.spi.write(bytearray([register | 0x80, value]))
-        if self._spi_cs_gpio:
-            self.select.off()
+        self.select.off()
     
-    def _read(self, register, length=1):
+    def _read(self, register: bytes, length: int =1):
+        """Read register"""
         # Create a buffer to send (with one extra byte for the register)
         send_buf = bytearray([register]) + bytearray(length)
         # Create a result buffer of the same length as the send_buf
         result = bytearray(len(send_buf))
         
-        if self._spi_cs_gpio:
-            self.select.on()
+        self.select.on()
         self.spi.write_readinto(send_buf, result)
-        if self._spi_cs_gpio:
-            self.select.off()
+        self.select.off()
         
         # Return the read result, skipping the first byte (which corresponds to the register)
         return result[1:] if length > 1 else result[1]
 
-    def _bulk_write(self, data):
+    def _bulk_write(self, data: int):
+        """Write a group of commands into registers"""
         for x in range(0, len(data), 2):
             register, value = data[x : x + 2]
             if register == WAIT:
-                time.sleep(value / 1000)
+                time.sleep_ms(value)
             else:
                 self._write(register, value)
                 
-    def read_registers(self, reg, buf, len):
+    def read_registers(self, reg: bytes, buf: bytearray, len: int):
+        """Read a group of data from the registers"""
         self.select.on()
         self.spi.write(bytearray([reg]))
         # Read data from the register
@@ -145,7 +143,11 @@ class PAA5100JE():
         self.select.off()   
         
 class MotionDetector(Analog_input):
-    def __init__(self, reset, cs1, cs2,
+    """
+    Using the Analog_input code to interface with 2 PAA5100JE sensors
+    reading `x` (SPI2) and `y` (softSPI) separately.
+    """
+    def __init__(self, reset: str, cs1: str, cs2: str,
                  name='MotDet', threshold=1, calib_coef=1,
                  sampling_rate=100, event='motion'):
         
@@ -183,14 +185,15 @@ class MotionDetector(Analog_input):
     
     @property
     def threshold(self):
-        "return the value in cms"
+        "return the value in mms"
         return math.sqrt(int(self._threshold**2) * self.calib_coef)
     
     def reset_delta(self):
-        # reset the accumulated position data
+        "reset the accumulated position data"
         self.delta_x, self.delta_y = 0, 0
     
     def read_sample(self):
+        "read motion once"
         # Units are in millimeters
         current_motion_x = self.motSen_x.get_motion()
         current_motion_y = self.motSen_y.get_motion()
@@ -208,16 +211,9 @@ class MotionDetector(Analog_input):
             # Update previous coordinates
             self.prev_x = self.delta_x
             self.prev_y = self.delta_y
-        
-        disp = self.displacement()
-        
-        if self.delta_x**2 + self.delta_y**2 >= self._threshold:
-            print(f"x coordinate: {self.delta_x:>10.5f} | y coordinate: {self.delta_y:>10.5f} | Displacement: {disp:>12.5f}")
                 
-    def displacement(self):
-        # Calculate displacement using the change of coordinates with time
-        disp = math.sqrt(self._delta_x**2 + self._delta_y**2)
-        return disp
+        if self.delta_x**2 + self.delta_y**2 >= self._threshold:
+            print(f"x coordinate: {self.delta_x:>10.5f} | y coordinate: {self.delta_y:>10.5f}")
     
     def _timer_ISR(self, t):
         "Read a sample to the buffer, update write index."
@@ -230,9 +226,10 @@ class MotionDetector(Analog_input):
             self.y = self.delta_y
             self.reset_delta()
             self.timestamp = fw.current_time
+            interrupt_queue.put(self.ID) 
 
     def _stop_acquisition(self):
-        # Stop sampling analog input values.
+        "Stop sampling analog input values."
         self.timer.deinit()
         self.data_chx.stop()
         self.data_chy.stop()
@@ -242,7 +239,7 @@ class MotionDetector(Analog_input):
         self.reset_delta()
         
     def _start_acquisition(self):
-        # Start sampling analog input values.
+        "Start sampling analog input values"
         self.timer.init(freq=self.data_chx.sampling_rate)
         self.timer.callback(self._timer_ISR)
         self.acquiring = True
