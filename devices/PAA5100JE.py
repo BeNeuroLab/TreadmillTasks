@@ -2,7 +2,7 @@ import time, gc, math
 from array import array
 from machine import Pin, SPI
 from pyControl.hardware import *
-from PAA5100JE_firmware import init_registers
+from PAA5100JE_firmware import *
 
 def to_signed_16(value):
     """Convert a 16-bit integer to a signed 16-bit integer."""
@@ -62,7 +62,8 @@ class PAA5100JE():
             self._read(REG_DATA_READY + offset)
        
         # Initiate registers using firmware
-        init_registers()
+        self.firmware = PAA5100JE_firmware()
+        self.firmware.init_registers()
     
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
