@@ -10,7 +10,6 @@ def to_signed_16(value):
         value -= 0x10000  # Convert to negative
     return value
 
-WAIT = -1
 # PAA5100 register definitions
 REG_ID = 0x00
 REG_DATA_READY = 0x02
@@ -88,23 +87,6 @@ class PAA5100JE():
         if invert_x:
             value |= 0b00100000
         self._write(REG_ORIENTATION, value)
-    
-    def get_motion(self):
-        """Retrieve motion from registers"""
-        buf = bytearray(12)
-        self.read_registers(REG_MOTION_BURST, buf, 12)
-        dr = buf[0]
-        x_out = to_signed_16((buf[3] << 8) | buf[2])
-        y_out = to_signed_16((buf[5] << 8) | buf[4])
-        quality = buf[6]
-        shutter_upper = buf[10]
-        if (dr & 0b10000000) and not ((quality < 0x19) and (shutter_upper == 0x1f)):
-            return x_out, y_out
-        else:
-            x_out, y_out = 0, 0
-        time.sleep_ms(1)
-
-        return x_out, y_out
     
     def _write(self, register: bytes, value: bytes):
         """Write into register"""
