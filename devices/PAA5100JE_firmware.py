@@ -20,10 +20,7 @@ class PAA5100JE_firmware():
         """Write a group of commands into registers"""
         for x in range(0, len(data), 2):
             register, value = data[x : x + 2]
-            if register == WAIT:
-                time.sleep_ms(value)
-            else:
-                self._write(register, value)
+            self._write(register, value)
                 
     def _write(self, register: bytes, value: bytes):
         if self._spi_cs_gpio:
@@ -150,10 +147,11 @@ class PAA5100JE_firmware():
             0x5B, 0x02,
     
             0x7F, 0x07,
-            0x40, 0x41,
+            0x40, 0x41,])
+
+        time.sleep_ms(10)
     
-            WAIT, 0x0A,  # Wait 10ms
-    
+        self._bulk_write([
             0x7F, 0x00,
             0x32, 0x00,
     
@@ -173,9 +171,7 @@ class PAA5100JE_firmware():
             0x4E, 0xA8,
             0x5A, 0x90,
             0x40, 0x80,
-            0x73, 0x1F,
+            0x73, 0x1F,])
     
-            WAIT, 0x0A,  # Wait 10ms
-    
-            0x73, 0x00
-        ])
+        time.sleep_ms(10)
+        self._bulk_write([0x73, 0x00])
