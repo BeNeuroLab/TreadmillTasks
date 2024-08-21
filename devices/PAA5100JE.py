@@ -23,16 +23,16 @@ REG_RAWDATA_GRAB = 0x58
 REG_RAWDATA_GRAB_STATUS = 0x59
 
 class PAA5100JE():
-    def __init__(self, spi_port=None, reset=None, spi_cs_gpio=None, sck=0, mosi=0, miso=0):
+    def __init__(self, spi_port=None, reset=None, spi_cs_gpio=None, sck=None, mosi=None, miso=None):
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
         SPIparams = {'baudrate': 400000, 'polarity': 0, 'phase': 0,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
-        if '0' in spi_port:
-            self.spi = SPI(0, **SPIparams)
-
-        elif '1' in spi_port:
+        if '1' in spi_port:
             self.spi = SPI(1, **SPIparams)
+
+        elif '2' in spi_port:
+            self.spi = SPI(2, **SPIparams)
 
         elif 'soft' in spi_port.lower():  # Works for newer versions of micropython
             self.spi = SoftSPI(sck=Pin(sck, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
@@ -54,16 +54,17 @@ class PAA5100JE():
         time.sleep(0.02)
         for offset in range(5):
             self._read(REG_DATA_READY + offset)
+       
+        # Initiate registers using firmware
+        init_registers()
 
-        self.init_registers()
-
-        # Validate device ID and revision
+        # Validate device ID
         product_id = self.get_id()
         if product_id != 0x49:
-            raise RuntimeError(f"Invalid Product ID or Revision for PAA5100: 0x{product_id:02x}")
+            raise RuntimeError(f"Invalid Product ID for PAA5100: 0x{product_id:02x}")
 
     def get_id(self):
-        """Get chip ID and revision from PAA5100."""
+        """Get chip ID from PAA5100."""
         return self._read(REG_ID, 1)
     
     def set_rotation(self, degrees=0):
@@ -149,9 +150,8 @@ class MotionDetector(Analog_input):
                  sampling_rate=100, event='motion'):
         
         # Create SPI objects
-        ## Change to same SPI, sck, miso, and mosi
-        self.motSen_x = PAA5100JE('SPI0', reset, cs1, 18, 19, 16)
-        self.motSen_y = PAA5100JE('SPI1', reset, cs2, 10, 11, 12)
+        self.motSen_x = PAA5100JE('SPI2', reset, cs1)
+        self.motSen_y = PAA5100JE('SPI2', reset, cs2)
 
         self._threshold = threshold
         self.calib_coef = calib_coef
@@ -253,15 +253,3 @@ class MotionDetector(Analog_input):
         self.data_chy.record()
         if not self.acquiring:
             self._start_acquisition()
-
-# --------------------------------------------------------
-if __name__ == "__main__":    
-    motion_sensor = MotionDetector(2, 17, 13)
-    try:
-        while True:
-            try:
-                motion_sensor.read_sample()
-            except RuntimeError:
-                continue
-    except KeyboardInterrupt:
-        pass
