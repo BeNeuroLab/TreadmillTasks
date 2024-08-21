@@ -1,7 +1,37 @@
 class PAA5100JE_firmware():
     def __init__(self):
         self.name = "firmware"
-    
+
+    def _read(self, register: bytes, length: int =1):
+        """Read register"""
+        # Create a buffer to send (with one extra byte for the register)
+        send_buf = bytearray([register]) + bytearray(length)
+        # Create a result buffer of the same length as the send_buf
+        result = bytearray(len(send_buf))
+
+        self.select.on()
+        self.spi.write_readinto(send_buf, result)
+        self.select.off()
+
+        # Return the read result, skipping the first byte (which corresponds to the register)
+        return result[1:] if length > 1 else result[1]
+
+    def _bulk_write(self, data: bytearray):
+        """Write a group of commands into registers"""
+        for x in range(0, len(data), 2):
+            register, value = data[x : x + 2]
+            if register == WAIT:
+                time.sleep_ms(value)
+            else:
+                self._write(register, value)
+                
+    def _write(self, register: bytes, value: bytes):
+        if self._spi_cs_gpio:
+            self.set_pin(self._spi_cs_gpio, 0)
+        self.spi.write(bytearray([register | 0x80, value]))
+        if self._spi_cs_gpio:
+            self.set_pin(self._spi_cs_gpio, 1)
+            
     def init_registers(self):
         self._bulk_write([
             0x7F, 0x00,
