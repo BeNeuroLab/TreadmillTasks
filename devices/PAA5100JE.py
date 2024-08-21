@@ -2,7 +2,7 @@ import time, gc, math
 from array import array
 from machine import Pin, SPI
 from pyControl.hardware import *
-from PAA5100JE_firmware import *
+from PAA5100JE_firmware import PAA5100JE_firmware
 
 def to_signed_16(value):
     """Convert a 16-bit integer to a signed 16-bit integer."""
@@ -126,7 +126,7 @@ class PAA5100JE():
         # Return the read result, skipping the first byte (which corresponds to the register)
         return result[1:] if length > 1 else result[1]
 
-    def _bulk_write(self, data: int):
+    def _bulk_write(self, data: bytearray):
         """Write a group of commands into registers"""
         for x in range(0, len(data), 2):
             register, value = data[x : x + 2]
@@ -160,13 +160,11 @@ class MotionDetector(Analog_input):
         self.calib_coef = calib_coef
         
         # Motion sensor variables
-        self.x_buffer = array('i', [0, 0])
-        self.y_buffer = array('i', [0, 0])
+        self.x_buffer = bytearray(12)
+        self.y_buffer = bytearray(12)
         self.x_buffer_mv = memoryview(self.x_buffer)
         self.y_buffer_mv = memoryview(self.y_buffer)
         
-        self.prev_x = 0
-        self.prev_y = 0
         self.delta_x, self.delta_y = 0, 0    # accumulated position
         self._delta_x, self._delta_y = 0, 0  # instantaneous position
         self.x, self.y = 0, 0  # to be accessed from the task, unit=mm
@@ -195,24 +193,16 @@ class MotionDetector(Analog_input):
     
     def read_sample(self):
         "read motion once"
-        # Units are in millimeters
-        current_motion_x = self.motSen_x.get_motion()
-        current_motion_y = self.motSen_y.get_motion()
+        # All units are in millimeters
+        self.motSen_x.read_registers(REG_MOTION_BURST, self.x_buffer_mv, 12)
+        self._delta_x = to_signed_16((self.x_buffer_mv[3] << 8) | self.x_buffer_mv[2])
+
+        self.motSen_y.read_registers(REG_MOTION_BURST, self.y_buffer_mv, 12)
+        self._delta_y = to_signed_16((self.x_buffer_mv[5] << 8) | self.x_buffer_mv[4])
+
+        self.delta_y += self._delta_y
+        self.delta_x += self._delta_x        
         
-        if current_motion_x is not None and current_motion_y is not None:
-            self.x_buffer_mv = current_motion_x
-            self.y_buffer_mv = current_motion_y
-
-            self.delta_x = self.x_buffer_mv[0]
-            self.delta_y = self.y_buffer_mv[1]
-
-            self._delta_x = self.delta_x - self.prev_x
-            self._delta_y = self.delta_y - self.prev_y
-            
-            # Update previous coordinates
-            self.prev_x = self.delta_x
-            self.prev_y = self.delta_y
-                
         if self.delta_x**2 + self.delta_y**2 >= self._threshold:
             print(f"x coordinate: {self.delta_x:>10.5f} | y coordinate: {self.delta_y:>10.5f}")
     
