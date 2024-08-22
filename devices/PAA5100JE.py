@@ -112,10 +112,7 @@ class PAA5100JE():
         """Write a group of commands into registers"""
         for x in range(0, len(data), 2):
             register, value = data[x : x + 2]
-            if register == WAIT:
-                time.sleep_ms(value)
-            else:
-                self._write(register, value)
+            self._write(register, value)
                 
     def read_registers(self, reg: bytes, buf: bytearray, len: int):
         """Read a group of data from the registers"""
