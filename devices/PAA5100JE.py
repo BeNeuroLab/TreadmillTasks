@@ -10,23 +10,11 @@ def to_signed_16(value):
         value -= 0x10000  # Convert to negative
     return value
 
-# PAA5100 registers definitions
-REG_ID = 0x00
-REG_DATA_READY = 0x02
-REG_MOTION_BURST = 0x16
-REG_POWER_UP_RESET = 0x3A
-REG_SHUTDOWN = 0x3B
-REG_ORIENTATION = 0x5B
-REG_RESOLUTION = 0x4E
-
-REG_RAWDATA_GRAB = 0x58
-REG_RAWDATA_GRAB_STATUS = 0x59
-
 class PAA5100JE():
     """Optical tracking sensor."""
     def __init__(self, spi_port: str, 
+                 spi_cs_gpio: str,
                  reset: str = None, 
-                 spi_cs_gpio: str, 
                  sck: str = None, 
                  mosi: str =None, 
                  miso: str =None):
