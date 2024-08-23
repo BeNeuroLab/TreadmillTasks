@@ -2,7 +2,7 @@ import time, gc, math
 from array import array
 from machine import Pin, SPI
 from pyControl.hardware import *
-from PAA5100JE_firmware import PAA5100JE_firmware
+from PAA5100JE_firmware import *
 
 def to_signed_16(value):
     """Convert a 16-bit integer to a signed 16-bit integer."""
@@ -187,10 +187,7 @@ class MotionDetector(Analog_input):
 
         # Record accumulated motion
         self.delta_y += self._delta_y
-        self.delta_x += self._delta_x        
-        
-        if self.delta_x**2 + self.delta_y**2 >= self._threshold:
-            print(f"x coordinate: {self._delta_x:>10.5f} | y coordinate: {self._delta_y:>10.5f}")
+        self.delta_x += self._delta_x
     
     def _timer_ISR(self, t):
         """Read a sample to the buffer, update write index."""
