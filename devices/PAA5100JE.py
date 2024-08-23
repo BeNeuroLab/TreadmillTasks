@@ -2,7 +2,7 @@ import time, gc, math
 from array import array
 from machine import Pin, SPI
 from pyControl.hardware import *
-from PAA5100JE_firmware import *
+from device.PAA5100JE_firmware import *
 
 def to_signed_16(value):
     """Convert a 16-bit integer to a signed 16-bit integer."""
@@ -44,14 +44,24 @@ class PAA5100JE():
         time.sleep_ms(50)
 
         # Reset the sensor
-        self._write(REG_POWER_UP_RESET, 0x5A)
+        self.firmware = PAA5100JE_firmware()
+        self._write(self.firmware.REG_POWER_UP_RESET, 0x5A)
         time.sleep_ms(20)
         for offset in range(5):
-            self._read(REG_DATA_READY + offset)
+            self._read(self.firmware.REG_DATA_READY + offset)
        
-        # Initiate registers using firmware
-        self.firmware = PAA5100JE_firmware()
-        self.firmware.init_registers()
+        # Initiate registers
+        PROGMEM = self.firmware.init_registers()
+        self._bulk_write(PROGMEM[0:10])
+        if self._read(0x67) & 0b10000000:
+            self._write(0x48, 0x04)
+        else:
+            self._write(0x48, 0x02)
+        self._bulk_write(PROGMEM[10:154])
+        time.sleep_ms(10)
+        self._bulk_write(PROGMEM[154:186])
+        time.sleep_ms(10)
+        self._bulk_write(PROGMEM[186:])
     
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
@@ -75,7 +85,7 @@ class PAA5100JE():
             value |= 0b01000000
         if invert_x:
             value |= 0b00100000
-        self._write(REG_ORIENTATION, value)
+        self._write(self.firmware.REG_ORIENTATION, value)
     
     def _write(self, register: bytes, value: bytes):
         """Write into register"""
@@ -119,7 +129,7 @@ class PAA5100JE():
         time.sleep_ms(1)
         self.reset.on()
         time.sleep_ms(60)
-        self.write(REG_SHUTDOWN, 1)
+        self.write(self.firmware.REG_SHUTDOWN, 1)
         time.sleep_ms(1)
         self.select.off()
         time.sleep_ms(1)
@@ -136,8 +146,8 @@ class MotionDetector(Analog_input):
                  sampling_rate=100, event='motion'):
         
         # Create SPI objects
-        self.motSen_x = PAA5100JE('SPI2', reset, cs1)
-        self.motSen_y = PAA5100JE('SPI2', reset, cs2)
+        self.motSen_x = PAA5100JE('SPI2', cs1, reset)
+        self.motSen_y = PAA5100JE('SPI2', cs2, reset)
 
         self._threshold = threshold
         self.calib_coef = calib_coef
@@ -178,11 +188,11 @@ class MotionDetector(Analog_input):
         """read motion once"""
         # All units are in millimeters
         # Read motion in x direction
-        self.motSen_x.read_registers(REG_MOTION_BURST, self.x_buffer_mv, 12)
+        self.motSen_x.read_registers(self.firmware.REG_MOTION_BURST, self.x_buffer_mv, 12)
         self._delta_x = to_signed_16((self.x_buffer_mv[3] << 8) | self.x_buffer_mv[2])
 
         # Read motion in y direction
-        self.motSen_y.read_registers(REG_MOTION_BURST, self.y_buffer_mv, 12)
+        self.motSen_y.read_registers(self.firmware.REG_MOTION_BURST, self.y_buffer_mv, 12)
         self._delta_y = to_signed_16((self.y_buffer_mv[5] << 8) | self.y_buffer_mv[4])
 
         # Record accumulated motion
