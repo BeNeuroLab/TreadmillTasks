@@ -1,72 +1,37 @@
 class PAA5100JE_firmware():
     def __init__(self):
+        """
+        PAA5100JE firmware includes registers and initiation protocol for
+        the optical tracking chip
+        """
         self.name = "firmware"
-
-    def _read(self, register: bytes, length: int =1):
-        """Read register"""
-        # Create a buffer to send (with one extra byte for the register)
-        send_buf = bytearray([register]) + bytearray(length)
-        # Create a result buffer of the same length as the send_buf
-        result = bytearray(len(send_buf))
-
-        self.select.on()
-        self.spi.write_readinto(send_buf, result)
-        self.select.off()
-
-        # Return the read result, skipping the first byte (which corresponds to the register)
-        return result[1:] if length > 1 else result[1]
-
-    def _bulk_write(self, data: bytearray):
-        """Write a group of commands into registers"""
-        for x in range(0, len(data), 2):
-            register, value = data[x : x + 2]
-            self._write(register, value)
-                
-    def _write(self, register: bytes, value: bytes):
-        if self._spi_cs_gpio:
-            self.set_pin(self._spi_cs_gpio, 0)
-        self.spi.write(bytearray([register | 0x80, value]))
-        if self._spi_cs_gpio:
-            self.set_pin(self._spi_cs_gpio, 1)
+        # PAA5100 registers definitions
+        REG_ID = 0x00
+        REG_DATA_READY = 0x02
+        REG_MOTION_BURST = 0x16
+        REG_POWER_UP_RESET = 0x3A
+        REG_SHUTDOWN = 0x3B
+        REG_ORIENTATION = 0x5B
+        REG_RESOLUTION = 0x4E
+        
+        REG_RAWDATA_GRAB = 0x58
+        REG_RAWDATA_GRAB_STATUS = 0x59
             
     def init_registers(self):
-        self._bulk_write([
+        PROGMEM = [
             0x7F, 0x00,
             0x55, 0x01,
             0x50, 0x07,
     
             0x7F, 0x0E,
-            0x43, 0x10
-        ])
-        if self._read(0x67) & 0b10000000:
-            self._write(0x48, 0x04)
-        else:
-            self._write(0x48, 0x02)
-        self._bulk_write([
+            0x43, 0x10,
+            
             0x7F, 0x00,
             0x51, 0x7B,
             0x50, 0x00,
             0x55, 0x00,
-            0x7F, 0x0E
-        ])
-        if self._read(0x73) == 0x00:
-            c1 = self._read(0x70)
-            c2 = self._read(0x71)
-            if c1 <= 28:
-                c1 += 14
-            if c1 > 28:
-                c1 += 11
-            c1 = max(0, min(0x3F, c1))
-            c2 = (c2 * 45) // 100
-            self._bulk_write([
-                0x7F, 0x00,
-                0x61, 0xAD,
-                0x51, 0x70,
-                0x7F, 0x0E
-            ])
-            self._write(0x70, c1)
-            self._write(0x71, c2)
-        self._bulk_write([
+            0x7F, 0x0E,
+            
             0x7F, 0x00,
             0x61, 0xAD,
     
@@ -147,11 +112,8 @@ class PAA5100JE_firmware():
             0x5B, 0x02,
     
             0x7F, 0x07,
-            0x40, 0x41,])
-
-        time.sleep_ms(10)
-    
-        self._bulk_write([
+            0x40, 0x41,
+            
             0x7F, 0x00,
             0x32, 0x00,
     
@@ -171,7 +133,6 @@ class PAA5100JE_firmware():
             0x4E, 0xA8,
             0x5A, 0x90,
             0x40, 0x80,
-            0x73, 0x1F,])
-    
-        time.sleep_ms(10)
-        self._bulk_write([0x73, 0x00])
+            0x73, 0x1F,  
+            
+            0x73, 0x00]
