@@ -6,19 +6,19 @@ class PAA5100JE_firmware():
         """
         self.name = "firmware"
         # PAA5100 registers definitions
-        REG_ID = 0x00
-        REG_DATA_READY = 0x02
-        REG_MOTION_BURST = 0x16
-        REG_POWER_UP_RESET = 0x3A
-        REG_SHUTDOWN = 0x3B
-        REG_ORIENTATION = 0x5B
-        REG_RESOLUTION = 0x4E
+        self.REG_ID = 0x00
+        self.REG_DATA_READY = 0x02
+        self.REG_MOTION_BURST = 0x16
+        self.REG_POWER_UP_RESET = 0x3A
+        self.REG_SHUTDOWN = 0x3B
+        self.REG_ORIENTATION = 0x5B
+        self.REG_RESOLUTION = 0x4E
         
-        REG_RAWDATA_GRAB = 0x58
-        REG_RAWDATA_GRAB_STATUS = 0x59
-            
+        self.REG_RAWDATA_GRAB = 0x58
+        self.REG_RAWDATA_GRAB_STATUS = 0x59
+        
     def init_registers(self):
-        PROGMEM = [
+        return [
             0x7F, 0x00,
             0x55, 0x01,
             0x50, 0x07,
