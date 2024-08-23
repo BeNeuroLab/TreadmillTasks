@@ -10,7 +10,7 @@ def to_signed_16(value):
         value -= 0x10000  # Convert to negative
     return value
 
-# PAA5100 register definitions
+# PAA5100 registers definitions
 REG_ID = 0x00
 REG_DATA_READY = 0x02
 REG_MOTION_BURST = 0x16
@@ -109,13 +109,13 @@ class PAA5100JE():
         return result[1:] if length > 1 else result[1]
 
     def _bulk_write(self, data: bytearray):
-        """Write a group of commands into registers"""
+        """Write a list of commands into registers"""
         for x in range(0, len(data), 2):
             register, value = data[x : x + 2]
             self._write(register, value)
                 
     def read_registers(self, reg: bytes, buf: bytearray, len: int):
-        """Read a group of data from the registers"""
+        """Read an array of data from the registers"""
         self.select.on()
         self.spi.write(bytearray([reg]))
         # Read data from the register
@@ -163,30 +163,33 @@ class MotionDetector(Analog_input):
     
     @property
     def threshold(self):
-        "return the value in mms"
+        """return the value in mms"""
         return math.sqrt(int(self._threshold**2) * self.calib_coef)
     
     def reset_delta(self):
-        "reset the accumulated position data"
+        """reset the accumulated position data"""
         self.delta_x, self.delta_y = 0, 0
     
     def read_sample(self):
-        "read motion once"
+        """read motion once"""
         # All units are in millimeters
+        # Read motion in x direction
         self.motSen_x.read_registers(REG_MOTION_BURST, self.x_buffer_mv, 12)
         self._delta_x = to_signed_16((self.x_buffer_mv[3] << 8) | self.x_buffer_mv[2])
 
+        # Read motion in y direction
         self.motSen_y.read_registers(REG_MOTION_BURST, self.y_buffer_mv, 12)
-        self._delta_y = to_signed_16((self.x_buffer_mv[5] << 8) | self.x_buffer_mv[4])
+        self._delta_y = to_signed_16((self.y_buffer_mv[5] << 8) | self.y_buffer_mv[4])
 
+        # Record accumulated motion
         self.delta_y += self._delta_y
         self.delta_x += self._delta_x        
         
         if self.delta_x**2 + self.delta_y**2 >= self._threshold:
-            print(f"x coordinate: {self.delta_x:>10.5f} | y coordinate: {self.delta_y:>10.5f}")
+            print(f"x coordinate: {self._delta_x:>10.5f} | y coordinate: {self._delta_y:>10.5f}")
     
     def _timer_ISR(self, t):
-        "Read a sample to the buffer, update write index."
+        """Read a sample to the buffer, update write index."""
         self.read_sample()
         self.data_chx.put(self._delta_x)
         self.data_chy.put(self._delta_y)
@@ -199,7 +202,7 @@ class MotionDetector(Analog_input):
             interrupt_queue.put(self.ID) 
 
     def _stop_acquisition(self):
-        "Stop sampling analog input values."
+        """Stop sampling analog input values."""
         self.timer.deinit()
         self.data_chx.stop()
         self.data_chy.stop()
@@ -209,13 +212,13 @@ class MotionDetector(Analog_input):
         self.reset_delta()
         
     def _start_acquisition(self):
-        "Start sampling analog input values"
+        """Start sampling analog input values"""
         self.timer.init(freq=self.data_chx.sampling_rate)
         self.timer.callback(self._timer_ISR)
         self.acquiring = True
 
     def record(self):
-        "Start streaming data to computer."
+        """Start streaming data to computer."""
         self.data_chx.record()
         self.data_chy.record()
         if not self.acquiring:
