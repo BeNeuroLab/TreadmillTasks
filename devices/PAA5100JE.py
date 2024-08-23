@@ -15,6 +15,7 @@ REG_ID = 0x00
 REG_DATA_READY = 0x02
 REG_MOTION_BURST = 0x16
 REG_POWER_UP_RESET = 0x3A
+REG_SHUTDOWN = 0x3B
 REG_ORIENTATION = 0x5B
 REG_RESOLUTION = 0x4E
 
@@ -121,6 +122,21 @@ class PAA5100JE():
         # Read data from the register
         buf[:] = self.spi.read(len)
         self.select.off()   
+
+    def shut_down(self, deinitSPI:bool =True):
+        """Shutdown the sensor"""
+        self.select.off()
+        time.sleep_ms(1)
+        self.select.on()
+        time.sleep_ms(1)
+        self.reset.on()
+        time.sleep_ms(60)
+        self.write(REG_SHUTDOWN, 1)
+        time.sleep_ms(1)
+        self.select.off()
+        time.sleep_ms(1)
+        if deinitSPI:
+            self.SPI.deinit()
         
 class MotionDetector(Analog_input):
     """
