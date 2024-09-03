@@ -149,7 +149,7 @@ class MotionDetector(Analog_input):
         self.motSen_x = PAA5100JE('SPI2', cs1, reset)
         self.motSen_y = PAA5100JE('SPI2', cs2, reset)
 
-        self._threshold = threshold
+        self.threshold = threshold
         self.calib_coef = calib_coef
         
         # Motion sensor variables
@@ -177,9 +177,14 @@ class MotionDetector(Analog_input):
     
     @property
     def threshold(self):
-        """return the value in mms"""
-        return math.sqrt(int(self._threshold**2) * self.calib_coef)
-    
+        "return the value in mms"
+        return math.sqrt(self._threshold)
+
+    @threshold.setter
+    def threshold(self, new_threshold):
+        self._threshold = int((new_threshold)**2) * self.calib_coef
+        self.reset_delta()
+        
     def reset_delta(self):
         """reset the accumulated position data"""
         self.delta_x, self.delta_y = 0, 0
