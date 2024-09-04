@@ -167,6 +167,30 @@ class PAA5100JE():
         time.sleep_ms(1)
         if deinitSPI:
             self.SPI.deinit()
+    
+    def read_register_buff(self, addrs: bytes, buff: bytes):
+        """
+        addrs < 128
+        """
+        self.select.on()
+        self.spi.write(addrs)
+        time.sleep_us(100)  # tSRAD
+        self.spi.readinto(buff)
+        time.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
+        self.select.off()
+        time.sleep_us(19)  # tSRW/tSRR (=20us) minus tSCLK-NCS
+
+    def write_register_buff(self, addrs: bytes, data: bytes):
+        """
+        addrs < 128
+        """
+        # flip the MSB to 1:...
+        self.select.on()
+        self.spi.write(addrs)
+        self.spi.write(data)
+        time.sleep_us(20)  # tSCLK-NCS for write operation
+        self.select.off()
+        time.sleep_us(100)  # tSWW/tSWR (=120us) minus tSCLK-NCS. Could be shortened, but is looks like a safe lower bound
         
 class MotionDetector(Analog_input):
     """
@@ -190,6 +214,11 @@ class MotionDetector(Analog_input):
         self.x_buffer_mv = memoryview(self.x_buffer)
         self.y_buffer_mv = memoryview(self.y_buffer)
         
+        #self.delta_x_l = self.x_buffer_mv[0:1]
+        #self.delta_x_h = self.x_buffer_mv[1:]
+        #self.delta_y_l = self.y_buffer_mv[0:1]
+        #self.delta_y_h = self.y_buffer_mv[1:]
+                     
         self.delta_x, self.delta_y = 0, 0    # accumulated position
         self._delta_x, self._delta_y = 0, 0  # instantaneous position
         self.x, self.y = 0, 0  # to be accessed from the task, unit=mm
@@ -232,6 +261,22 @@ class MotionDetector(Analog_input):
         self.motSen_y.read_registers(self.firmware.REG_MOTION_BURST, self.y_buffer_mv, 12)
         self._delta_y = to_signed_16((self.y_buffer_mv[3] << 8) | self.y_buffer_mv[2])
 
+        #self.motSen_y.write_register_buff(b'\x82', b'\x01')
+        #self.motSen_y.read_register_buff(b'\x02', self.delta_y_l)
+        #self.motSen_y.read_register_buff(b'\x03', self.delta_y_l)
+        #self.motSen_y.read_register_buff(b'\x04', self.delta_y_l)
+        #self.motSen_y.read_register_buff(b'\x05', self.delta_y_l)
+        #self.motSen_y.read_register_buff(b'\x06', self.delta_y_h)
+        #self._delta_y = to_signed_16(int.from_bytes(self.y_buffer_mv, 'little'))
+
+        #self.motSen_x.write_register_buff(b'\x82', b'\x01')
+        #self.motSen_x.read_register_buff(b'\x02', self.delta_x_l)
+        #self.motSen_x.read_register_buff(b'\x03', self.delta_x_l)
+        #self.motSen_x.read_register_buff(b'\x04', self.delta_x_h)
+        #self.motSen_x.read_register_buff(b'\x05', self.delta_y_l)
+        #self.motSen_x.read_register_buff(b'\x06', self.delta_y_l)
+        #self._delta_x = to_signed_16(int.from_bytes(self.x_buffer_mv, 'little'))
+        
         # Record accumulated motion
         self.delta_y += self._delta_y
         self.delta_x += self._delta_x
