@@ -259,9 +259,9 @@ class MotionDetector(Analog_input):
 
         # Read motion in y direction
         self.motSen_y.read_registers(self.firmware.REG_MOTION_BURST, self.y_buffer_mv, 12)
-        self._delta_y = to_signed_16((self.y_buffer_mv[3] << 8) | self.y_buffer_mv[2])
+        self._delta_y = to_signed_16((self.y_buffer_mv[5] << 8) | self.y_buffer_mv[4])
 
-        #self.motSen_y.write_register_buff(b'\x82', b'\x01')
+        #self.motSen_y.write_register_buff(b'\x82', b'\x01')  # not sure what register 0x82 is (from previous sensor)
         #self.motSen_y.read_register_buff(b'\x02', self.delta_y_l)
         #self.motSen_y.read_register_buff(b'\x03', self.delta_y_l)
         #self.motSen_y.read_register_buff(b'\x04', self.delta_y_l)
