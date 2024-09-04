@@ -66,7 +66,7 @@ class PAA5100JE():
             c1 = max(0, min(0x3F, c1))
             c2 = (c2 * 45) // 100
     
-         self._bulk_write([
+            self._bulk_write([
                 0x7F, 0x00,
                 0x61, 0xAD,
                 0x51, 0x70,
@@ -82,8 +82,8 @@ class PAA5100JE():
         self._bulk_write(PROGMEM[186:])
         
         # Check if registers are initialized
-        rev_ID = self._read(0x01)
-        if rev_ID == 0:
+        prod_ID = self._read(0x00)
+        if prod_ID == 0x49:
             print("Registers initialized successfully.")
                      
     def set_rotation(self, degrees:int =0):
@@ -166,40 +166,16 @@ class PAA5100JE():
         self.select.off()
         time.sleep_ms(1)
         if deinitSPI:
-            self.SPI.deinit()
-    
-    def read_register_buff(self, addrs: bytes, buff: bytes):
-        """
-        addrs < 128
-        """
-        self.select.on()
-        self.spi.write(addrs)
-        time.sleep_us(100)  # tSRAD
-        self.spi.readinto(buff)
-        time.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
-        self.select.off()
-        time.sleep_us(19)  # tSRW/tSRR (=20us) minus tSCLK-NCS
-
-    def write_register_buff(self, addrs: bytes, data: bytes):
-        """
-        addrs < 128
-        """
-        # flip the MSB to 1:...
-        self.select.on()
-        self.spi.write(addrs)
-        self.spi.write(data)
-        time.sleep_us(20)  # tSCLK-NCS for write operation
-        self.select.off()
-        time.sleep_us(100)  # tSWW/tSWR (=120us) minus tSCLK-NCS. Could be shortened, but is looks like a safe lower bound
+            self.spi.deinit()
         
 class MotionDetector(Analog_input):
     """
     Using the Analog_input code to interface with 2 PAA5100JE sensors
     reading `x` (SPI2) and `y` (softSPI) separately.
     """
-    def __init__(self, cs1: str, cs2: str,
-                 name='MotSen', event='motion', 
-                 calib_coef=1, threshold=1, sampling_rate=100):
+    def __init__(self, reset: str, cs1: str, cs2: str,
+                 name='MotSen', threshold=1, calib_coef=1,  
+                 sampling_rate=100, event='motion'):
         
         # Create SPI objects
         self.motSen_x = PAA5100JE('SPI2', cs1)
@@ -213,11 +189,6 @@ class MotionDetector(Analog_input):
         self.y_buffer = bytearray(12)
         self.x_buffer_mv = memoryview(self.x_buffer)
         self.y_buffer_mv = memoryview(self.y_buffer)
-        
-        #self.delta_x_l = self.x_buffer_mv[0:1]
-        #self.delta_x_h = self.x_buffer_mv[1:]
-        #self.delta_y_l = self.y_buffer_mv[0:1]
-        #self.delta_y_h = self.y_buffer_mv[1:]
                      
         self.delta_x, self.delta_y = 0, 0    # accumulated position
         self._delta_x, self._delta_y = 0, 0  # instantaneous position
@@ -260,22 +231,6 @@ class MotionDetector(Analog_input):
         # Read motion in y direction
         self.motSen_y.read_registers(self.firmware.REG_MOTION_BURST, self.y_buffer_mv, 12)
         self._delta_y = to_signed_16((self.y_buffer_mv[5] << 8) | self.y_buffer_mv[4])
-
-        #self.motSen_y.write_register_buff(b'\x82', b'\x01')  # not sure what register 0x82 is (from previous sensor)
-        #self.motSen_y.read_register_buff(b'\x02', self.delta_y_l)
-        #self.motSen_y.read_register_buff(b'\x03', self.delta_y_l)
-        #self.motSen_y.read_register_buff(b'\x04', self.delta_y_l)
-        #self.motSen_y.read_register_buff(b'\x05', self.delta_y_l)
-        #self.motSen_y.read_register_buff(b'\x06', self.delta_y_h)
-        #self._delta_y = to_signed_16(int.from_bytes(self.y_buffer_mv, 'little'))
-
-        #self.motSen_x.write_register_buff(b'\x82', b'\x01')
-        #self.motSen_x.read_register_buff(b'\x02', self.delta_x_l)
-        #self.motSen_x.read_register_buff(b'\x03', self.delta_x_l)
-        #self.motSen_x.read_register_buff(b'\x04', self.delta_x_h)
-        #self.motSen_x.read_register_buff(b'\x05', self.delta_y_l)
-        #self.motSen_x.read_register_buff(b'\x06', self.delta_y_l)
-        #self._delta_x = to_signed_16(int.from_bytes(self.x_buffer_mv, 'little'))
         
         # Record accumulated motion
         self.delta_y += self._delta_y
