@@ -129,7 +129,7 @@ class PAA5100JE():
         self.spi.write_readinto(send_buf, result)
         time.sleep_us(1)
         self.select.off()
-        time.sleep_us(1) # try 19us if not working
+        time.sleep_us(19)
         
         # Return the read result, skipping the first byte (which corresponds to the register)
         return result[1:] if length > 1 else result[1]
@@ -140,20 +140,20 @@ class PAA5100JE():
         for x in range(0, len(data), 2):
             register, value = data[x : x + 2]
             self._write(register, value)
-            time.sleep_us(20)
+            time.sleep_us(11)
         self.select.off()
-        time.sleep_us(100)
+        time.sleep_us(15)
                 
     def read_registers(self, registers: bytes, buf: bytearray, len: int):
         """Read an array of data from the registers"""
         self.select.on()
         self.spi.write(bytearray([registers]))
-        time.sleep_us(100)
+        time.sleep_us(7)
         # Read data from the register
         buf[:] = self.spi.read(len)
-        time.sleep_us(1)
-        self.select.off()  
-        time.sleep_us(1)
+        time.sleep_us(2)
+        self.select.off()
+        time.sleep_us(15)
 
     def shut_down(self, deinitSPI:bool =True):
         """Shutdown the sensor"""
