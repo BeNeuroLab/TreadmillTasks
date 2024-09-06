@@ -129,7 +129,7 @@ class PAA5100JE():
         self.spi.write_readinto(send_buf, result)
         time.sleep_us(1)
         self.select.off()
-        time.sleep_us(19)
+        time.sleep_us(1) # try 19us if not working
         
         # Return the read result, skipping the first byte (which corresponds to the register)
         return result[1:] if length > 1 else result[1]
@@ -153,7 +153,7 @@ class PAA5100JE():
         buf[:] = self.spi.read(len)
         time.sleep_us(1)
         self.select.off()  
-        time.sleep_us(19)
+        time.sleep_us(1)
 
     def shut_down(self, deinitSPI:bool =True):
         """Shutdown the sensor"""
