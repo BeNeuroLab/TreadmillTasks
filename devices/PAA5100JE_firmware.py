@@ -7,6 +7,7 @@ class PAA5100JE_firmware():
         self.name = "firmware"
         # PAA5100 registers definitions
         self.REG_ID = 0x00
+        self.REVISION = 0x01
         self.REG_DATA_READY = 0x02
         self.REG_MOTION_BURST = 0x16
         self.REG_POWER_UP_RESET = 0x3A
