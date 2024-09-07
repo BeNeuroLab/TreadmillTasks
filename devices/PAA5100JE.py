@@ -20,8 +20,10 @@ class PAA5100JE():
                      
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
-        SPIparams = {'baudrate': 400000, 'polarity': 0, 'phase': 0,
+        SPIparams = {'baudrate': 1000000, 'polarity': 0, 'phase': 0,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
+        #BUG: Test for different polarity and phase combinations (because different SPI mode is used)
+        
         if '1' in spi_port:
             self.spi = machine.SPI(1, **SPIparams)
 
@@ -37,8 +39,10 @@ class PAA5100JE():
             
         # Handle Chip Select (CS) pin
         self.select = Digital_output(pin=spi_cs_gpio, inverted=True)
-        self.select.off()  # Deselect the device by setting CS high
+
+        self.select.on()
         time.sleep_ms(50)
+        self.select.off()  # Deselect the device by setting CS high
 
         # Reset the sensor
         self.firmware = PAA5100JE_firmware()
@@ -83,8 +87,7 @@ class PAA5100JE():
         
         # Check if registers are initialized
         prod_ID = self._read(0x00)
-        if prod_ID == 0x49:
-            print("Registers initialized successfully.")
+        assert prod_ID == 0x49
                      
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
@@ -112,14 +115,24 @@ class PAA5100JE():
     
     def _write(self, register: bytes, value: bytes):
         """Write into register"""
+        #self.select.on()
+        #self.spi.write(bytearray([register | 0x80, value]))
+        #time.sleep_us(20)
+        #self.select.off()
+        #time.sleep_us(100)
+        
+        buf = bytearray(2)
+        buf[0] = register | 0x80
+        buf[1] = value
         self.select.on()
-        self.spi.write(bytearray([register | 0x80, value]))
+        self.spi.write(buf)
         time.sleep_us(20)
         self.select.off()
         time.sleep_us(100)
     
     def _read(self, register: bytes, length: int =1):
         """Read register"""
+        '''
         # Create a buffer to send (with one extra byte for the register)
         send_buf = bytearray([register]) + bytearray(length)
         # Create a result buffer of the same length as the send_buf
@@ -133,24 +146,27 @@ class PAA5100JE():
         
         # Return the read result, skipping the first byte (which corresponds to the register)
         return result[1:] if length > 1 else result[1]
+        '''
+        data = bytearray(1)  # Create a single byte buffer for the result
+        self.select.on()
+        spi.write_readinto(bytearray([reg]), data)
+        self.select.off()
+        return data[0]  # Return the byte read (#Possible BUG: originally was set to first)
 
     def _bulk_write(self, data: bytearray):
         """Write a list of commands into registers"""
-        self.select.on()
         for x in range(0, len(data), 2):
             register, value = data[x : x + 2]
             self._write(register, value)
-            time.sleep_us(11)
-        self.select.off()
-        time.sleep_us(15)
-                
+            
     def read_registers(self, registers: bytes, buf: bytearray, len: int):
         """Read an array of data from the registers"""
         self.select.on()
         self.spi.write(bytearray([registers]))
         time.sleep_us(7)
         # Read data from the register
-        buf[:] = self.spi.read(len)
+        #buf[:] = self.spi.read(len)
+        spi.readinto(buf, len)
         time.sleep_us(2)
         self.select.off()
         time.sleep_us(15)
@@ -235,7 +251,9 @@ class MotionDetector(Analog_input):
         # Record accumulated motion
         self.delta_y += self._delta_y
         self.delta_x += self._delta_x
-    
+        
+        time.sleep_ms(1)
+        
     def _timer_ISR(self, t):
         """Read a sample to the buffer, update write index."""
         self.read_sample()
