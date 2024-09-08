@@ -20,7 +20,7 @@ class PAA5100JE():
                      
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
-        SPIparams = {'baudrate': 1000000, 'polarity': 0, 'phase': 0,
+        SPIparams = {'baudrate': 1000000, 'polarity': 0, 'phase': 1,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
         #BUG: Test for different polarity and phase combinations (because different SPI mode is used)
         
@@ -151,7 +151,7 @@ class PAA5100JE():
         self.select.on()
         spi.write_readinto(bytearray([reg]), data)
         self.select.off()
-        return data[0]  # Return the byte read (#Possible BUG: originally was set to first)
+        return data[1]  # Return the byte read
 
     def _bulk_write(self, data: bytearray):
         """Write a list of commands into registers"""
