@@ -151,7 +151,7 @@ class PAA5100JE():
         self.select.on()
         spi.write_readinto(bytearray([reg]), data)
         self.select.off()
-        return data[1]  # Return the byte read
+        return data[0]  # Return the byte read
 
     def _bulk_write(self, data: bytearray):
         """Write a list of commands into registers"""
