@@ -11,7 +11,10 @@ def to_signed_16(value):
     return value
 
 class PAA5100JE():
-    """Optical tracking sensor."""
+    """
+    Optical tracking sensor:
+    C++ code reference can be found on: https://github.com/pimoroni/pimoroni-pico.git
+    """
     def __init__(self, spi_port: str, 
                  spi_cs_gpio: str, 
                  sck: str = None, 
@@ -21,8 +24,7 @@ class PAA5100JE():
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
         SPIparams = {'baudrate': 1000000, 'polarity': 0, 'phase': 1,
-                     'bits': 8, 'firstbit': machine.SPI.MSB}
-        #BUG: Test for different polarity and phase combinations (because different SPI mode is used)
+                     'bits': 16, 'firstbit': machine.SPI.MSB}
         
         if '1' in spi_port:
             self.spi = machine.SPI(1, **SPIparams)
@@ -50,7 +52,12 @@ class PAA5100JE():
         time.sleep_ms(20)
         for offset in range(5):
             self._read(self.firmware.REG_DATA_READY + offset)
-       
+
+        ## Check if registers are initialized
+        #prod_ID = self._read(0x00)
+        #assert prod_ID == 0x49, 'bad initialization' + str(prod_ID)
+                     
+        # check if initialisation protocol is correct
         # Initiate registers
         PROGMEM = self.firmware.init_registers()
         self._bulk_write(PROGMEM[0:10])
@@ -87,7 +94,7 @@ class PAA5100JE():
         
         # Check if registers are initialized
         prod_ID = self._read(0x00)
-        assert prod_ID == 0x49
+        assert prod_ID == 0x49, 'bad initialization' + str(prod_ID)
                      
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
@@ -113,60 +120,51 @@ class PAA5100JE():
             value |= 0b00100000
         self._write(self.firmware.REG_ORIENTATION, value)
     
-    def _write(self, register: bytes, value: bytes):
-        """Write into register"""
-        #self.select.on()
-        #self.spi.write(bytearray([register | 0x80, value]))
-        #time.sleep_us(20)
-        #self.select.off()
-        #time.sleep_us(100)
+    def _write(self, address: int, value: int):
+        """Write value into register"""
+        addrs = address | 0x80  # Flip MSB to 1
+        addrs = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
+        value = value.to_bytes(1, 'little')  # Convert the value from integer to a single byte
         
-        buf = bytearray(2)
-        buf[0] = register | 0x80
-        buf[1] = value
         self.select.on()
-        self.spi.write(buf)
-        time.sleep_us(20)
+        self.spi.write(addrs)   # find specific address of the device
+        self.spi.write(value)   # write value into the above address of the device
+        time.sleep_us(15)
         self.select.off()
-        time.sleep_us(100)
-    
-    def _read(self, register: bytes, length: int =1):
+        time.sleep_us(25)
+
+    def _read(self, address: int):
         """Read register"""
-        '''
-        # Create a buffer to send (with one extra byte for the register)
-        send_buf = bytearray([register]) + bytearray(length)
-        # Create a result buffer of the same length as the send_buf
-        result = bytearray(len(send_buf))
+        # Create a buffer to send
+        addrs = address & 0x7f  # Ensure MSB is 0   (check if MSB = 1 for read and MSB = 0 for write)
+        addrs = addrs.to_bytes(1, 'little')  # Convert the integer to a single byte
         
         self.select.on()
-        self.spi.write_readinto(send_buf, result)
+        self.spi.write(addrs)
+        time.sleep_us(2)  #tSRAD
+        data = self.spi.read(1)   # does this return one byte only?
+        assert type(data) == int
+        
+        val = int.from_bytes(data, 'little')  # converts back to integer for comparison
+        assert type(val) == bytes
         time.sleep_us(1)
         self.select.off()
         time.sleep_us(19)
-        
-        # Return the read result, skipping the first byte (which corresponds to the register)
-        return result[1:] if length > 1 else result[1]
-        '''
-        data = bytearray(1)  # Create a single byte buffer for the result
-        self.select.on()
-        spi.write_readinto(bytearray([reg]), data)
-        self.select.off()
-        return data[0]  # Return the byte read
+        return val
 
-    def _bulk_write(self, data: bytearray):
+    def _bulk_write(self, data: int):
         """Write a list of commands into registers"""
         for x in range(0, len(data), 2):
-            register, value = data[x : x + 2]
-            self._write(register, value)
+            address, value = data[x : x + 2]
+            self._write(address, value)
             
-    def read_registers(self, registers: bytes, buf: bytearray, len: int):
+    def read_registers(self, registers: int, buf: int, len: int):
         """Read an array of data from the registers"""
         self.select.on()
-        self.spi.write(bytearray([registers]))
+        self.spi.write(registers)
         time.sleep_us(7)
         # Read data from the register
-        #buf[:] = self.spi.read(len)
-        spi.readinto(buf, len)
+        self.spi.readinto(buf, len)
         time.sleep_us(2)
         self.select.off()
         time.sleep_us(15)
@@ -184,7 +182,7 @@ class PAA5100JE():
         if deinitSPI:
             self.spi.deinit()
         
-class MotionDetector(Analog_input):
+class MotionDetector2(Analog_input):
     """
     Using the Analog_input code to interface with 2 PAA5100JE sensors
     reading `x` (SPI2) and `y` (softSPI) separately.
