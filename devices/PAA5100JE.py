@@ -18,10 +18,11 @@ class PAA5100JE():
     def __init__(self, spi_port: str, 
                  spi_cs_gpio: str, 
                  sck: str = None, 
-                 mosi: str =None, 
-                 miso: str =None):
+                 mosi: str = None, 
+                 miso: str = None):
                      
         # Initialize SPI
+        '''
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
         SPIparams = {'baudrate': 1000000, 'polarity': 0, 'phase': 1,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
@@ -38,7 +39,12 @@ class PAA5100JE():
                                        miso=machine.Pin(miso, mode=machine.Pin.IN),
                                        **SPIparams
                                        )
-            
+        '''    
+        if '2' in spi_port:
+            self.spi = machine.SPI(1, baudrate=9600, polarity=0, phase=1, bits=8, firstbit=machine.SPI.MSB,
+                           sck=machine.Pin(sck, mode=0, pull=1), mosi=machine.Pin(mosi, mode=0, pull=1),
+                           miso=machine.Pin(miso, mode=1))   # check baudrate and SPI mode
+                         
         # Handle Chip Select (CS) pin
         self.select = Digital_output(pin=spi_cs_gpio, inverted=True)
 
@@ -51,7 +57,8 @@ class PAA5100JE():
         self._write(self.firmware.REG_POWER_UP_RESET, 0x5A)
         time.sleep_ms(20)
         for offset in range(5):
-            self._read(self.firmware.REG_DATA_READY + offset)
+            data = 0
+            self.read_registers(self.firmware.REG_DATA_READY + offset, data, 1)
 
         ## Check if registers are initialized
         #prod_ID = self._read(0x00)
@@ -122,13 +129,14 @@ class PAA5100JE():
     
     def _write(self, address: int, value: int):
         """Write value into register"""
-        addrs = address | 0x80  # Flip MSB to 1
-        addrs = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
-        value = value.to_bytes(1, 'little')    # Convert the value from integer to a single byte
-        
         self.select.on()
-        self.spi.write(addrs)   # find specific address of the device
-        self.spi.write(value)   # write value into the above address of the device
+        #addrs = address | 0x80  # Flip MSB to 1
+        #addrs = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
+        #value = value.to_bytes(1, 'little')    # Convert the value from integer to a single byte
+        self.spi.write(bytearray([address | 0x80, value]))
+        
+        #self.spi.write(addrs)   # find specific address of the device
+        #self.spi.write(value)   # write value into the above address of the device
         time.sleep_us(15)
         self.select.off()
         time.sleep_us(25)
@@ -151,7 +159,20 @@ class PAA5100JE():
         self.select.off()
         time.sleep_us(19)
         return val
-
+    
+    def _read(self, register, length=1):
+        # Create a buffer to send (with one extra byte for the register)
+        send_buf = bytearray([register]) + bytearray(length)
+        # Create a result buffer of the same length as the send_buf
+        result = bytearray(len(send_buf))
+        
+        self.select.on()        
+        self.spi.write_readinto(send_buf, result)
+        self.select.off()
+        
+        # Return the read result, skipping the first byte (which corresponds to the register)
+        return result[1]
+        
     def _bulk_write(self, data: int):
         """Write a list of commands into registers"""
         for x in range(0, len(data), 2):
