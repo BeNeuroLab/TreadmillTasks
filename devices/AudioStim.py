@@ -10,15 +10,15 @@ class AudioStim(Audio_player):
         self.set_volume(25)  # Between 1 - 30
         utime.sleep_ms(20)  # wait for the audio player to be ready
 
-        pins = {0:'W10',    # Dir0
-                1:'W68',    # Dir1
-                2:'W66',    # Dir2
+        pins = {0:'W59',    # Dir0
+                1:'W55',    # Dir1
+                2:'W7',    # Dir2
                 3:'W58',    # Dir3
                 4:'W56',    # Dir4
                 5:'W64',    # Dir5
                 6:'W62'}    # Dir6
         #the POW pins used so that their logic level is inverted automatically.
-        powerlines = ('W23', 'W25', 'W62', 'W64','W30','W32')
+        powerlines = ('W18', 'W46', 'W62', 'W64','W30','W32')
         self.speakers = {}
         self.active = []
         for direction, pin in pins.items():
