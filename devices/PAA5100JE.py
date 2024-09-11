@@ -24,7 +24,7 @@ class PAA5100JE():
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
         SPIparams = {'baudrate': 1000000, 'polarity': 0, 'phase': 1,
-                     'bits': 16, 'firstbit': machine.SPI.MSB}
+                     'bits': 8, 'firstbit': machine.SPI.MSB}
         
         if '1' in spi_port:
             self.spi = machine.SPI(1, **SPIparams)
@@ -124,7 +124,7 @@ class PAA5100JE():
         """Write value into register"""
         addrs = address | 0x80  # Flip MSB to 1
         addrs = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
-        value = value.to_bytes(1, 'little')  # Convert the value from integer to a single byte
+        value = value.to_bytes(1, 'little')    # Convert the value from integer to a single byte
         
         self.select.on()
         self.spi.write(addrs)   # find specific address of the device
@@ -141,12 +141,12 @@ class PAA5100JE():
         
         self.select.on()
         self.spi.write(addrs)
-        time.sleep_us(2)  #tSRAD
+        time.sleep_us(2)  #tSRAD: check if waiting time is long enough
         data = self.spi.read(1)   # does this return one byte only?
-        assert type(data) == int
+        assert type(data) == bytes
         
         val = int.from_bytes(data, 'little')  # converts back to integer for comparison
-        assert type(val) == bytes
+        assert type(val) == int
         time.sleep_us(1)
         self.select.off()
         time.sleep_us(19)
