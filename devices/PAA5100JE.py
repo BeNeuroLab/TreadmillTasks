@@ -3,6 +3,12 @@ from array import array
 import machine
 from pyControl.hardware import *
 from devices.PAA5100JE_firmware import *
+# things to test: 
+# SPI settings: compare with pi pico (SPI type 1)
+# initialize changed to read_registers instead of _read
+# _read function added dummy byte
+# _read and _write function MSB --> 0 or 1
+# _write function uses bytearray
 
 def to_signed_16(value):
     """Convert a 16-bit integer to a signed 16-bit integer."""
@@ -129,12 +135,13 @@ class PAA5100JE():
     
     def _write(self, address: int, value: int):
         """Write value into register"""
-        self.select.on()
         #addrs = address | 0x80  # Flip MSB to 1
         #addrs = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
         #value = value.to_bytes(1, 'little')    # Convert the value from integer to a single byte
-        self.spi.write(bytearray([address | 0x80, value]))
+        buf = bytearray([address | 0x80, value])
         
+        self.select.on()
+        self.spi.write(buf)
         #self.spi.write(addrs)   # find specific address of the device
         #self.spi.write(value)   # write value into the above address of the device
         time.sleep_us(15)
@@ -144,22 +151,23 @@ class PAA5100JE():
     def _read(self, address: int):
         """Read register"""
         # Create a buffer to send
-        addrs = address & 0x7f  # Ensure MSB is 0   (check if MSB = 1 for read and MSB = 0 for write)
+        addrs = address & 0x7f  # Ensure MSB is 0 (or | 0x80?)
         addrs = addrs.to_bytes(1, 'little')  # Convert the integer to a single byte
         
         self.select.on()
         self.spi.write(addrs)
         time.sleep_us(2)  #tSRAD: check if waiting time is long enough
+        dummy_byte = 0x00
+        self.spi.write(bytearray([dummy_byte]))
+        
         data = self.spi.read(1)   # does this return one byte only?
-        assert type(data) == bytes
         
         val = int.from_bytes(data, 'little')  # converts back to integer for comparison
-        assert type(val) == int
         time.sleep_us(1)
         self.select.off()
         time.sleep_us(19)
         return val
-    
+    '''
     def _read(self, register, length=1):
         # Create a buffer to send (with one extra byte for the register)
         send_buf = bytearray([register]) + bytearray(length)
@@ -172,7 +180,7 @@ class PAA5100JE():
         
         # Return the read result, skipping the first byte (which corresponds to the register)
         return result[1]
-        
+    '''    
     def _bulk_write(self, data: int):
         """Write a list of commands into registers"""
         for x in range(0, len(data), 2):
