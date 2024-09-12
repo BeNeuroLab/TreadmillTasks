@@ -3,13 +3,6 @@ from array import array
 import machine
 from pyControl.hardware import *
 from devices.PAA5100JE_firmware import *
-# things to test: 
-# SPI settings: compare with pi pico (SPI type 1)
-# initialize changed to read_registers instead of _read
-# _read function added dummy byte
-# _read and _write function MSB --> 0 or 1
-# _write function uses bytearray
-# added reset
 
 def to_signed_16(value):
     """Convert a 16-bit integer to a signed 16-bit integer."""
@@ -23,14 +16,12 @@ class PAA5100JE():
     C++ code reference can be found on: https://github.com/pimoroni/pimoroni-pico.git
     """
     def __init__(self, spi_port: str, 
-                 spi_cs_gpio: str, 
-                 reset: str = None,
-                 sck: str = None, 
+                 cs: str, 
+                 miso: str = None, 
                  mosi: str = None, 
-                 miso: str = None):
+                 sck: str = None):
                      
         # Initialize SPI
-        '''
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
         SPIparams = {'baudrate': 1000000, 'polarity': 0, 'phase': 1,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
@@ -47,14 +38,9 @@ class PAA5100JE():
                                        miso=machine.Pin(miso, mode=machine.Pin.IN),
                                        **SPIparams
                                        )
-        '''    
-        if '2' in spi_port:
-            self.spi = machine.SPI(1, baudrate=9600, polarity=0, phase=1, bits=8, firstbit=machine.SPI.MSB,
-                           sck=machine.Pin(sck, mode=0, pull=1), mosi=machine.Pin(mosi, mode=0, pull=1),
-                           miso=machine.Pin(miso, mode=1))   # check baudrate and SPI mode
                          
         # Handle Chip Select (CS) pin
-        self.select = Digital_output(pin=spi_cs_gpio, inverted=True)
+        self.select = Digital_output(pin=cs, inverted=True)
 
         self.select.on()
         time.sleep_ms(50)
@@ -68,11 +54,10 @@ class PAA5100JE():
             data = 0
             self.read_registers(self.firmware.REG_DATA_READY + offset, data, 1)
 
-        ## Check if registers are initialized
-        #prod_ID = self._read(0x00)
-        #assert prod_ID == 0x49, 'bad initialization ' + str(prod_ID)
+        # Check if registers are initialized
+        prod_ID = self._read(0x00)
+        assert prod_ID == 0x49, 'bad initialization ' + str(prod_ID)
                      
-        # check if initialisation protocol is correct
         # Initiate registers
         PROGMEM = self.firmware.init_registers()
         self._bulk_write(PROGMEM[0:10])
@@ -137,16 +122,13 @@ class PAA5100JE():
     
     def _write(self, address: int, value: int):
         """Write value into register"""
-        #addrs = address | 0x80  # Flip MSB to 1
-        #addrs = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
-        #value = value.to_bytes(1, 'little')    # Convert the value from integer to a single byte
-        buf = bytearray([address | 0x80, value])
+        addrs = address | 0x80  # Flip MSB to 1
+        addrs = addrs.to_bytes(1, 'little')  # Convert the address from integer to a single byte
+        value = value.to_bytes(1, 'little')    # Convert the value from integer to a single byte
         
         self.select.on()
-        self.spi.write(buf[0])
-        self.spi.write(buf[1])
-        #self.spi.write(addrs)   # find specific address of the device
-        #self.spi.write(value)   # write value into the above address of the device
+        self.spi.write(addrs)   # find specific address of the device
+        self.spi.write(value)   # write value into the above address of the device
         time.sleep_us(11)  # tSWW
         self.select.off()
         time.sleep_us(25) # buffer time
@@ -170,20 +152,7 @@ class PAA5100JE():
         self.select.off()
         time.sleep_us(19)  # tSRW/tSRR (=20us) minus tSCLK-NCS
         return val
-    '''
-    def _read(self, register, length=1):
-        # Create a buffer to send (with one extra byte for the register)
-        send_buf = bytearray([register]) + bytearray(length)
-        # Create a result buffer of the same length as the send_buf
-        result = bytearray(len(send_buf))
-        
-        self.select.on()        
-        self.spi.write_readinto(send_buf, result)
-        self.select.off()
-        
-        # Return the read result, skipping the first byte (which corresponds to the register)
-        return result[1]
-    '''    
+    
     def _bulk_write(self, data: int):
         """Write a list of commands into registers"""
         for x in range(0, len(data), 2):
@@ -192,11 +161,15 @@ class PAA5100JE():
             
     def read_registers(self, registers: int, buf: int, len: int):
         """Read an array of data from the registers"""
+        addrs = registers & 0x7f  # Flip MSB to 1
+        addrs = addrs.to_bytes(1, 'little')  # Convert the address from integer to a single byte
+        
         self.select.on()
-        self.spi.write(registers)
+        self.spi.write(addrs)
         time.sleep_us(7)
         # Read data from the register
-        self.spi.readinto(buf, len)
+        #self.spi.readinto(buf, len)
+        buf[:] = self.spi.read(len)
         time.sleep_us(2)
         self.select.off()
         time.sleep_us(15)
@@ -224,8 +197,8 @@ class MotionDetector2(Analog_input):
                  sampling_rate=100, event='motion'):
         
         # Create SPI objects
-        self.motSen_x = PAA5100JE('SPI2', cs1, reset)
-        self.motSen_y = PAA5100JE('SPI2', cs2, reset)
+        self.motSen_x = PAA5100JE('SPI2', cs1)
+        self.motSen_y = PAA5100JE('SPI2', cs2)
 
         self.calib_coef = calib_coef
         self.threshold = threshold
