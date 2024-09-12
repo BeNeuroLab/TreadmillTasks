@@ -3,6 +3,10 @@ from array import array
 import machine
 from pyControl.hardware import *
 from devices.PAA5100JE_firmware import *
+#things to test
+# power supply (ensure its the same as the pmw3360dm old sensor)
+# unplug and plug all the wires
+# digital output in cs pin
 
 def to_signed_16(value):
     """Convert a 16-bit integer to a signed 16-bit integer."""
@@ -23,7 +27,7 @@ class PAA5100JE():
                      
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
-        SPIparams = {'baudrate': 1000000, 'polarity': 0, 'phase': 1,
+        SPIparams = {'baudrate': 1000000, 'polarity': 1, 'phase': 1,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
         
         if '1' in spi_port:
@@ -40,24 +44,47 @@ class PAA5100JE():
                                        )
                          
         # Handle Chip Select (CS) pin
-        self.select = Digital_output(pin=cs, inverted=True)
+        #self.select = Digital_output(pin=cs, inverted=True)
+        self.select = machine.Pin(cs, Pin.OUT)
 
-        self.select.on()
+        self.select.value(1)
         time.sleep_ms(50)
-        self.select.off()  # Deselect the device by setting CS high
-
-        # Reset the sensor
-        self.firmware = PAA5100JE_firmware()
-        self._write(self.firmware.REG_POWER_UP_RESET, 0x5A)
-        time.sleep_ms(20)
-        for offset in range(5):
-            data = 0
-            self.read_registers(self.firmware.REG_DATA_READY + offset, data, 1)
+        self.select.value(0)
+        time.sleep_ms(50)
+        self.select.value(1)  # Deselect the device by setting CS high
 
         # Check if registers are initialized
         prod_ID = self._read(0x00)
+        dIpihc = self._read(0x5F)
+
         assert prod_ID == 0x49, 'bad initialization ' + str(prod_ID)
+        assert dIpihc == 0xB8, 'bad initialization'
+        
+        # Reset the sensor
+        self.firmware = PAA5100JE_firmware()
+        #self._write(self.firmware.REG_POWER_UP_RESET, 0x5A)
+        self._write(0x3A, 0x5A)
+
+        time.sleep_ms(50)  # wait time increases
+        for offset in range(5):
+            self._read(self.firmware.REG_DATA_READY + offset)   # can try comment it
+            time.sleep_ms(1)
+        
+        # try reading motion registers once
+        self._read(0x02)
+        self._read(0x03)
+        self._read(0x04)
+        self._read(0x05)
+        self._read(0x06)
+        time.sleep_ms(1)
                      
+        # Check if registers are initialized
+        prod_ID = self._read(0x00)
+        dIpihc = self._read(0x5F)
+
+        assert prod_ID == 0x49, 'bad initialization ' + str(prod_ID)
+        assert dIpihc == 0xB8, 'bad initialization'
+        
         # Initiate registers
         PROGMEM = self.firmware.init_registers()
         self._bulk_write(PROGMEM[0:10])
@@ -122,13 +149,15 @@ class PAA5100JE():
     
     def _write(self, address: int, value: int):
         """Write value into register"""
-        addrs = address | 0x80  # Flip MSB to 1
-        addrs = addrs.to_bytes(1, 'little')  # Convert the address from integer to a single byte
-        value = value.to_bytes(1, 'little')    # Convert the value from integer to a single byte
+        #addrs = address | 0x80  # Flip MSB to 1
+        #addrs = addrs.to_bytes(1, 'little')  # Convert the address from integer to a single byte
+        #value = value.to_bytes(1, 'little')    # Convert the value from integer to a single byte
         
         self.select.on()
-        self.spi.write(addrs)   # find specific address of the device
-        self.spi.write(value)   # write value into the above address of the device
+        self.spi.write(bytearray([address | 0x80, value]))
+
+        #self.spi.write(addrs)   # find specific address of the device
+        #self.spi.write(value)   # write value into the above address of the device
         time.sleep_us(11)  # tSWW
         self.select.off()
         time.sleep_us(25) # buffer time
@@ -142,8 +171,6 @@ class PAA5100JE():
         self.select.on()
         self.spi.write(addrs)
         time.sleep_us(8)  # tSRAD + tSWR
-        dummy_byte = 0x00
-        self.spi.write(bytearray([dummy_byte]))
         
         data = self.spi.read(1)
         
@@ -152,17 +179,28 @@ class PAA5100JE():
         self.select.off()
         time.sleep_us(19)  # tSRW/tSRR (=20us) minus tSCLK-NCS
         return val
-    
+    '''
+    def _read(self, address: int):
+        result = []
+        val = bytearray(2)
+        cmd = bytearray(2)
+        cmd[0] = address+1
+        cmd[1] = 0
+        self.spi.write_readinto(cmd, val)
+        result.append(val[1])
+        return result[0]
+    '''
     def _bulk_write(self, data: int):
         """Write a list of commands into registers"""
         for x in range(0, len(data), 2):
             address, value = data[x : x + 2]
             self._write(address, value)
             
-    def read_registers(self, registers: int, buf: int, len: int):
+    def read_registers(self, registers: int, buf: bytearray, len: int):
         """Read an array of data from the registers"""
-        addrs = registers & 0x7f  # Flip MSB to 1
-        addrs = addrs.to_bytes(1, 'little')  # Convert the address from integer to a single byte
+        #addrs = registers & 0x7f  # Flip MSB to 1
+        #addrs = addrs.to_bytes(1, 'little')  # Convert the address from integer to a single byte
+        addrs = bytearray(registers)
         
         self.select.on()
         self.spi.write(addrs)
@@ -197,8 +235,8 @@ class MotionDetector2(Analog_input):
                  sampling_rate=100, event='motion'):
         
         # Create SPI objects
-        self.motSen_x = PAA5100JE('SPI2', cs1)
-        self.motSen_y = PAA5100JE('SPI2', cs2)
+        self.motSen_x = PAA5100JE('SPI2', cs1, reset)
+        self.motSen_y = PAA5100JE('SPI2', cs2, reset)
 
         self.calib_coef = calib_coef
         self.threshold = threshold
