@@ -3,7 +3,6 @@ from array import array
 from pyControl.hardware import *
 from devices.PAA5100JE_firmware import *
 
-
 def to_signed_16(value):
     """Convert a 16-bit integer to a signed 16-bit integer."""
     if value & 0x8000:  # Check if the sign bit is set
@@ -14,6 +13,7 @@ class PAA5100JE():
     """
     Optical tracking sensor:
     C++ code reference can be found on: https://github.com/pimoroni/pimoroni-pico.git
+    and on https://github.com/zic-95/PAA5100JE/blob/main/src/PAA5100JE.cpp
     """
     def __init__(self, 
                  SPI_type: str, 
@@ -24,7 +24,7 @@ class PAA5100JE():
                      
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
-        SPIparams = {'baudrate': 400000, 'polarity': 1, 'phase': 1,
+        SPIparams = {'baudrate': 2000000, 'polarity': 1, 'phase': 1,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
         
         if '1' in SPI_type:
@@ -43,18 +43,23 @@ class PAA5100JE():
         # Handle Chip Select (CS) pin
         self.select = Digital_output(pin=CS, inverted=True)
 
+        time.sleep_ms(1)
+        self.select.off()
+        time.sleep_ms(1)
         self.select.on()
-        time.sleep_ms(50)
+        time.sleep_ms(1)
         self.select.off() # Deselect the device by setting CS high
-        
+        time.sleep_ms(1)
+                     
         # Reset the sensor
         self.firmware = PAA5100JE_firmware()
         self._write(self.firmware.REG_POWER_UP_RESET, 0x5A)
 
-        time.sleep_ms(50)  # wait time increases
+        time.sleep_ms(20)
         for offset in range(5):
             self._read(self.firmware.REG_DATA_READY + offset)
-                    
+        time.sleep_ms(1)
+                     
         # Check if registers are initialized
         prod_ID = self._read(self.firmware.REG_ID)
         assert prod_ID == 0x49, 'bad initialization ' + str(prod_ID)
@@ -62,15 +67,16 @@ class PAA5100JE():
         # Initiate registers
         PROGMEM = self.firmware.init_registers()
         self._bulk_write(PROGMEM[0:10])
-        if self._read(0x67) & 0b10000000:
+        res = self._read(0x67) & 0x80
+        if res == 0x80:
             self._write(0x48, 0x04)
         else:
             self._write(0x48, 0x02)
         self._bulk_write(PROGMEM[10:20])
         
         if self._read(0x73) == 0x00:
-            c1 = self._read(0x70)
-            c2 = self._read(0x71)
+            c1 = int(self._read(0x70))
+            c2 = int(self._read(0x71))
             if c1 <= 28:
                 c1 += 14
             if c1 > 28:
@@ -123,34 +129,37 @@ class PAA5100JE():
     
     def _write(self, address: int, value: int):
         """Write value into register"""
-        address = address | 0x80  # Flip MSB to 1
+        address |= 0x80  # Flip MSB to 1
         address = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
         value = value.to_bytes(1, 'little')    # Convert the value from integer to a single byte
         
         self.select.on()
+        time.sleep_us(1)
         self.spi.write(address)   # find specific address of the device
         self.spi.write(value)   # write value into the above address of the device
-        time.sleep_us(20)  # tSWW
+        time.sleep_us(5)  # tSWW
         self.select.off()
-        time.sleep_us(100) # buffer time
+        time.sleep_us(5) # buffer time
    
     def _read(self, address: int):
         """Read register"""
         # Create a buffer to send
-        address = address & 0x7f  # Ensure MSB is 0 (or | 0x80?)
+        address &= ~0x80  # Ensure MSB is 0
         address = address.to_bytes(1, 'little')  # Convert the integer to a single byte
+        buf = bytearray(len(address))
         
         self.select.on()
+        time.sleep_us(1)
         self.spi.write(address)
-        time.sleep_us(120)  # tSRAD + tSWR
+        time.sleep_us(5)  # tSRAD + tSWR
         
-        data = self.spi.read(1)
+        data = self.spi.write_readinto(0x00, buf) # or simply spi.read would be ok
         
-        val = int.from_bytes(data, 'little')  # converts back to integer for comparison
+        #val = int.from_bytes(data, 'little')  # converts back to integer for comparison
         time.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
         self.select.off()
-        time.sleep_us(19)  # tSRW/tSRR (=20us) minus tSCLK-NCS
-        return val
+        time.sleep_us(5)  # tSRW/tSRR (=20us) minus tSCLK-NCS
+        return data
 
     def _bulk_write(self, data: int):
         """Write a list of commands into registers"""
@@ -160,19 +169,20 @@ class PAA5100JE():
             
     def read_registers(self, registers: int, buf: bytearray, len: int):
         """Read an array of data from the registers"""
-        #addrs = registers & 0x7f  # Flip MSB to 1
+        registers &= ~0x80  # Flip MSB to 1
         #addrs = addrs.to_bytes(1, 'little')  # Convert the address from integer to a single byte
         addrs = bytearray(registers)
         
         self.select.on()
+        time.sleep_us(1)
         self.spi.write(addrs)
-        time.sleep_us(7)
+        time.sleep_us(5)
         # Read data from the register
         #self.spi.readinto(buf, len)
         buf[:] = self.spi.read(len)
-        time.sleep_us(2)
+        time.sleep_us(5)
         self.select.off()
-        time.sleep_us(15)
+        time.sleep_us(50)
 
     def shut_down(self, deinitSPI:bool =True):
         """Shutdown the sensor"""
