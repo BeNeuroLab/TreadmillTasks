@@ -37,6 +37,7 @@ v.IT_duration = 4 * second
 
 v.reward_per_block = 20
 v.reward_counter = 0
+v.short_timeout = False
 
 v.last_spk___ = 1
 v.next_spk___ = 0
@@ -143,10 +144,8 @@ def reward (event):
             v.next_led___ = choice(v.leds___)
             v.reward_counter = 0
         reset_timer('led_timer',v.target_duration)
-        sleep(v.reward_led_duration)
-        hw.light.all_off()
-        hw.sound.all_off()        
-        timed_goto_state('trial', v.IT_duration)
+        v.short_timeout = True
+        timed_goto_state('timeout', v.reward_led_duration)
 
 def timeout(event):
     "timeout state"
@@ -155,7 +154,11 @@ def timeout(event):
         hw.light.all_off()
         hw.sound.all_off()
         v.next_spk___ = v.spks___[0]
-        timed_goto_state('trial', v.timeout_duration)
+        if v.short_timeout: # Timeout after reward
+            timed_goto_state('trial', v.IT_duration)
+            v.short_timeout = False
+        else:
+            timed_goto_state('trial', v.timeout_duration)
     elif event == 'exit':
         reset_timer('led_timer',v.target_duration)
 
