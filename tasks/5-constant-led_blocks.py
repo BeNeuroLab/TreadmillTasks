@@ -32,7 +32,8 @@ v.target_duration = 2 * minute
 v.timeout_duration = 20 * second
 
 v.reward_number = 0
-v.IT_duration = 5 * second
+v.reward_led_duration = 1 * second
+v.IT_duration = 4 * second
 
 v.reward_per_block = 20
 v.reward_counter = 0
@@ -142,6 +143,9 @@ def reward (event):
             v.next_led___ = choice(v.leds___)
             v.reward_counter = 0
         reset_timer('led_timer',v.target_duration)
+        sleep(v.reward_led_duration)
+        hw.light.all_off()
+        hw.sound.all_off()        
         timed_goto_state('trial', v.IT_duration)
 
 def timeout(event):
