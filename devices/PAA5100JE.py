@@ -9,6 +9,7 @@ from devices.PAA5100JE_firmware import *
 # _read function added dummy byte
 # _read and _write function MSB --> 0 or 1
 # _write function uses bytearray
+# added reset
 
 def to_signed_16(value):
     """Convert a 16-bit integer to a signed 16-bit integer."""
@@ -23,6 +24,7 @@ class PAA5100JE():
     """
     def __init__(self, spi_port: str, 
                  spi_cs_gpio: str, 
+                 reset: str = None,
                  sck: str = None, 
                  mosi: str = None, 
                  miso: str = None):
@@ -68,7 +70,7 @@ class PAA5100JE():
 
         ## Check if registers are initialized
         #prod_ID = self._read(0x00)
-        #assert prod_ID == 0x49, 'bad initialization' + str(prod_ID)
+        #assert prod_ID == 0x49, 'bad initialization ' + str(prod_ID)
                      
         # check if initialisation protocol is correct
         # Initiate registers
@@ -141,12 +143,13 @@ class PAA5100JE():
         buf = bytearray([address | 0x80, value])
         
         self.select.on()
-        self.spi.write(buf)
+        self.spi.write(buf[0])
+        self.spi.write(buf[1])
         #self.spi.write(addrs)   # find specific address of the device
         #self.spi.write(value)   # write value into the above address of the device
-        time.sleep_us(15)
+        time.sleep_us(11)  # tSWW
         self.select.off()
-        time.sleep_us(25)
+        time.sleep_us(25) # buffer time
 
     def _read(self, address: int):
         """Read register"""
@@ -156,16 +159,16 @@ class PAA5100JE():
         
         self.select.on()
         self.spi.write(addrs)
-        time.sleep_us(2)  #tSRAD: check if waiting time is long enough
+        time.sleep_us(8)  # tSRAD + tSWR
         dummy_byte = 0x00
         self.spi.write(bytearray([dummy_byte]))
         
-        data = self.spi.read(1)   # does this return one byte only?
+        data = self.spi.read(1)
         
         val = int.from_bytes(data, 'little')  # converts back to integer for comparison
-        time.sleep_us(1)
+        time.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
         self.select.off()
-        time.sleep_us(19)
+        time.sleep_us(19)  # tSRW/tSRR (=20us) minus tSCLK-NCS
         return val
     '''
     def _read(self, register, length=1):
@@ -221,8 +224,8 @@ class MotionDetector2(Analog_input):
                  sampling_rate=100, event='motion'):
         
         # Create SPI objects
-        self.motSen_x = PAA5100JE('SPI2', cs1)
-        self.motSen_y = PAA5100JE('SPI2', cs2)
+        self.motSen_x = PAA5100JE('SPI2', cs1, reset)
+        self.motSen_y = PAA5100JE('SPI2', cs2, reset)
 
         self.calib_coef = calib_coef
         self.threshold = threshold
