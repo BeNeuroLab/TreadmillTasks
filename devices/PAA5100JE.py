@@ -17,14 +17,14 @@ class PAA5100JE():
     """
     def __init__(self, 
                  SPI_type: str, 
-                 CS: str = None, 
+                 CS: str, 
                  MI: str = None, 
                  MO: str = None, 
                  SCK: str = None):
                      
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
-        SPIparams = {'baudrate': 2000000, 'polarity': 1, 'phase': 1,
+        SPIparams = {'baudrate': 1000000, 'polarity': 1, 'phase': 1,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
         
         if '1' in SPI_type:
@@ -59,11 +59,7 @@ class PAA5100JE():
         for offset in range(5):
             self._read(self.firmware.REG_DATA_READY + offset)
         time.sleep_ms(1)
-                     
-        # Check if registers are initialized
-        prod_ID = self._read(self.firmware.REG_ID)
-        assert prod_ID == 0x49, 'bad initialization ' + str(prod_ID)
-        
+                           
         # Initiate registers
         PROGMEM = self.firmware.init_registers()
         self._bulk_write(PROGMEM[0:10])
@@ -99,9 +95,9 @@ class PAA5100JE():
         time.sleep_ms(10)
         self._bulk_write(PROGMEM[186:])
         
+        time.sleep_ms(10)
         # Check if registers are initialized
-        prod_ID = self._read(self.firmware.REG_ID)
-        assert prod_ID == 0x49, 'bad initialization ' + str(prod_ID)
+        ID = self._read(0x02)
                      
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
@@ -146,20 +142,19 @@ class PAA5100JE():
         # Create a buffer to send
         address &= ~0x80  # Ensure MSB is 0
         address = address.to_bytes(1, 'little')  # Convert the integer to a single byte
-        buf = bytearray(len(address))
         
         self.select.on()
         time.sleep_us(1)
         self.spi.write(address)
         time.sleep_us(5)  # tSRAD + tSWR
         
-        data = self.spi.write_readinto(0x00, buf) # or simply spi.read would be ok
+        data = self.spi.read(1)
         
-        #val = int.from_bytes(data, 'little')  # converts back to integer for comparison
+        val = int.from_bytes(data, 'little')  # converts back to integer for comparison
         time.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
         self.select.off()
         time.sleep_us(5)  # tSRW/tSRR (=20us) minus tSCLK-NCS
-        return data
+        return val
 
     def _bulk_write(self, data: int):
         """Write a list of commands into registers"""
@@ -167,22 +162,23 @@ class PAA5100JE():
             address, value = data[x : x + 2]
             self._write(address, value)
             
-    def read_registers(self, registers: int, buf: bytearray, len: int):
+    def read_registers(self, address: int, buf: bytearray, len: int):
         """Read an array of data from the registers"""
-        registers &= ~0x80  # Flip MSB to 1
-        #addrs = addrs.to_bytes(1, 'little')  # Convert the address from integer to a single byte
-        addrs = bytearray(registers)
+        address &= ~0x80  # Flip MSB to 1
+        address = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
         
         self.select.on()
         time.sleep_us(1)
-        self.spi.write(addrs)
+        self.spi.write(address)
         time.sleep_us(5)
         # Read data from the register
-        #self.spi.readinto(buf, len)
-        buf[:] = self.spi.read(len)
+        for i in range(12):
+            buf[i] = self.spi.read(1)
         time.sleep_us(5)
         self.select.off()
         time.sleep_us(50)
+        assert buf[10] == 0x1F, str(buf[10])
+        assert buf[6] < 0x19
 
     def shut_down(self, deinitSPI:bool =True):
         """Shutdown the sensor"""
@@ -190,7 +186,7 @@ class PAA5100JE():
         time.sleep_ms(1)
         self.select.on()
         time.sleep_ms(60)
-        self.write(self.firmware.REG_SHUTDOWN, 1)
+        self._write(self.firmware.REG_SHUTDOWN, 0xB6)
         time.sleep_ms(1)
         self.select.off()
         time.sleep_ms(1)
@@ -265,8 +261,6 @@ class MotionDetector2(Analog_input):
         self.delta_y += self._delta_y
         self.delta_x += self._delta_x
         
-        time.sleep_ms(1)
-        
     def _timer_ISR(self, t):
         """Read a sample to the buffer, update write index."""
         self.read_sample()
@@ -278,7 +272,7 @@ class MotionDetector2(Analog_input):
             self.y = self.delta_y
             self.reset_delta()
             self.timestamp = fw.current_time
-            interrupt_queue.put(self.ID) 
+            interrupt_queue.put(self.ID)
 
     def _stop_acquisition(self):
         """Stop sampling analog input values."""
