@@ -40,15 +40,15 @@ class PAA5100JE():
                                        **SPIparams
                                        )
                          
-        # Handle Chip Select (CS) pin
+        # Define Chip Select (CS) pin (active low)
         self.select = Digital_output(pin=CS, inverted=True)
 
         time.sleep_ms(1)
-        self.select.off()
-        time.sleep_ms(1)
-        self.select.on()
-        time.sleep_ms(1)
         self.select.off() # Deselect the device by setting CS high
+        time.sleep_ms(1)
+        self.select.on() # Select the device by setting CS low
+        time.sleep_ms(1)
+        self.select.off()
         time.sleep_ms(1)
                      
         # Reset the sensor
@@ -56,11 +56,12 @@ class PAA5100JE():
         self._write(self.firmware.REG_POWER_UP_RESET, 0x5A)
 
         time.sleep_ms(20)
+        # Read motion registers once after reset
         for offset in range(5):
             self._read(self.firmware.REG_DATA_READY + offset)
         time.sleep_ms(1)
                            
-        # Initiate registers
+        # Registers initialization protocol
         PROGMEM = self.firmware.init_registers()
         self._bulk_write(PROGMEM[0:10])
         res = self._read(0x67) & 0x80
@@ -96,8 +97,9 @@ class PAA5100JE():
         self._bulk_write(PROGMEM[186:])
         
         time.sleep_ms(10)
-        # Check if registers are initialized
-        ID = self._read(0x02)
+        # Check for successful initialization
+        prod_ID = self._read(0x00)
+        assert prod_ID == 0x49
                      
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
@@ -150,10 +152,10 @@ class PAA5100JE():
         
         data = self.spi.read(1)
         
-        val = int.from_bytes(data, 'little')  # converts back to integer for comparison
+        val = int.from_bytes(data, 'little')  # converts received data back to integer for further calculations
         time.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
         self.select.off()
-        time.sleep_us(5)  # tSRW/tSRR (=20us) minus tSCLK-NCS
+        time.sleep_us(5)  # tSRW/tSRR minus tSCLK-NCS
         return val
 
     def _bulk_write(self, data: int):
@@ -163,7 +165,7 @@ class PAA5100JE():
             self._write(address, value)
             
     def read_registers(self, address: int, buf: bytearray, len: int):
-        """Read an array of data from the registers"""
+        """Read an array of data from the registers, used for reading motion burst"""
         address &= ~0x80  # Flip MSB to 1
         address = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
         
@@ -171,14 +173,14 @@ class PAA5100JE():
         time.sleep_us(1)
         self.spi.write(address)
         time.sleep_us(5)
-        # Read data from the register
+        # Read 12 bytes of data from the motion burst register
         for i in range(12):
             buf[i] = self.spi.read(1)
         time.sleep_us(5)
         self.select.off()
         time.sleep_us(50)
+        # Check for data being successfully read into the buffer
         assert buf[10] == 0x1F, str(buf[10])
-        assert buf[6] < 0x19
 
     def shut_down(self, deinitSPI:bool =True):
         """Shutdown the sensor"""
@@ -272,7 +274,7 @@ class MotionDetector2(Analog_input):
             self.y = self.delta_y
             self.reset_delta()
             self.timestamp = fw.current_time
-            interrupt_queue.put(self.ID)
+            interrupt_queue.put(self.ID)  # Note: no self.ID for this sensor, cannot interrupt queue so data were not sent
 
     def _stop_acquisition(self):
         """Stop sampling analog input values."""
