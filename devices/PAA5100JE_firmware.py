@@ -4,7 +4,6 @@ class PAA5100JE_firmware():
         PAA5100JE firmware includes registers and initiation protocol for
         the optical tracking chip
         """
-        self.name = "firmware"
         # PAA5100 registers definitions
         self.REG_ID = 0x00
         self.REVISION = 0x01
@@ -19,6 +18,7 @@ class PAA5100JE_firmware():
         self.REG_RAWDATA_GRAB_STATUS = 0x59
         
     def init_registers(self):
+        """Initialization protocol for sensor setup (C++ code reference can be found on: https://github.com/pimoroni/pimoroni-pico.git)"""
         return [
             0x7F, 0x00,
             0x55, 0x01,
