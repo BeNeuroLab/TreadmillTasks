@@ -1,8 +1,8 @@
-# how to name tasks
+# How to name tasks
 
 ## Tasks
 
-- each experiment to have a branch
+- each experiment to have a branch — No task files in the `main` branch
 - keep the task names informative
 - use a docstring in the first line of the task file to explicitly describe what the task is doing
 - if using numbered file names, they must be in the order of the behavioural training protocol.
