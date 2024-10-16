@@ -1,8 +1,13 @@
 # how to name tasks
 
-## States
+## Tasks
 
 - each experiment to have a branch
+- keep the task names informative
+- use a docstring in the first line of the task file to explicitly describe what the task is doing
+
+## States
+
 - the following state names must exist:
   - a state called `trial` where the important things happen 
   - a state called `intertrial` that acts as a intertrial period/ gap
