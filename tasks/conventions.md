@@ -5,6 +5,8 @@
 - each experiment to have a branch
 - keep the task names informative
 - use a docstring in the first line of the task file to explicitly describe what the task is doing
+- if using numbered file names, they must be in the order of the behavioural training protocol.
+- all parameters and variables must be indexed-zero, e.g., speaker0, speaker1, etc
 
 ## States
 
