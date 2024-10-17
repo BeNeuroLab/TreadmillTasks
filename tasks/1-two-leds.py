@@ -1,4 +1,5 @@
-"1-stim-triggered-reward.py"
+"""task with 2 LEDs only and a penalty for offlicks (no timeout)
+"""
 
 import utime
 from pyControl.utility import *
@@ -10,12 +11,13 @@ from devices import *
 # -------------------------------------------------------------------------
 
 states = ['trial',
-          'led_on',
-          'reward']
+          'cursor_match',
+          'reward',
+          'penalty']
 
 events = ['lick',
           'motion',
-          'spk_update',
+          'cursor_update ',
           'session_timer']
 
 initial_state = 'trial'
@@ -24,7 +26,7 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 v.session_duration = 45 * minute
 v.reward_duration = 30 * ms
-v.sound_bins = (0.5 * second, 0.5 * second, 0.75 * second, 2 * second)
+v.sound_bins = (0.5 * second, 0.75 * second, 1 * second, 2 * second)
 
 v.reward_number = 0
 v.IT_duration = 5 * second
@@ -90,25 +92,25 @@ def run_end():
 
 # -------------------------------------------------------------------------
 def trial(event):
-    "led at first, and spk update at later bins"
+    "trial"
     if event == 'entry':
         hw.light.all_off()
         hw.sound.cue(v.next_spk___)
         print('{}, spk_direction'.format(v.next_spk___))
-        set_timer('spk_update', choice(v.sound_bins), False)
+        set_timer('cursor_update ', choice(v.sound_bins), False)
         v.next_led___ = choice(v.leds___)
-    elif event == 'lick':  # lick during the trial delays the sweep
-        reset_timer('spk_update', v.sound_bins[-1])
-    elif event == 'spk_update':
+    elif event == 'lick':
+        goto_state('penalty')
+    elif event == 'cursor_update ':
         if hw.sound.active[0] == v.next_led___:
-            goto_state('led_on')
+            goto_state('cursor_match')
         else:
-            set_timer('spk_update', choice(v.sound_bins), False)
+            set_timer('cursor_update ', choice(v.sound_bins), False)
     elif event == 'exit':
-        disarm_timer('spk_update')
+        disarm_timer('cursor_update ')
 
-def led_on (event):
-    "reward state"
+def cursor_match (event):
+    "when led and spk line up"
     if event == 'entry':
         hw.light.cue(v.next_led___)
         print('{}, led_direction'.format(v.next_led___))
@@ -118,19 +120,24 @@ def led_on (event):
         goto_state('reward')
 
 def reward (event):
-    "intertrial state"
+    "reward state"
     if event == 'entry':
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
         timed_goto_state('trial', v.IT_duration)
 
+def penalty (event):
+    "penalty state"
+    if event == 'entry':
+        timed_goto_state('trial', v.sound_bins[-1])
+        v.next_spk___ = next_spk()
 
 def all_states(event):
     """
     Executes before the state code.
     """
-    if event == 'spk_update':
+    if event == 'cursor_update ':
         spk_dir = next_spk()
         print('{}, spk_direction'.format(spk_dir))
         hw.sound.cue(spk_dir)
