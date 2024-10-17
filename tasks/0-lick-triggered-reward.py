@@ -1,4 +1,5 @@
-"reward on lick, half of the time, when sound and light match"
+"reward -> light on -> reward -> intertrial"
+
 from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
@@ -11,7 +12,7 @@ states = ['trial',
 
 events = ['lick',
           'session_timer',
-          'spk_update',
+          'cursor_update',
           'motion']
 
 initial_state = 'trial'
@@ -92,16 +93,16 @@ def trial(event):
         hw.light.all_off()
         hw.sound.cue(v.next_spk___)
         print('{}, spk_direction'.format(v.next_spk___))
-        set_timer('spk_update', choice(v.sound_bins), False)
+        set_timer('cursor_update', choice(v.sound_bins), False)
     elif event == 'lick':  # lick during the trial delays the sweep
         hw.light.cue(hw.sound.active[0])
         print('{}, led_direction'.format(hw.light.active[0]))
         timed_goto_state('reward', v.led_len)
-        disarm_timer('spk_update')
-    elif event == 'spk_update':
-        set_timer('spk_update', choice(v.sound_bins), False)
+        disarm_timer('cursor_update')
+    elif event == 'cursor_update':
+        set_timer('cursor_update', choice(v.sound_bins), False)
     elif event == 'exit':
-        disarm_timer('spk_update')
+        disarm_timer('cursor_update')
 
 def reward (event):
     "reward state"
@@ -117,7 +118,7 @@ def all_states(event):
     """
     Executes before the state code.
     """
-    if event == 'spk_update':
+    if event == 'cursor_update':
         spk_dir = next_spk()
         print('{}, spk_direction'.format(spk_dir))
         hw.sound.cue(spk_dir)
