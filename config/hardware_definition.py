@@ -5,11 +5,11 @@ board = Breakout_dseries_1_6()
 # Instantiate Devices.
 bci_link = UARTlink('bci_update', timer_freq=100)
 
-motionSensor = MotionDetector(name='MotSen1', event='motion',
-                              reset=board.port_1.DIO_C,
-                              cs1=board.port_2.DIO_A,
-                              cs2=board.port_2.DIO_B,
-                              calib_coef=1, threshold=1, sampling_rate=100)
+#motionSensor = MotionDetector(name='MotSen1', event='motion',
+#                              reset=board.port_1.DIO_C,
+#                              cs1=board.port_2.DIO_A,
+#                              cs2=board.port_2.DIO_B,
+#                              calib_coef=1, threshold=1, sampling_rate=100)
 
 light = LEDStim()
 light.all_off()
