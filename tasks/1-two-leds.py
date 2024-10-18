@@ -17,7 +17,7 @@ states = ['trial',
 
 events = ['lick',
           'motion',
-          'cursor_update ',
+          'cursor_update',
           'session_timer']
 
 initial_state = 'trial'
@@ -97,17 +97,17 @@ def trial(event):
         hw.light.all_off()
         hw.sound.cue(v.next_spk___)
         print('{}, spk_direction'.format(v.next_spk___))
-        set_timer('cursor_update ', choice(v.sound_bins), False)
+        set_timer('cursor_update', choice(v.sound_bins), False)
         v.next_led___ = choice(v.leds___)
     elif event == 'lick':
         goto_state('penalty')
-    elif event == 'cursor_update ':
+    elif event == 'cursor_update':
         if hw.sound.active[0] == v.next_led___:
             goto_state('cursor_match')
         else:
-            set_timer('cursor_update ', choice(v.sound_bins), False)
+            set_timer('cursor_update', choice(v.sound_bins), False)
     elif event == 'exit':
-        disarm_timer('cursor_update ')
+        disarm_timer('cursor_update')
 
 def cursor_match (event):
     "when led and spk line up"
@@ -137,7 +137,7 @@ def all_states(event):
     """
     Executes before the state code.
     """
-    if event == 'cursor_update ':
+    if event == 'cursor_update':
         spk_dir = next_spk()
         print('{}, spk_direction'.format(spk_dir))
         hw.sound.cue(spk_dir)
