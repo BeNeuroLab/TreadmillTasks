@@ -142,7 +142,6 @@ def reward (event):
     elif event == 'exit':
         reset_timer('trial_timer', v.timeout_timer, True)
 
-
 def timeout(event):
     "timeout state"
     if event == 'entry':
@@ -153,6 +152,12 @@ def timeout(event):
         timed_goto_state('trial', v.timeout_duration)
     elif event == 'exit':
         reset_timer('trial_timer', v.timeout_timer, True)
+
+def penalty (event):
+    "penalty state"
+    if event == 'entry':
+        timed_goto_state('trial', v.offlick_penalty)
+        v.next_spk___ = next_spk()
 
 
 def all_states(event):
