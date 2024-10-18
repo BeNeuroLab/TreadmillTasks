@@ -26,7 +26,7 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 v.session_duration = 60 * minute
 v.reward_duration = 30 * ms
-v.sound_bins = (0.5 * second, 0.75 * second, 1 * second, 2 * second)
+v.sound_bins = (0.5 * second, 0.75 * second, 1 * second, 3 * second)
 
 v.reward_number = 0
 v.IT_duration = 5 * second
