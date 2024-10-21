@@ -104,7 +104,8 @@ def run_end():
 def trial(event):
     "led at first, and spk update at later bins"
     if event == 'entry':
-        hw.light.all_off()
+        hw.light.cue(v.next_led___)
+        print('{}, led_direction'.format(v.next_led___))
         hw.sound.cue(v.next_spk___)
         print('{}, spk_direction'.format(v.next_spk___))
         set_timer('cursor_update', choice(v.sound_bins), False)
@@ -125,7 +126,7 @@ def cursor_match (event):
     if event == 'entry':
         pause_timer('trial_timer')
         timed_goto_state('trial', v.sound_bins[-1])
-        v.next_spk___ = next_spk()  # in case of no lick, sweep continues
+        v.next_spk___ = next_spk()
     elif event == 'lick':
         goto_state('reward')
     elif event == 'exit':
@@ -145,9 +146,9 @@ def reward (event):
 def timeout(event):
     "timeout state"
     if event == 'entry':
-        v.next_led___ = choice(v.leds___)
         hw.light.all_off()
         hw.sound.all_off()
+        v.next_led___ = choice(v.leds___)
         v.next_spk___ = v.spks___[0]
         timed_goto_state('trial', v.timeout_duration)
     elif event == 'exit':
@@ -157,6 +158,7 @@ def penalty (event):
     "penalty state"
     if event == 'entry':
         timed_goto_state('trial', v.offlick_penalty)
+        hw.light.all_off()
 
 
 def all_states(event):
