@@ -1,4 +1,4 @@
-"""task with all LEDs and a penalty for offlicks (no timeout)
+"""speaker sweep every 1s
 """
 
 import utime
