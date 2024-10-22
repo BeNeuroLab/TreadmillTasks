@@ -1,4 +1,4 @@
-"""speaker sweep every 1s
+"""led sweep every 1s
 """
 
 import utime
@@ -24,37 +24,36 @@ initial_state = 'trial'
 v.session_duration = 10 * minute
 v.sound_bins = (1 * second,)
 
-v.last_spk___ = 1
-v.next_spk___ = 0
+v.last_led___ = 2
+v.next_led___ = 1
 
-v.spks___ = [0, 1, 2, 3, 4, 5, 6]
 v.leds___ = [1, 2, 3, 4, 5]
 v.next_led___ = v.leds___[-1]
 
 
 # -------------------------------------------------------------------------
-def next_spk():
+def next_led():
     """
     returns the next speakers, in either direction of the sweep
     """
-    assert len(hw.sound.active)==1, 'one speaker can be active'
-    active_spk = hw.sound.active[0]
-    active_spk_idx = v.spks___.index(active_spk)
+    assert len(hw.light.active) == 1, 'one speaker can be active'
+    active_led = hw.light.active[0]
+    active_led_idx = v.leds___.index(active_led)
 
-    if active_spk > v.last_spk___:
-        if active_spk < v.spks___[-1]:
-            out = active_spk_idx + 1
+    if active_led > v.last_led___:
+        if active_led < v.leds___[-1]:
+            out = active_led_idx + 1
         else:
-            out = active_spk_idx - 1
+            out = active_led_idx - 1
     else:
-        if active_spk > v.spks___[0]:
-            out = active_spk_idx - 1
+        if active_led > v.leds___[0]:
+            out = active_led_idx - 1
         else:
-            out = active_spk_idx + 1
+            out = active_led_idx + 1
 
-    v.last_spk___ = active_spk
+    v.last_led___ = active_led
 
-    return v.spks___[out]
+    return v.leds___[out]
 
 
 # -------------------------------------------------------------------------
@@ -86,9 +85,9 @@ def run_end():
 def trial(event):
     "trial state"
     if event == 'entry':
-        hw.light.all_off()
-        hw.sound.cue(v.next_spk___)
-        print('{}, spk_direction'.format(v.next_spk___))
+        hw.sound.all_off()
+        hw.light.cue(v.next_led___)
+        print('{}, led_direction'.format(v.next_led___))
         set_timer('cursor_update', choice(v.sound_bins), False)
     elif event == 'cursor_update':
         set_timer('cursor_update', choice(v.sound_bins), False)
@@ -99,8 +98,8 @@ def all_states(event):
     Executes before the state code.
     """
     if event == 'cursor_update':
-        spk_dir = next_spk()
-        print('{}, spk_direction'.format(spk_dir))
-        hw.sound.cue(spk_dir)
+        led_dir = next_led()
+        print('{}, led_direction'.format(led_dir))
+        hw.light.cue(led_dir)
     elif event == 'session_timer':
         stop_framework()
