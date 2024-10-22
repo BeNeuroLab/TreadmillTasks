@@ -1,5 +1,7 @@
-"1-stim-triggered-reward.py"
+"""main BCI task, similar to task 5
+target always on during the speaker sweep
 
+"""
 import utime
 from pyControl.utility import *
 import hardware_definition as hw
@@ -10,12 +12,15 @@ from devices import *
 # -------------------------------------------------------------------------
 
 states = ['trial',
-          'stim_match',
-          'reward']
+          'cursor_match',
+          'reward',
+          'timeout',
+          'penalty']
 
 events = ['lick',
           'motion',
-          'bci_update',
+          'cursor_update',
+          'trial_timer',
           'session_timer']
 
 initial_state = 'trial'
@@ -25,6 +30,8 @@ initial_state = 'trial'
 v.session_duration = 60 * minute
 v.reward_duration = 30 * ms
 v.hold_duration = 200 * ms
+v.timeout_duration = 20 * second
+v.timeout_timer = 1 * minute
 
 v.reward_number = 0
 v.IT_duration = 5 * second
@@ -49,6 +56,8 @@ def run_start():
     print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
 
+    set_timer('trial_timer', v.timeout_timer, True)
+
 def run_end():
     "Code here is executed when the framework stops running."
     hw.light.all_off()
@@ -66,19 +75,24 @@ def trial(event):
     if event == 'entry':
         hw.light.cue(v.next_led___)
         print('{}, led_direction'.format(v.next_led___))
-    elif event == 'bci_update':
+    elif event == 'cursor_update':
         if hw.light.active[0] in hw.sound.active:
-            goto_state('stim_match')
+            goto_state('cursor_match')
+    elif event == 'trial_timer':
+        goto_state('timeout')
 
-def stim_match (event):
-    "reward state"
+def cursor_match(event):
+    "when led and spk line up"
     if event == 'entry':
+        pause_timer('trial_timer')
         timed_goto_state('reward', v.hold_duration)
-    elif event == 'bci_update':
+    elif event == 'cursor_update':
         goto_state('trial')
+    elif event == 'exit':
+        unpause_timer('trial_timer')
 
 def reward (event):
-    "intertrial state"
+    "reward state"
     if event == 'entry':
         hw.reward.release()
         v.reward_number += 1
@@ -86,15 +100,30 @@ def reward (event):
         hw.light.all_off()
         timed_goto_state('trial', v.IT_duration)
         v.next_led___ = choice(v.leds___)
+    elif event == 'exit':
+        reset_timer('trial_timer', v.timeout_timer, True)
+
+def timeout(event):
+    "timeout state"
+    if event == 'entry':
+        hw.light.all_off()
+        hw.sound.all_off()
+        v.next_led___ = choice(v.leds___)
+        timed_goto_state('trial', v.timeout_duration)
+    elif event == 'exit':
+        reset_timer('trial_timer', v.timeout_timer, True)
 
 
 def all_states(event):
     """
     Executes before the state code.
     """
-    if event == 'bci_update':
+    if event == 'cursor_update':
         spk_dir = hw.bci_link.spk
         print('{}, spk_direction'.format(spk_dir))
-        hw.sound.cue(spk_dir)
+        try:  # Try is more efficient than If statement
+            hw.sound.cue(spk_dir)
+        except:  # if the spk_dir is not valid
+            pass
     elif event == 'session_timer':
         stop_framework()
