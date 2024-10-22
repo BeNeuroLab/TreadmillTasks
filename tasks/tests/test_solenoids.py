@@ -1,12 +1,13 @@
 # Importing required libraries
 from pyControl.utility import *
 import hardware_definition as hw
-# from devices import *
+from devices import *
 from random import randint
 import time  # Import the time library
-from devices._port_expander import Port_expander
 
-Port_expander(port=hw.board.port_8)
+#port_exp=Port_expander(port=hw.board.port_8)
+earthquake_stim = shakeStim(port_exp=Port_expander(port=hw.board.port_8))
+
 
 '''
 # Need to define the earthquake here to avoid initializing the pow pins in hardware definition
@@ -25,6 +26,8 @@ events = [
     'session_timer',
     'motion'
 ]
+
+initial_state = "trial"
 '''
 
 initial_state = 'intertrial'
@@ -72,23 +75,23 @@ def intertrial(event):
 
             
     
+'''
 
 def trial(event):
-    
-    if event == 'entry':
-        set_timer('trial_timer', v.trial_duration, True)
+    earthquake_stim.sol_1.off()
+    # if event == 'entry':
+    #     set_timer('trial_timer', v.trial_duration, True)
 
-    elif event == 'trial_timer':
-        earthquake_stim.cue_sol(0)  # Activate solenoid
-        print('{}, Sol_direction'.format(v.sol_number))
-        # v.sol_number = v.sol_number + 1
-        print('Next solenoid {}'.format(v.sol_number))
-        timed_goto_state('intertrial', v.sol_duration)
+    # elif event == 'trial_timer':
+    #     earthquake_stim.cue_sol(0)  # Activate solenoid
+    #     print('{}, Sol_direction'.format(v.sol_number))
+    #     # v.sol_number = v.sol_number + 1
+    #     print('Next solenoid {}'.format(v.sol_number))
+    #     timed_goto_state('intertrial', v.sol_duration)
 
-    elif event == 'session_timer':
-        hw.motionSensor.stop()
-        stop_framework()
-'''
+    # elif event == 'session_timer':
+    #     hw.motionSensor.stop()
+    #     stop_framework()
 
     
 
