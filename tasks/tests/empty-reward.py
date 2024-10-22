@@ -78,7 +78,7 @@ def run_end():
 # State behaviour functions.
 def intertrial(event):
     "intertrial state behaviour"
-    pass
+    hw.light.all_on()
 
 # State independent behaviour.
 def all_states(event):
