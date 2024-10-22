@@ -120,7 +120,7 @@ def trial(event):
         disarm_timer('cursor_update')
 
 def cursor_match (event):
-    "reward state"
+    "when led and spk line up"
     if event == 'entry':
         hw.light.cue(v.next_led___)
         print('{}, led_direction'.format(v.next_led___))

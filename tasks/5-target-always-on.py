@@ -122,7 +122,7 @@ def trial(event):
         disarm_timer('cursor_update')
 
 def cursor_match (event):
-    "reward state"
+    "when led and spk line up"
     if event == 'entry':
         pause_timer('trial_timer')
         timed_goto_state('trial', v.sound_bins[-1])
