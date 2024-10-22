@@ -133,7 +133,7 @@ def cursor_match (event):
         unpause_timer('trial_timer')
 
 def reward (event):
-    "intertrial state"
+    "reward state"
     if event == 'entry':
         hw.reward.release()
         v.reward_number += 1
