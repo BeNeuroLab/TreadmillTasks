@@ -29,7 +29,7 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 v.session_duration = 60 * minute
 v.reward_duration = 30 * ms
-v.hold_duration = 200 * ms
+v.hold_duration = 150 * ms
 v.timeout_duration = 20 * second
 v.timeout_timer = 1 * minute
 
