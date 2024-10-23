@@ -28,57 +28,29 @@ events = [
 ]
 
 initial_state = "trial"
-'''
-
-initial_state = 'intertrial'
 
 # Variables
 v.min_motion = 15
 v.sol_number = 0
 v.sol_duration = 100 * ms
 v.IT_duration = 1 * second
-v.trial_duration = 1 * second
+v.trial_duration = 5 * second
 v.session_duration = 10 * minute
-
-# Run behaviour
-def run_start():
-    hw.motionSensor.record()
-    hw.motionSensor.threshold = v.min_motion
-    hw.cameraTrigger.start()
-    set_timer('session_timer', v.session_duration, True)
-    earthquake_stim.all_off()
-    print('CPI={}'.format(hw.motionSensor.sensor_x.CPI))
-
-def run_end():
-    earthquake_stim.all_off()
-    hw.motionSensor.off()
-    hw.off()
 
 # States and transitions
 def intertrial(event):
 
     if event == 'entry':
-        earthquake_stim.all_off()
-        set_timer('IT_timer', v.IT_duration, True)
+        earthquake_stim.sol_off(0)
 
-    elif event == 'IT_timer':
-        if v.sol_number < 6:
-            goto_state('trial')
-        elif v.sol_number == 6:
-            v.sol_number = 0
-            goto_state('trial')
-
-
-    elif event == 'session_timer':
-        hw.motionSensor.stop()
-        stop_framework()
-
-            
-    
-'''
 
 def trial(event):
-    earthquake_stim.sol_1.off()
+    set_timer('trial_timer', v.trial_duration, True)
+
+    if event == 'trial_timer':
+        earthquake_stim.sol_on(0)
+        timed_goto_state('intertrial', v.sol_duration)
+
     # if event == 'entry':
     #     set_timer('trial_timer', v.trial_duration, True)
 
