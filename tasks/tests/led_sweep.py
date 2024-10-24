@@ -21,7 +21,7 @@ initial_state = 'trial'
 
 
 # -------------------------------------------------------------------------
-v.session_duration = 10 * minute
+v.session_duration = 15 * minute
 v.sound_bins = (1 * second,)
 
 v.last_led___ = 2
