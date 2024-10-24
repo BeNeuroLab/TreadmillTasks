@@ -32,7 +32,7 @@ initial_state = "trial"
 # Variables
 v.min_motion = 15
 v.sol_number = 0
-v.sol_duration = 100 * ms
+v.sol_duration = 10 * second
 v.IT_duration = 1 * second
 v.trial_duration = 5 * second
 v.session_duration = 10 * minute
@@ -41,14 +41,14 @@ v.session_duration = 10 * minute
 def intertrial(event):
 
     if event == 'entry':
-        earthquake_stim.sol_off(0)
+        earthquake_stim.sol_off(2)
 
 
 def trial(event):
     set_timer('trial_timer', v.trial_duration, True)
 
     if event == 'trial_timer':
-        earthquake_stim.sol_on(0)
+        earthquake_stim.sol_on(2)
         timed_goto_state('intertrial', v.sol_duration)
 
     # if event == 'entry':
