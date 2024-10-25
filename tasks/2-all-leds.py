@@ -132,6 +132,8 @@ def penalty (event):
     if event == 'entry':
         timed_goto_state('trial', v.sound_bins[-1])
         v.next_spk___ = next_spk()
+    elif event == 'lick':
+        goto_state('penalty')  # extend the penalty state
 
 
 def all_states(event):

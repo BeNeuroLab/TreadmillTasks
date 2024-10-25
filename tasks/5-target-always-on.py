@@ -159,6 +159,8 @@ def penalty (event):
     if event == 'entry':
         timed_goto_state('trial', v.offlick_penalty)
         hw.light.all_off()
+    elif event == 'lick':
+        goto_state('penalty')  # extend the penalty state
 
 
 def all_states(event):

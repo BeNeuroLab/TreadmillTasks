@@ -158,6 +158,8 @@ def penalty (event):
     "penalty state"
     if event == 'entry':
         timed_goto_state('trial', v.offlick_penalty)
+    elif event == 'lick':
+        goto_state('penalty')  # extend the penalty state
 
 
 def all_states(event):
