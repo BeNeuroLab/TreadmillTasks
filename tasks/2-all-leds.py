@@ -1,4 +1,5 @@
 """task with all LEDs and a penalty for offlicks (no timeout)
+penalty is cursor reset to spk 0 and wait for v.IT_duration=5s from the last offlick
 """
 
 import utime
@@ -128,9 +129,14 @@ def reward (event):
         timed_goto_state('trial', v.IT_duration)
 
 def penalty (event):
-    "penalty state"
+    """
+    penalty state
+    penalty is cursor reset to spk-0 and wait for v.IT_duration=5s from the last offlick
+    """
     if event == 'entry':
-        timed_goto_state('trial', v.sound_bins[-1])
+        timed_goto_state('trial', v.IT_duration)
+        hw.sound.cue(v.spks___[0])
+        print('{}, spk_direction'.format(v.spks___[0]))
         v.next_spk___ = next_spk()
     elif event == 'lick':
         goto_state('penalty')  # extend the penalty state
