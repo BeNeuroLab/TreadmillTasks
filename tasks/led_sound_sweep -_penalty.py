@@ -10,7 +10,7 @@ from devices import *
 # -------------------------------------------------------------------------
 
 states = ['trial',
-          'led_on',
+          'cursor_match',
           'reward']
 
 events = ['lick',
@@ -25,7 +25,7 @@ initial_state = 'trial'
 v.session_duration = 30 * minute
 v.reward_duration = 35 * ms
 v.sound_bins = (0.5 * second, 0.5 * second, 0.75 * second, 2 * second)
-v.penalty_durations = (5 * second, 5 * second)
+v.penalty_durations = (1.5 * second, 5 * second)
 v.reward_number = 0
 v.IT_duration = 2 * second
 
@@ -106,13 +106,13 @@ def trial(event):
             reset_timer('spk_update', v.penalty_durations[1])
     elif event == 'spk_update':
         if hw.sound.active[0] == v.next_led___:
-            goto_state('led_on')
+            goto_state('cursor_match')
         else:
             set_timer('spk_update', choice(v.sound_bins), False)
     elif event == 'exit':
         disarm_timer('spk_update')
 
-def led_on (event):
+def cursor_match (event):
     "reward state"
     if event == 'entry':
         #hw.light.cue(v.next_led___)

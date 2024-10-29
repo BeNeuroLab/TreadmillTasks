@@ -21,6 +21,7 @@ v.iti_duration = 2 * second  # Inter-trial interval
 v.targets = [2, 4]  # Speaker/LED positions
 v.correct_trials = 0
 v.total_trials = 0
+v.penalty_durations = (2*second)
 
 v.target_duration = 40 * second
 v.silence_duration = 15 * second
@@ -65,6 +66,8 @@ def stimulus_on(event):
     elif event == 'lick':
         if v.matching:
             goto_state('reward')
+        else:
+            reset_timer('spk_update', v.penalty_durations[0])
     elif event == 'led_timer':
         goto_state('silence')
     elif event == 'stimulus_timer':
