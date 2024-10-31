@@ -34,10 +34,10 @@ def next_spk():
     returns the next speakers, in either direction of the sweep
     """
     assert len(hw.sound.active)==1, 'one speaker can be active'
-    active_spk = hw.sound.active[0]
-    active_spk_idx = v.spks___.index(active_spk)
     if len(v.spks___) == 1:
         return v.spks___[0]
+    active_spk = hw.sound.active[0]
+    active_spk_idx = v.spks___.index(active_spk)
 
     if active_spk > v.last_spk___:
         if active_spk < v.spks___[-1]:
