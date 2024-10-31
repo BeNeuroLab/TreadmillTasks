@@ -161,6 +161,7 @@ def penalty (event):
     """
     if event == 'entry':
         timed_goto_state('trial', v.IT_duration)
+        hw.light.all_off()
         hw.sound.cue(v.spks___[0])
         print('{}, spk_direction'.format(v.spks___[0]))
         v.next_spk___ = next_spk()
