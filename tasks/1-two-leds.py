@@ -70,8 +70,8 @@ def run_start():
     hw.sound.set_volume(8)  # Between 1 - 30
     utime.sleep_ms(20)  # wait for the sound player to be ready
     hw.reward.reward_duration = v.reward_duration
-    hw.motionSensor.record()
-    hw.motionSensor.threshold = 10
+    # hw.motionSensor.record()
+    # hw.motionSensor.threshold = 10
     hw.sound.start()
     hw.light.all_off()
     set_timer('session_timer', v.session_duration, True)
@@ -83,8 +83,8 @@ def run_end():
     "Code here is executed when the framework stops running."
     hw.light.all_off()
     hw.reward.stop()
-    hw.motionSensor.off()
-    hw.motionSensor.stop()
+    # hw.motionSensor.off()
+    # hw.motionSensor.stop()
     hw.cameraTrigger.stop()
     hw.sound.stop()
     hw.off()
