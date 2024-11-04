@@ -21,7 +21,7 @@ states = [
     'trial',
 ]
 events = [
-    'IT_timer',
+    'intertrial_timer',
     'trial_timer',
     'session_timer',
     'motion'
@@ -31,24 +31,37 @@ initial_state = "trial"
 
 # Variables
 v.min_motion = 15
+v.sol_duration = 1 * second
 v.sol_number = 0
-v.sol_duration = 10 * second
-v.IT_duration = 1 * second
+v.intertrial_duration = 1 * second
 v.trial_duration = 5 * second
 v.session_duration = 10 * minute
+v.max_solenoids = 8
 
 # States and transitions
 def intertrial(event):
 
     if event == 'entry':
-        earthquake_stim.sol_off(2)
+        set_timer('intertrial_timer', v.intertrial_duration, True)
+        earthquake_stim.sol_off(v.sol_number)
+        v.sol_number = v.sol_number + 1
+
+    elif event == 'intertrial_timer':
+        goto_state('trial')
+
+
 
 
 def trial(event):
+    if v.sol_number == v.max_solenoids:
+        hw.motionSensor.stop()
+        stop_framework()
+
     set_timer('trial_timer', v.trial_duration, True)
 
     if event == 'trial_timer':
-        earthquake_stim.sol_on(2)
+        earthquake_stim.sol_on(v.sol_number)
+        
         timed_goto_state('intertrial', v.sol_duration)
 
     # if event == 'entry':
@@ -57,7 +70,7 @@ def trial(event):
     # elif event == 'trial_timer':
     #     earthquake_stim.cue_sol(0)  # Activate solenoid
     #     print('{}, Sol_direction'.format(v.sol_number))
-    #     # v.sol_number = v.sol_number + 1
+    #     # 
     #     print('Next solenoid {}'.format(v.sol_number))
     #     timed_goto_state('intertrial', v.sol_duration)
 

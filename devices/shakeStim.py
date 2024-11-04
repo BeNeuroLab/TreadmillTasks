@@ -6,11 +6,15 @@ class shakeStim:
     "Earthequake machine stimuli."
     def __init__(self,port_exp):
         """PINS should be exactly `Ndirections` strings"""
-        self.n_directions = 1
-        self.sol_0 = _h.Digital_output(pin=port_exp.port_8.DIO_A)
-        self.sol_1 = _h.Digital_output(pin=port_exp.port_8.DIO_B)
-        self.sol_2 = _h.Digital_output(pin=port_exp.port_8.POW_A, inverted=True)
-        #self.sol_3 = _h.Digital_output(pin=port_exp.port_8.POW_B, inverted=True)
+
+        self.sol_0 = _h.Digital_output(pin=port_exp.port_6.DIO_A)
+        self.sol_1 = _h.Digital_output(pin=port_exp.port_6.DIO_B)
+        self.sol_2 = _h.Digital_output(pin=port_exp.port_6.POW_A, inverted=True)
+        self.sol_3 = _h.Digital_output(pin=port_exp.port_6.POW_B, inverted=True)
+        self.sol_4 = _h.Digital_output(pin=port_exp.port_4.DIO_A)
+        self.sol_5 = _h.Digital_output(pin=port_exp.port_4.DIO_B)
+        self.sol_6 = _h.Digital_output(pin=port_exp.port_4.POW_A, inverted=True)
+        self.sol_7 = _h.Digital_output(pin=port_exp.port_4.POW_B, inverted=True)
         # self.sol_1.off()
 
     def all_off(self):
