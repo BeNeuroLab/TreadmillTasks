@@ -78,9 +78,9 @@ def cursor_match (event):
     "when led and spk line up"
     if event == 'entry':
         hw.sound.cue(v.spks___[0])
-        print('{}, spk_direction'.format(v.spks___[0]))
+        print('{}, spk_direction'.format(hw.sound.active[0]))
         hw.light.cue(v.leds___[0])
-        print('{}, led_direction'.format(v.leds___[0]))
+        print('{}, led_direction'.format(hw.light.active[0]))
         timed_goto_state('trial', v.sound_bins[-1])
     elif event == 'lick':
         goto_state('reward')
