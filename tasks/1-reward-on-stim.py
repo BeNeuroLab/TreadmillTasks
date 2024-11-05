@@ -78,9 +78,9 @@ def cursor_match (event):
     "when led and spk line up"
     if event == 'entry':
         hw.sound.cue(v.spks___[0])
-        print('{}, spk_direction'.format(v.next_spk___))
+        print('{}, spk_direction'.format(v.spks___[0]))
         hw.light.cue(v.leds___[0])
-        print('{}, led_direction'.format(v.next_led___))
+        print('{}, led_direction'.format(v.leds___[0]))
         timed_goto_state('trial', v.sound_bins[-1])
     elif event == 'lick':
         goto_state('reward')
@@ -97,7 +97,6 @@ def penalty (event):
     "penalty state"
     if event == 'entry':
         timed_goto_state('trial', v.sound_bins[-1])
-        v.next_spk___ = next_spk()
     elif event == 'lick':
         goto_state('penalty')
 
