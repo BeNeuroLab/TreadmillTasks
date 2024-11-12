@@ -39,11 +39,11 @@ v.timeout_timer = 1 * minute
 v.reward_number = 0
 v.IT_duration = 5 * second
 
-v.last_spk___ = 1
-v.next_spk___ = 0
+v.last_spk___ = 2
+v.next_spk___ = 3
 
 v.spks___ = [2, 3, 4]
-v.leds___ = [2, 3, 4]
+v.leds___ = [2, 4]
 v.next_led___ = v.leds___[-1]
 
 
@@ -164,9 +164,9 @@ def penalty (event):
     if event == 'entry':
         timed_goto_state('trial', v.IT_duration)
         hw.light.all_off()
-        hw.sound.cue(v.spks___[0])
+        hw.sound.all_off()
         print('{}, spk_direction'.format(v.spks___[0]))
-        v.next_spk___ = next_spk()
+        v.next_spk___ = v.spks___[0]
     elif event == 'lick':
         goto_state('penalty')  # extend the penalty state
 
