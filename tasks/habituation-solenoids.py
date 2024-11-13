@@ -28,21 +28,23 @@ v.min_motion = 10
 v.session_duration = 10 * minute
 v.free_duration = 5 * minute
 v.sol_number = 0
-v.trial_duration = 5 * second
+v.trial_duration = 10 * second
+v.trial_min_period = 2 * second
+v.intertrial_duration = 10 * second
+
 
 # States
 def trial(event):
     if event == 'entry':
         set_timer('trial_timer', v.trial_duration, True)
-
-        # Generate random timer duration
+        set_timer('sol_onset', random.uniform(v.trial_min_period, ))
 
     elif event == 'trial_timer':
         goto_state('intertrial')
 
+
 def intertrial(event):
     if event == 'entry':
-        earthquake_stim.sol_off(v.sol_number)
         set_timer('intertrial_timer', v.intertrial_duration, True)
 
     elif event == 'intertrial_timer':
