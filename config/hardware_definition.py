@@ -1,4 +1,5 @@
 from devices import *
+import hardware_definition as hw
 
 board = Breakout_dseries_1_6()
 
@@ -22,3 +23,5 @@ sound = AudioStim(board.port_11)
 cameraTrigger = CameraPulse(pin=board.port_1.POW_B, trigger_rate=100, duty_cycle=50)
 
 _sync_output = Rsync(pin=board.port_1.POW_A, event_name='rsync', mean_IPI=5000, pulse_dur=50)
+
+earthquake_stim = shakeStim(port_exp=Port_expander(port=hw.board.port_8))
