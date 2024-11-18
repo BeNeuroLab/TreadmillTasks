@@ -1,11 +1,10 @@
 from pyControl.utility import *
 import hardware_definition as hw
+from random import randrange, uniform
 
 from devices import *
 from random import randint
 import time  # Import the time library
-
-earthquake_stim = shakeStim(port_exp=Port_expander(port=hw.board.port_8))
 
 # States and events
 states = [
@@ -28,24 +27,34 @@ v.min_motion = 10
 v.session_duration = 10 * minute
 v.free_duration = 5 * minute
 v.sol_number = 0
+v.sol_duration = 100 * ms
 v.trial_duration = 10 * second
-v.trial_min_period = 2 * second
 v.intertrial_duration = 10 * second
+v.trial_limits = (2, 8)
 
 
 # States
 def trial(event):
     if event == 'entry':
-        set_timer('trial_timer', v.trial_duration, True)
-        set_timer('sol_onset', random.uniform(v.trial_min_period, ))
+        set_timer('trial_timer', v.trial_duration)
+        set_timer('sol_on', uniform(v.trial_limits[0], v.trial_limits[1]) * second)
+
+    elif event == 'sol_on':
+        v.sol_number = randrange(12)
+        hw.earthquake_stim.sol_on(v.sol_number)
+        set_timer('sol_off', v.sol_duration)
+
+    elif event =='sol_off':
+        hw.earthquake_stim.sol_off(v.sol_number)
 
     elif event == 'trial_timer':
         goto_state('intertrial')
 
 
+
 def intertrial(event):
     if event == 'entry':
-        set_timer('intertrial_timer', v.intertrial_duration, True)
+        set_timer('intertrial_timer', v.intertrial_duration)
 
     elif event == 'intertrial_timer':
         goto_state('trial')
@@ -55,11 +64,13 @@ def free(event):
     if event == 'entry':
         timed_goto_state('intertrial', v.free_duration, True)
 
+
+# State independent functions
 def all_states(event):
     if event == 'session_timer':
         stop_framework()
 
-# Common functions
+
 def run_start():
     """
     Code here is executed when the framework starts running.
