@@ -34,15 +34,19 @@ v.min_motion = 15
 v.sol_duration = 1 * second
 v.sol_number = 0
 v.intertrial_duration = 1 * second
-v.trial_duration = 3 * second
+v.trial_duration = 2 * second
 v.session_duration = 10 * minute
 v.max_solenoids = 11
 
-# def run_end():
-#     # Code here is executed when the framework stops running.
-#     # Turn off all hardware outputs.
-#     hw.motionSensor.off()
-#     hw.off()
+
+
+def run_start():
+    earthquake_stim.kill_switch.on()
+
+def run_end():
+    earthquake_stim.kill_switch.off()
+
+
 
 # States and transitions
 def intertrial(event):
