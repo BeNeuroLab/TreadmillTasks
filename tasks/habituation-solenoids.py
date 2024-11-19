@@ -13,6 +13,8 @@ states = [
     'trial',
 ]
 events = [
+    'sol_on',
+    'sol_off',
     'session_timer',
     'intertrial_timer',
     'trial_timer',
