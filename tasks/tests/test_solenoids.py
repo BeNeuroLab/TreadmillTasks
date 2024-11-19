@@ -31,7 +31,7 @@ initial_state = "trial"
 
 # Variables
 v.min_motion = 15
-v.sol_duration = 1 * second
+v.sol_duration = 150 * ms
 v.sol_number = 0
 v.intertrial_duration = 1 * second
 v.trial_duration = 2 * second
@@ -42,6 +42,7 @@ v.max_solenoids = 11
 
 def run_start():
     earthquake_stim.kill_switch.on()
+    set_timer('session_timer', v.session_duration)
 
 def run_end():
     earthquake_stim.kill_switch.off()
@@ -60,14 +61,15 @@ def intertrial(event):
     elif event == 'intertrial_timer':
         goto_state('trial')
 
-
-
+def all_states(event):
+    if event == 'session_timer':
+        stop_framework()
 
 def trial(event):
 
     if event == 'entry':
         if v.sol_number == v.max_solenoids:
-            stop_framework()
+            v.sol_number = 0
         set_timer('trial_timer', v.trial_duration, True)
 
 
