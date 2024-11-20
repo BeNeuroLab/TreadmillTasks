@@ -26,12 +26,12 @@ initial_state = 'free'
 # Variables
 v.min_motion = 10
 v.session_duration = 30 * minute
-v.free_duration = 5 * minute
+v.free_duration = 10 * second
 v.sol_number = 0
 v.sol_duration = 50 * ms
-v.trial_duration = 7 * second
-v.intertrial_duration = 2 * second
-v.trial_limits = (2, 5)
+v.trial_duration = 10 * second
+v.intertrial_duration = 10 * second
+v.trial_limits = (2, 8)
 
 
 # States
