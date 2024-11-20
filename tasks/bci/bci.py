@@ -14,8 +14,7 @@ from devices import *
 states = ['trial',
           'cursor_match',
           'reward',
-          'timeout',
-          'penalty']
+          'timeout']
 
 events = ['lick',
           'motion',
