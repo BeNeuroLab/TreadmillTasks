@@ -23,18 +23,16 @@ states = [
 events = [
     'intertrial_timer',
     'trial_timer',
-    'session_timer',
-    'motion'
+    'session_timer'
 ]
 
 initial_state = "trial"
 
 # Variables
-v.min_motion = 15
-v.sol_duration = 150 * ms
+v.sol_duration = 50 * ms
 v.sol_number = 0
 v.intertrial_duration = 1 * second
-v.trial_duration = 2 * second
+v.trial_duration = 1 * second
 v.session_duration = 10 * minute
 v.max_solenoids = 11
 
