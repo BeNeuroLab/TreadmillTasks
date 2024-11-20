@@ -109,6 +109,8 @@ def timeout(event):
         hw.sound.all_off()
         v.next_led___ = choice(v.leds___)
         timed_goto_state('trial', v.timeout_duration)
+    elif event == 'cursor_update':
+        hw.sound.all_off()
     elif event == 'exit':
         reset_timer('trial_timer', v.timeout_timer, True)
 
