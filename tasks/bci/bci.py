@@ -27,8 +27,8 @@ initial_state = 'trial'
 
 # -------------------------------------------------------------------------
 v.session_duration = 60 * minute
-v.reward_duration = 30 * ms
-v.hold_duration = 150 * ms
+v.reward_duration = 40 * ms
+v.hold_duration = 100 * ms
 v.timeout_duration = 20 * second
 v.timeout_timer = 1 * minute
 
@@ -37,7 +37,7 @@ v.IT_duration = 5 * second
 
 v.spks___ = [0, 1, 2, 3, 4, 5, 6]
 v.leds___ = [1, 2, 3, 4, 5]
-v.next_led___ = v.leds___[-1]
+v.next_led___ = v.leds___[2]
 
 
 # -------------------------------------------------------------------------
@@ -72,10 +72,9 @@ def run_end():
 def trial(event):
     "Trial state"
     if event == 'entry':
-        hw.light.cue(v.next_led___)
-        print('{}, led_direction'.format(v.next_led___))
+        hw.light.all_off()
     elif event == 'cursor_update':
-        if hw.light.active[0] in hw.sound.active:
+        if v.next_led___ in hw.sound.active:
             goto_state('cursor_match')
     elif event == 'trial_timer':
         goto_state('timeout')
@@ -83,6 +82,8 @@ def trial(event):
 def cursor_match(event):
     "when led and spk line up"
     if event == 'entry':
+        hw.light.cue(v.next_led___)
+        print('{}, led_direction'.format(v.next_led___))
         pause_timer('trial_timer')
         timed_goto_state('reward', v.hold_duration)
     elif event == 'cursor_update':
