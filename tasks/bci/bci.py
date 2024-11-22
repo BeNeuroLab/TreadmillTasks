@@ -38,6 +38,7 @@ v.IT_duration = 5 * second
 v.spks___ = [0, 1, 2, 3, 4, 5, 6]
 v.leds___ = [1, 2, 3, 4, 5]
 v.next_led___ = v.leds___[2]
+v.last_spk = 0
 
 
 # -------------------------------------------------------------------------
@@ -106,6 +107,7 @@ def reward (event):
 def timeout(event):
     "timeout state"
     if event == 'entry':
+        v.last_spk = hw.sound.active[0]
         hw.light.all_off()
         hw.sound.all_off()
         v.next_led___ = choice(v.leds___)
@@ -113,6 +115,7 @@ def timeout(event):
     elif event == 'cursor_update':
         hw.sound.all_off()
     elif event == 'exit':
+        hw.sound.cue(v.last_spk)
         reset_timer('trial_timer', v.timeout_timer, True)
 
 
