@@ -27,22 +27,22 @@ initial_state = 'free'
 
 # Variables
 v.min_motion = 10
-v.session_duration = 1.25 * minute
-v.free_duration = 10 * second
-v.earthquake_duration = 1 * minute
+v.session_duration = 89 * minute
+v.free_duration = 10 * minute
+v.earthquake_duration = 70 * minute
 v.sol_number = 0
 v.sol_off_time_list = [50, 100, 150]
 v.sol_off_time = 0
 v.trial_duration = 4 * second
-v.intertrial_duration = [1, 3, 5, 10]
-v.sol_on_time = 2 * second
+v.intertrial_duration = [1, 3, 5, 7]
+v.sol_onset_time = 2 * second
 
 
 # States
 def trial(event):
     if event == 'entry':
         set_timer('trial_timer', v.trial_duration, False)
-        set_timer('sol_on', v.sol_on_time, True)
+        set_timer('sol_on', v.sol_onset_time, True)
         v.sol_number = randrange(11)
         v.sol_off_time = choice(v.sol_off_time_list)
         print('{}, Sol_direction'.format(v.sol_number))
@@ -106,6 +106,5 @@ def run_end():
     """
     hw.motionSensor.stop()
     hw.earthquake_stim.kill_switch.off()
-
-    # hw.cameraTrigger.stop()
+    hw.cameraTrigger.stop()
     hw.off()
