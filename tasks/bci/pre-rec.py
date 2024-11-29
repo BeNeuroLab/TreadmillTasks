@@ -24,10 +24,10 @@ initial_state = 'trial'
 v.session_duration = 10 * minute
 v.sound_bins = (1 * second,)
 
-v.last_spk___ = 1
-v.next_spk___ = 0
+v.last_spk___ = 2
+v.next_spk___ = 1
 
-v.spks___ = [0, 1, 2, 3, 4, 5, 6]
+v.spks___ = [1, 2, 3, 4, 5]
 v.leds___ = [1, 2, 3, 4, 5]
 v.next_led___ = v.leds___[-1]
 
