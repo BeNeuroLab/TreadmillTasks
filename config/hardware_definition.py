@@ -17,7 +17,8 @@ light.all_off()
 lickometer = Lickometer(lick_port=board.port_6, sol_port=board.port_7, rising_event_A='lick', debounce=5)
 reward = Reward(lickometer.SOL_1 , reward_duration=50)
 
-sound = AudioStim(board.port_11)
+# sound = AudioStim(board.port_11)
+speaker = Audio_board(board.port_8)
 
 cameraTrigger = CameraPulse(pin=board.port_1.POW_B, trigger_rate=100, duty_cycle=50)
 
