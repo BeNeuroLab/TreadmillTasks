@@ -14,7 +14,7 @@ bci_link = UARTlink('bci_update', timer_freq=100)
 light = LEDStim()
 light.all_off()
 
-lickometer = Lickometer(lick_port=board.port_6, sol_port=board.port_7, rising_event_A='lick', debounce=5)
+lickometer = Lickometer(lick_port=board.port_6, sol_port=board.port_7, rising_event_A='lick', debounce=5,pull="up")
 reward = Reward(lickometer.SOL_1 , reward_duration=50)
 
 # sound = AudioStim(board.port_11)
