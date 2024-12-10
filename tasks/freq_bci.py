@@ -50,12 +50,12 @@ v.high_threshold = 10000
 # Assume speaker0 and speaker1 refer to different speaker outputs if available
 # If only one speaker device, just interpret freq changes. 
 # LED indexing zero-based
-v.led_low = 0
-v.led_high = 1
+v.led_low = 2
+v.led_high = 4
 
 # Durations
 v.reward_duration = 40 * ms
-v.hold_duration = 1 * second
+v.hold_duration = 10 * ms
 v.trial_duration = 20 * second
 v.IT_duration = 10 * second  # intertrial duration
 v.inter_trial_interval = 2 * second  # after reward
@@ -70,27 +70,34 @@ v.reward_given = False
 # Run Start/End
 # -------------------------------------------------------------------------
 def run_start():
+    "Code here is executed when the framework starts running."
+    hw.speaker.set_volume(8)  # Between 1 - 30
+    utime.sleep_ms(20)  # wait for the sound player to be ready
     hw.reward.reward_duration = v.reward_duration
-    hw.speaker.set_volume(10)
+    #hw.motionSensor.record()
+    #hw.motionSensor.threshold = 10
+    hw.light.all_off()
+    set_timer('session_timer', v.session_duration, True)
+    #print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
+    print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
-    set_timer('session_timer', v.session_duration)
-    print("val, session_start")
 
 def run_end():
-    hw.speaker.off()
     hw.light.all_off()
     hw.reward.stop()
+    #hw.motionSensor.off()
+    #hw.motionSensor.stop()
     hw.cameraTrigger.stop()
-    print("val, session_end")
+    hw.off()
 
 # -------------------------------------------------------------------------
 # Utility Functions
 # -------------------------------------------------------------------------
 
 def determine_zone(freq):
-    if freq < v.low_threshold:
+    if freq <= v.low_threshold:
         return 'low'
-    elif freq > v.high_threshold:
+    elif freq >= v.high_threshold:
         return 'high'
     else:
         return 'intermediate'
@@ -104,16 +111,15 @@ def update_output(freq):
     zone = determine_zone(freq)
     if zone == 'low':
         hw.light.cue(v.led_low)    # led0 on
-        print(f"val, led_direction:{v.led_low}")
+        print("{}, led_direction".format(v.led_low))
     elif zone == 'high':
         hw.light.cue(v.led_high)   # led1 on
-        print(f"val, led_direction:{v.led_high}")
+        print("{}, led_direction".format(v.led_high))
     # intermediate: no LED
 
     # For print messages about speaker direction, since we are using freq directly:
     # If you want to specify which speaker index is active, you can do so here.
     # Assuming a single speaker device (speaker0) for all frequencies:
-    print("val, spk_direction:0") 
 
     return zone
 
@@ -147,13 +153,12 @@ def trial(event):
         v.reward_given = False
         reset_hold_timer()
         set_timer('trial_timer', v.trial_duration)
-        print("val, trial_start")
 
     elif event == 'cursor_update':
-        freq = hw.bci_link.freq
+        freq = hw.bci_link.spk # reuse spk
         if freq is None:
-            freq = 0.0
-        print(f"val, frequency:{freq}")
+            freq = int((v.low_threshold + v.high_threshold)/2)
+        print("{}, frequency".format(freq))
 
         v.current_zone = update_output(freq)
         handle_hold_timer(v.current_zone)
@@ -175,13 +180,12 @@ def reward(event):
         hw.reward.release()
         v.reward_given = True
         v.reward_count += 1
-        print(f"val, reward_number:{v.reward_count}")
+        print("{}, reward_number".format(v.reward_count))
         # Turn off LED and sound
         hw.speaker.off()
         hw.light.all_off()
         # After reward, short ITI before next trial.
         set_timer('IT_timer', v.inter_trial_interval)
-        print("val, sol_direction:0") # Assuming solenoid0 for reward
 
     elif event == 'IT_timer':
         goto_state('trial')
@@ -198,7 +202,6 @@ def intertrial(event):
         hw.speaker.off()
         hw.light.all_off()
         set_timer('IT_timer', v.IT_duration)
-        print("val, intertrial_start")
 
     elif event == 'IT_timer':
         goto_state('trial')
@@ -214,6 +217,6 @@ def all_states(event):
     # If you have lick or motion events, you can handle them here or in states.
     # For now, just acknowledge they exist:
     if event == 'lick':
-        print("val, lick_event")
+        print("lick")
     elif event == 'motion':
-        print("val, motion_event")
+        print("motion")
