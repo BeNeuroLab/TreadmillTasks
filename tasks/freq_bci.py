@@ -36,7 +36,8 @@ events = [
     'IT_timer',
     'lick',
     'motion',
-    'hold_timer'
+    'hold_timer',
+    'reward_timer'
 ]
 
 initial_state = 'trial'
@@ -48,15 +49,16 @@ v.session_duration = 30 * minute
 
 # Thresholds (zero-indexed)
 v.low_threshold = 2300
-v.high_threshold = 10000
+v.high_threshold = 13000
 
 v.led_low = 2
 v.led_high = 4
 
 v.reward_duration = 40 * ms
 v.hold_duration = 500 * ms     # Mouse must sustain freq for this duration
-v.trial_duration = 20 * second # total trial duration (example)
-v.IT_duration = 5 * second     # intertrial interval
+v.trial_duration = 10 * second # total trial duration (example)
+v.IT_duration = 3 * second     # intertrial interval
+v.reward_timer = 3 * second
 
 v.reward_count = 0
 v.hold_passed = False  # To track if hold_duration passed in reward state
@@ -68,6 +70,7 @@ def run_start():
     hw.speaker.set_volume(8)
     utime.sleep_ms(20)
     hw.reward.reward_duration = v.reward_duration
+    
     hw.light.all_off()
     hw.speaker.off()
     set_timer('session_timer', v.session_duration, True)
@@ -144,11 +147,12 @@ def reward(event):
     """
     if event == 'entry':
         v.hold_passed = False
-        set_timer('hold_timer', v.hold_duration, output_event=False) 
+        set_timer('hold_timer', v.hold_duration, output_event=False)
         # output_event=False because we only use this internally.
 
     elif event == 'hold_timer':
         v.hold_passed = True
+        set_timer('reward_timer', v.reward_timer) 
 
     elif event == 'lick':
         # If hold_passed is True, deliver reward
@@ -158,10 +162,12 @@ def reward(event):
             print("{}, reward_number".format(v.reward_count))
             hw.light.all_off()
             hw.speaker.off()
+            v.hold_passed = False
             goto_state('intertrial')
         # If lick before hold_passed, do nothing
 
-    elif event == 'trial_timer':
+    elif event == 'reward_timer':
+        v.hold_passed = False
         # Trial ended with no reward given
         hw.light.all_off()
         hw.speaker.off()
