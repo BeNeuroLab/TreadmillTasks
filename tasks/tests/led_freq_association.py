@@ -16,8 +16,8 @@ v.session_duration = 45 * minute
 v.trial_duration = 2 * second
 v.stimulus_duration = 2 * second
 v.reward_duration = 40 * ms
-v.timeout_duration = 2 * second
-v.iti_duration = 2 * second  # Inter-trial interval
+v.timeout_duration = 10 * second
+v.iti_duration = 5 * second  # Inter-trial interval
 v.targets = [2, 4]  # Speaker/LED positions
 v.spk_freqs = [2300, 12500]
 v.correct_trials = 0
@@ -66,7 +66,7 @@ def stimulus_on(event):
             v.sound_target = v.spk_freqs[1]
         # hw.sound.cue(v.sound_target)
         hw.speaker.sine(v.sound_target)
-        hw.light.cue(v.light_target)
+        # hw.light.cue(v.light_target)
         # v.matching = v.sound_target == v.light_target
         # print('Trial {} started. Sound: {}, Light: {}, Matching: {}'.format(
         #     v.total_trials, v.sound_target, v.light_target, v.matching))
