@@ -25,7 +25,7 @@ v.iti_duration = 5 * second  # Inter-trial interval
 v.spk_freqs = [2181,2378,2594,2828,3084,3364,3668,4000,4362,4757,5187,5657,6169,6727,7336,8000,8724,9514,10375,11314,12336]  # Frequency sweep range
 # v.spk_freqs = [2181,2594,3084,3668,4362,5187,6169,7336,8724,10375,12338] # 4tr octave list
 
-v.trial_in_block = 0  # Track position within the block
+v.trial_in_block = 2  # Track position within the block
 v.correct_trials = 0
 v.total_trials = 0
 
@@ -38,9 +38,15 @@ v.current_freq_index = mid_idx  # Start from the middle frequency
 
 # Pseudo-randomized trial structure
 v.trial_types = ['ascending', 'descending']  # Both must appear in every block
-random.shuffle(v.trial_types)  # Shuffle order of first block
 
 # -------------------------------------------------------------------------
+
+def shuffle_list(lst): # Fisher-Yates Shuffle
+    for i in range(len(lst) - 1, 0, -1):
+        j = random.randint(0, i)
+        lst[i], lst[j] = lst[j], lst[i]  # Swap elements
+
+# -------------------------------------------------------------------------        
 
 def run_start():
     hw.reward.reward_duration = v.reward_duration
@@ -62,7 +68,7 @@ def wait_for_trial(event):
         timed_goto_state('stimulus_on', v.iti_duration)
         if v.trial_in_block >= 2:  # End of block, reset and shuffle
             v.trial_in_block = 0
-            random.shuffle(v.trial_types)  # Shuffle order of next block
+            shuffle_list(v.trial_types)  # Shuffle order of next block
     elif event == 'lick':
         reset_timer('silence_timer', v.target_duration)
     elif event == 'silence_timer':
@@ -73,7 +79,6 @@ def stimulus_on(event):
         v.total_trials += 1
         v.trial_type = v.trial_types[v.trial_in_block] # Select trial type from the shuffled block
         v.current_freq_index = mid_idx # Set initial frequency for this trial
-        print('Trial {}: {} start at {} Hz'.format(v.total_trials,v.trial_type,v.spk_freqs[v.current_freq_index]))
         hw.speaker.sine(v.spk_freqs[v.current_freq_index])
         set_timer('sweep_timer', v.sweep_duration)
     elif event == 'sweep_timer':
