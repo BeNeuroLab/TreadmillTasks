@@ -73,7 +73,6 @@ def stimulus_on(event):
         v.total_trials += 1
         v.trial_type = v.trial_types[v.trial_in_block] # Select trial type from the shuffled block
         v.current_freq_index = mid_idx # Set initial frequency for this trial
-        print(f'Trial {v.total_trials}: {v.trial_type} start at {v.spk_freqs[v.current_freq_index]} Hz')
         hw.speaker.sine(v.spk_freqs[v.current_freq_index])
         set_timer('sweep_timer', v.sweep_duration)
     elif event == 'sweep_timer':
