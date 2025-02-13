@@ -6,7 +6,7 @@ import random
 # -------------------------------------------------------------------------
  
 # States
-states = ['wait_for_trial', 'stimulus_on', 'reward', 'silence']
+states = ['wait_for_trial', 'stimulus_on', 'reward', 'silence', 'reward_freq']
  
 # Events
 events = ['session_timer', 'sweep_timer', 'lick', 'stimulus_timer', 'silence_timer']
