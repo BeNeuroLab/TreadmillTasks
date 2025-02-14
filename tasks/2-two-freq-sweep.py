@@ -19,11 +19,11 @@ initial_state = 'wait_for_trial'
 # Variables
 v.session_duration = 45 * minute
 v.stimulus_duration = 2 * second
-v.sweep_duration = .5 * second
+v.sweep_duration = .10 * second
 v.reward_duration = 40 * ms
-v.iti_duration = 5 * second  # Inter-trial interval
-v.spk_freqs = [2181,2378,2594,2828,3084,3364,3668,4000,4362,4757,5187,5657,6169,6727,7336,8000,8724,9514,10375,11314,12336]  # Frequency sweep range
-# v.spk_freqs = [2181,2594,3084,3668,4362,5187,6169,7336,8724,10375,12338] # 4tr octave list
+v.iti_duration = 4 * second  # Inter-trial interval
+# v.spk_freqs = [2181,2378,2594,2828,3084,3364,3668,4000,4362,4757,5187,5657,6169,6727,7336,8000,8724,9514,10375,11314,12336]  # Frequency sweep range
+v.spk_freqs = [2181,2594,3084,3668,4362,5187,6169,7336,8724,10375,12338] # 4tr octave list
 
 v.trial_in_block = 2  # Track position within the block
 v.correct_trials = 0
@@ -109,7 +109,7 @@ def reward(event):
     if event == 'entry':
         hw.reward.release()
         v.correct_trials += 1
-        print('Correct! Trials: {}/{}'.format(v.correct_trials, v.total_trials))
+        print('Correct! Trials ({}): {}/{}'.format(v.trial_type,v.correct_trials, v.total_trials))
         timed_goto_state('wait_for_trial', 1000)
         reset_timer('silence_timer', v.target_duration)
         v.trial_in_block += 1  # Move to next trial in block
