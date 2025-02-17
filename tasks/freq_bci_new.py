@@ -46,22 +46,34 @@ initial_state = 'trial'
 # Variables
 # -------------------------------------------------------------------------
 v.session_duration = 30 * minute
-
-# Thresholds (zero-indexed)
-v.low_threshold = 2300
-v.high_threshold = 13000
-
-v.led_low = 2
-v.led_high = 4
-
 v.reward_duration = 40 * ms
 v.hold_duration = 200 * ms     # Mouse must sustain freq for this duration
 v.trial_duration = 10 * second # total trial duration 
 v.IT_duration = 3 * second     # intertrial interval
-v.reward_timer = 3 * second
+v.reward_timer_duration = 3 * second
+v.IT_mode = "fixed" # "fixed" or "baseline"
+
+# Thresholds (zero-indexed)
+v.freq_bins = [2181,2594,3084,3668,4362,5187,6169,7336,8724,10375,12338] # 4tr octave list
+v.low_threshold = 2181
+v.high_threshold = 12338
+v.baseline_freq_range = [3668, 7336] # the range of frequencies that are considered baseline
+
 
 v.reward_count = 0
 v.hold_passed = False  # To track if hold_duration passed in reward state
+
+def determine_zone(freq):
+    """
+    Determine whether the raw frequency is in the low, high, or intermediate zone.
+    """
+    if freq <= v.low_threshold:
+        return 'low'
+    elif freq >= v.high_threshold:
+        return 'high'
+    else:
+        return 'intermediate'
+
 
 # -------------------------------------------------------------------------
 # Run Start/End
@@ -70,7 +82,6 @@ def run_start():
     hw.speaker.set_volume(8)
     utime.sleep_ms(20)
     hw.reward.reward_duration = v.reward_duration
-    
     hw.speaker.off()
     set_timer('session_timer', v.session_duration, True)
     print('{}, before_camera_trigger'.format(get_current_time()))
@@ -78,6 +89,7 @@ def run_start():
 
 def run_end():
     hw.reward.stop()
+    hw.speaker.off()
     hw.cameraTrigger.stop()
     hw.off()
 
@@ -110,7 +122,7 @@ def trial(event):
     elif event == 'cursor_update':
         freq = hw.bci_link.spk
         if freq is None:
-            freq = int((v.low_threshold + v.high_threshold)/2)
+            freq = v.freq_bins[5] # Default to mid (5th) frequency
         print("{}, spk_direction".format(freq))
         hw.speaker.sine(freq)
 
@@ -120,10 +132,10 @@ def trial(event):
         elif zone == 'high':
             goto_state('reward')
         else:
-            hw.light.all_off()
-
+            print("{}, update".format(freq))
     elif event == 'trial_timer':
         # Trial ended with no reward trigger
+        hw.speaker.off()
         goto_state('intertrial')
 
     elif event == 'session_timer':
@@ -145,7 +157,7 @@ def reward(event):
 
     elif event == 'hold_timer':
         v.hold_passed = True
-        set_timer('reward_timer', v.reward_timer) 
+        set_timer('reward_timer', v.reward_timer_duration) 
 
     elif event == 'lick':
         # If hold_passed is True, deliver reward
@@ -174,7 +186,16 @@ def intertrial(event):
     """
     if event == 'entry':
         hw.speaker.off()
-        set_timer('IT_timer', v.IT_duration)
+        if v.IT_mode == "fixed":
+            set_timer('IT_timer', v.IT_duration)
+
+    elif event == "cursor_update":
+        if v.IT_mode == "baseline":
+            freq = hw.bci_link.spk
+            if freq is None:
+                freq = v.freq_bins[5]
+            if freq in range(v.baseline_freq_range[0], v.baseline_freq_range[1]):
+                goto_state('trial')
 
     elif event == 'IT_timer':
         goto_state('trial')
