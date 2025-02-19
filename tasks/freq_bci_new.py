@@ -24,10 +24,10 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 # Variables
 # -------------------------------------------------------------------------
-v.session_duration       = 30 * minute
+v.session_duration       = 45 * minute
 v.reward_duration        = 40 * ms
 v.hold_duration          = 200 * ms       # Hold period before lick can trigger reward
-v.trial_duration         = 10 * second    # Maximum trial duration if no threshold is crossed
+v.trial_duration         = 15 * second    # Maximum trial duration if no threshold is crossed
 v.IT_duration            = 3 * second     # Intertrial interval (for fixed IT mode)
 v.reward_timer_duration  = 2 * second     # Maximum duration in the reward state waiting for a lick
 v.IT_mode                = "fixed"        # "fixed" or "baseline"
@@ -97,7 +97,7 @@ def trial(event):
         if zone in ['low', 'high']:
             goto_state('threshold_crossed')  # Cancel trial timeout and move to threshold_crossed state
         else:
-            print("{}, intermediate frequency update".format(freq))
+            print("{}, frequency update".format(freq))
     elif event == 'session_timer':
         stop_framework()
 
@@ -109,10 +109,10 @@ def threshold_crossed(event):
       - After v.hold_duration, the task automatically transitions to the reward state.
     """
     if event == 'entry':
-        print("{}, entered threshold_crossed; starting hold period".format(get_current_time()))
+        print("threshold crossed")
         timed_goto_state('reward', v.hold_duration)
     elif event == 'lick':
-        print("{}, lick received during hold period (ignored)".format(get_current_time()))
+        print("lick detected during hold period")
     elif event == 'session_timer':
         stop_framework()
 
@@ -124,12 +124,11 @@ def reward(event):
       - A lick during this window triggers reward delivery and transitions immediately to intertrial.
     """
     if event == 'entry':
-        print("{}, reward window open, awaiting lick".format(get_current_time()))
         timed_goto_state('intertrial', v.reward_timer_duration)
     elif event == 'lick':
         hw.reward.release()
         v.reward_count += 1
-        print("{}, reward delivered, count: {}".format(get_current_time(), v.reward_count))
+        print("{}, reward number".format(v.reward_count))
         hw.speaker.off()
         goto_state('intertrial')
     elif event == 'session_timer':
@@ -145,7 +144,6 @@ def intertrial(event):
     """
     if event == 'entry':
         hw.speaker.off()
-        print("{}, entering intertrial".format(get_current_time()))
         if v.IT_mode == "fixed":
             timed_goto_state('trial', v.IT_duration)
     elif event == 'cursor_update':
@@ -154,7 +152,7 @@ def intertrial(event):
             if freq is None:
                 freq = v.freq_bins[5]
             if v.baseline_freq_range[0] <= freq <= v.baseline_freq_range[1]:
-                print("{}, baseline frequency detected, returning to trial".format(get_current_time()))
+                print("baseline frequency detected, returning to trial")
                 goto_state('trial')
     elif event == 'session_timer':
         stop_framework()
