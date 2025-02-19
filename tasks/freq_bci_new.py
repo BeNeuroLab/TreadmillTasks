@@ -1,20 +1,3 @@
-"""
-BCI frequency-based reward task:
-- On frequency update in trial:
-  * If freq <= low_threshold: move to reward state.
-  * If freq >= high_threshold: move to reward state.
-  * Else (intermediate): intermiediate frequency feedback, stay in trial.
-- In reward state:
-  * On entry, start hold_timer = hold_duration.
-  * Before hold_duration passes: licks do nothing.
-  * After hold_duration passes: a lick delivers reward and then go to intertrial.
-  * If trial_timer ends with no reward, go to intertrial.
-- In intertrial state:
-  * Wait IT_duration, then return to trial. Or wait until the neural activity (frequency) goes to baseline.
-- Session ends after session_duration.
-- Print statements follow the "val, message" format.
-"""
-
 import utime
 from pyControl.utility import *
 import hardware_definition as hw
@@ -25,19 +8,15 @@ from devices import *
 # -------------------------------------------------------------------------
 states = [
     'trial',
+    'threshold_crossed',
     'reward',
-    'intertrial',
+    'intertrial'
 ]
 
 events = [
     'session_timer',
     'cursor_update',
-    'trial_timer',
-    'IT_timer',
-    'lick',
-    'motion',
-    'hold_timer',
-    'reward_timer'
+    'lick'
 ]
 
 initial_state = 'trial'
@@ -45,35 +24,34 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 # Variables
 # -------------------------------------------------------------------------
-v.session_duration = 30 * minute
-v.reward_duration = 40 * ms
-v.hold_duration = 200 * ms     # Mouse must sustain freq for this duration
-v.trial_duration = 10 * second # total trial duration 
-v.IT_duration = 3 * second     # intertrial interval
-v.reward_timer_duration = 3 * second
-v.IT_mode = "fixed" # "fixed" or "baseline"
+v.session_duration       = 30 * minute
+v.reward_duration        = 40 * ms
+v.hold_duration          = 200 * ms       # Hold period before lick can trigger reward
+v.trial_duration         = 10 * second    # Maximum trial duration if no threshold is crossed
+v.IT_duration            = 3 * second     # Intertrial interval (for fixed IT mode)
+v.reward_timer_duration  = 2 * second     # Maximum duration in the reward state waiting for a lick
+v.IT_mode                = "fixed"        # "fixed" or "baseline"
 
-# Thresholds (zero-indexed)
-v.freq_bins = [2181,2594,3084,3668,4362,5187,6169,7336,8724,10375,12338] # 4tr octave list
-v.low_threshold = 2181
-v.high_threshold = 12338
-v.baseline_freq_range = [3668, 7336] # the range of frequencies that are considered baseline
+v.freq_bins              = [2181,2594,3084,3668,4362,5187,6169,7336,8724,10375,12338]
+v.baseline_freq_range    = [3668, 7336]   # Frequencies considered baseline in IT mode
 
+v.reward_count           = 0
 
-v.reward_count = 0
-v.hold_passed = False  # To track if hold_duration passed in reward state
-
+# -------------------------------------------------------------------------
+# Utility Functions
+# -------------------------------------------------------------------------
 def determine_zone(freq):
     """
-    Determine whether the raw frequency is in the low, high, or intermediate zone.
+    Returns 'low' if freq is below or equal to low_threshold,
+    'high' if freq is above or equal to high_threshold,
+    and 'intermediate' otherwise.
     """
-    if freq <= v.low_threshold:
+    if freq <= v.freq_bins[0]:
         return 'low'
-    elif freq >= v.high_threshold:
+    elif freq >= v.freq_bins[-1]:
         return 'high'
     else:
         return 'intermediate'
-
 
 # -------------------------------------------------------------------------
 # Run Start/End
@@ -83,6 +61,7 @@ def run_start():
     utime.sleep_ms(20)
     hw.reward.reward_duration = v.reward_duration
     hw.speaker.off()
+    # Ensure session termination is scheduled.
     set_timer('session_timer', v.session_duration, True)
     print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
@@ -94,118 +73,92 @@ def run_end():
     hw.off()
 
 # -------------------------------------------------------------------------
-# Utility Functions
-# -------------------------------------------------------------------------
-def determine_zone(freq):
-    if freq <= v.low_threshold:
-        return 'low'
-    elif freq >= v.high_threshold:
-        return 'high'
-    else:
-        return 'intermediate'
-
-# -------------------------------------------------------------------------
 # States
 # -------------------------------------------------------------------------
 def trial(event):
     """
-    In trial state:
-    - On entry, set trial_timer.
-    - On cursor_update, determine zone:
-       * low/high -> LED on, sound on, goto reward
-       * intermediate -> LED off, sound freq
+    In the trial state:
+      - On entry, the speaker is turned off and a timed transition to intertrial is scheduled.
+      - On cursor_update, the task reads the frequency. If it is in the low or high zone,
+        it transitions immediately to the threshold_crossed state (canceling the pending trial timeout).
+      - Intermediate frequencies continue to provide auditory feedback.
     """
     if event == 'entry':
         hw.speaker.off()
-        set_timer('trial_timer', v.trial_duration)
-
+        # Automatically move to intertrial after trial_duration if no threshold crossing occurs.
+        timed_goto_state('intertrial', v.trial_duration)
     elif event == 'cursor_update':
         freq = hw.bci_link.spk
         if freq is None:
-            freq = v.freq_bins[5] # Default to mid (5th) frequency
-        print("{}, spk_direction".format(freq))
+            freq = v.freq_bins[5]  # Default to a mid-range frequency
+        print("{}, spk_frequency".format(freq))
         hw.speaker.sine(freq)
-
         zone = determine_zone(freq)
-        if zone == 'low':
-            goto_state('reward')
-        elif zone == 'high':
-            goto_state('reward')
+        if zone in ['low', 'high']:
+            goto_state('threshold_crossed')  # Cancel trial timeout and move to threshold_crossed state
         else:
-            print("{}, update".format(freq))
-    elif event == 'trial_timer':
-        # Trial ended with no reward trigger
-        hw.speaker.off()
-        goto_state('intertrial')
+            print("{}, intermediate frequency update".format(freq))
+    elif event == 'session_timer':
+        stop_framework()
 
+def threshold_crossed(event):
+    """
+    In the threshold_crossed state:
+      - On entry, a hold period is initiated using timed_goto_state.
+      - Licks during this hold period are ignored.
+      - After v.hold_duration, the task automatically transitions to the reward state.
+    """
+    if event == 'entry':
+        print("{}, entered threshold_crossed; starting hold period".format(get_current_time()))
+        timed_goto_state('reward', v.hold_duration)
+    elif event == 'lick':
+        print("{}, lick received during hold period (ignored)".format(get_current_time()))
     elif event == 'session_timer':
         stop_framework()
 
 def reward(event):
     """
-    In reward state:
-    - On entry, start hold_timer for hold_duration.
-    - Before hold_timer event, licks do nothing.
-    - On hold_timer event, v.hold_passed = True, now a lick gives reward.
-    - On lick after hold_passed = True, give reward and goto intertrial.
-    - If trial_timer ends with no lick after hold_passed, goto intertrial with no reward.
+    In the reward state:
+      - On entry, a timed transition is scheduled so that if no lick occurs within v.reward_timer_duration,
+        the task goes to intertrial.
+      - A lick during this window triggers reward delivery and transitions immediately to intertrial.
     """
     if event == 'entry':
-        v.hold_passed = False
-        set_timer('hold_timer', v.hold_duration, output_event=False)
-        # output_event=False because we only use this internally.
-
-    elif event == 'hold_timer':
-        v.hold_passed = True
-        set_timer('reward_timer', v.reward_timer_duration) 
-
+        print("{}, reward window open, awaiting lick".format(get_current_time()))
+        timed_goto_state('intertrial', v.reward_timer_duration)
     elif event == 'lick':
-        # If hold_passed is True, deliver reward
-        if v.hold_passed:
-            hw.reward.release()
-            v.reward_count += 1
-            print("{}, reward_number".format(v.reward_count))
-            hw.speaker.off()
-            v.hold_passed = False
-            goto_state('intertrial')
-        # If lick before hold_passed, do nothing
-
-    elif event == 'reward_timer':
-        v.hold_passed = False
-        # Trial ended with no reward given
+        hw.reward.release()
+        v.reward_count += 1
+        print("{}, reward delivered, count: {}".format(get_current_time(), v.reward_count))
         hw.speaker.off()
         goto_state('intertrial')
-
     elif event == 'session_timer':
         stop_framework()
 
 def intertrial(event):
     """
-    intertrial state:
-    - On entry, wait IT_duration, then go to trial
+    In the intertrial state:
+      - On entry, the speaker is turned off.
+      - In fixed mode, a timed transition returns the task to trial after v.IT_duration.
+      - In baseline mode, the state monitors cursor_update events and transitions to trial once
+        the frequency falls within the predefined baseline range.
     """
     if event == 'entry':
         hw.speaker.off()
+        print("{}, entering intertrial".format(get_current_time()))
         if v.IT_mode == "fixed":
-            set_timer('IT_timer', v.IT_duration)
-
-    elif event == "cursor_update":
+            timed_goto_state('trial', v.IT_duration)
+    elif event == 'cursor_update':
         if v.IT_mode == "baseline":
             freq = hw.bci_link.spk
             if freq is None:
                 freq = v.freq_bins[5]
-            if freq in range(v.baseline_freq_range[0], v.baseline_freq_range[1]):
+            if v.baseline_freq_range[0] <= freq <= v.baseline_freq_range[1]:
+                print("{}, baseline frequency detected, returning to trial".format(get_current_time()))
                 goto_state('trial')
-
-    elif event == 'IT_timer':
-        goto_state('trial')
-
     elif event == 'session_timer':
         stop_framework()
 
 def all_states(event):
     if event == 'session_timer':
         stop_framework()
-    # motion event not used, just acknowledge
-    if event == 'motion':
-        pass
