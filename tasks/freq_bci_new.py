@@ -24,13 +24,13 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 # Variables
 # -------------------------------------------------------------------------
-v.session_duration       = 45 * minute
+v.session_duration       = 60 * minute
 v.reward_duration        = 40 * ms
 v.hold_duration          = 200 * ms       # Hold period before lick can trigger reward
 v.trial_duration         = 10 * second    # Maximum trial duration if no threshold is crossed
 v.IT_duration            = 3 * second     # Intertrial interval (for fixed IT mode)
 v.reward_timer_duration  = 2 * second     # Maximum duration in the reward state waiting for a lick
-v.IT_mode                = "fixed"        # "fixed" or "baseline"
+v.IT_mode                = "baseline"        # "fixed" or "baseline"
 
 v.freq_bins              = [2181,2594,3084,3668,4362,5187,6169,7336,8724,10375,12338]
 v.baseline_freq_range    = [3668, 7336]   # Frequencies considered baseline in IT mode
@@ -153,7 +153,8 @@ def intertrial(event):
                 freq = v.freq_bins[5]
             if v.baseline_freq_range[0] <= freq <= v.baseline_freq_range[1]:
                 print("baseline frequency detected, returning to trial")
-                goto_state('trial')
+                timed_goto_state('trial', v.IT_duration)
+
     elif event == 'session_timer':
         stop_framework()
 

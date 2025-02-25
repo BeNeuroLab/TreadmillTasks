@@ -17,11 +17,11 @@ initial_state = 'intertrial'
 # -------------------------------------------------------------------------
  
 # Variables
-v.session_duration = 45 * minute
+v.session_duration = 5 * minute
 v.stimulus_duration = 2 * second
-v.sweep_duration = .50 * second
+v.sweep_duration = .15 * second
 v.reward_duration = 40 * ms
-v.iti_duration = 4 * second  # Inter-trial interval
+v.iti_duration = 8 * second  # Inter-trial interval
 # v.spk_freqs = [2181,2378,2594,2828,3084,3364,3668,4000,4362,4757,5187,5657,6169,6727,7336,8000,8724,9514,10375,11314,12336]  # Frequency sweep range
 v.spk_freqs = [2181,2594,3084,3668,4362,5187,6169,7336,8724,10375,12338] # 4tr octave list
 
