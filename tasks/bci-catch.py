@@ -1,6 +1,6 @@
 """main BCI task, similar to task 5
 target always on during the speaker sweep
-
+there are also catch trials where led and spk never turn on and reward is released AFTER a lick
 """
 import utime
 from pyControl.utility import *
@@ -13,7 +13,9 @@ from devices import *
 
 states = ['trial',
         'cursor_match',
-        'reward'
+        'reward',
+        'catch_reward',
+        'catch_cursor_match'
         ]
 
 events = ['lick',
@@ -28,6 +30,10 @@ initial_state = 'trial'
 v.session_duration = 60 * minute
 v.reward_duration = 40 * ms
 v.hold_duration = 200 * ms
+
+v.catch_chance = 0.1  # 10% chance of catch trial in cursor match
+v.max_ommitted_rewards = 10  # maximum number of rewards ommitted due to catch trials
+v.n_ommitted_reward = 0  # number of ommitted rewards due to catch trials
 
 v.reward_number = 0
 v.IT_duration = 5 * second
@@ -73,7 +79,10 @@ def trial(event):
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
         if spk_dir == 1:
-            goto_state('cursor_match')
+            if random() < v.catch_chance and v.n_ommitted_reward < v.max_ommitted_rewards:
+                goto_state('catch_cursor_match')
+            else:
+                goto_state('cursor_match')
 
 def cursor_match(event):
     "when led and spk line up"
@@ -95,6 +104,28 @@ def reward (event):
         hw.light.all_off()
         hw.sound.all_off()
         timed_goto_state('trial', v.IT_duration)
+
+def catch_cursor_match(event):
+    "cursor match without led and spk"
+    if event == 'entry':
+        hw.light.all_off()
+        hw.sound.all_off()
+        timed_goto_state('catch_reward', v.hold_duration)
+    elif event == 'cursor_update':
+        spk_dir = hw.bci_link.spk
+        if spk_dir != 1:
+            goto_state('trial')
+
+def catch_reward(event):
+    "reward state for catch trials"
+    if event == 'entry':
+        hw.light.all_off()
+        hw.sound.all_off()
+        v.n_ommitted_reward += 1
+        print('{}, ommitted_reward'.format(v.n_ommitted_reward))
+        timed_goto_state('trial', v.IT_duration)
+    elif event == 'lick':  # reward should be released
+        goto_state('reward')
 
 
 def all_states(event):
