@@ -26,7 +26,7 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 v.session_duration       = 60 * minute
 v.reward_duration        = 40 * ms
-v.hold_duration          = 200 * ms       # Hold period before lick can trigger reward
+v.hold_duration          = 120 *ms    # Hold period before lick can trigger reward
 v.trial_duration         = 10 * second    # Maximum trial duration if no threshold is crossed
 v.IT_duration            = 3 * second     # Intertrial interval (for fixed IT mode)
 v.reward_timer_duration  = 2 * second     # Maximum duration in the reward state waiting for a lick
@@ -113,6 +113,8 @@ def threshold_crossed(event):
         timed_goto_state('reward', v.hold_duration)
     elif event == 'lick':
         print("lick detected during hold period")
+    elif event == 'cursor_update':
+        goto_state('trial')  
     elif event == 'session_timer':
         stop_framework()
 
