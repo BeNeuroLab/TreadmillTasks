@@ -27,9 +27,9 @@ initial_state = 'free'
 
 # Variables
 v.min_motion = 10
-v.session_duration = 45 * minute
-v.free_duration = 8 * minute
-v.earthquake_duration = 30 * minute
+v.session_duration = 69 * minute
+v.free_duration = 10 * minute
+v.earthquake_duration = 50 * minute
 v.sol_number = 0
 v.sol_off_time_list = [50, 100, 150, 200]
 v.sol_off_time = 0
@@ -43,7 +43,7 @@ def trial(event):
     if event == 'entry':
         set_timer('trial_timer', v.trial_duration, False)
         set_timer('sol_on', v.sol_onset_time, True)
-        v.sol_number = randrange(11)
+        v.sol_number = randrange(12)
         # If solenoids are on top row, do perturbations only of 100, 150, 200 ms
         # if v.sol_number < 5:
         #     v.sol_off_time = choice(v.sol_off_time_list[1:])
