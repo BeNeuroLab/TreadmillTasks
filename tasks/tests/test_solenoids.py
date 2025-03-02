@@ -34,7 +34,7 @@ v.sol_number = 0
 v.intertrial_duration = 1 * second
 v.trial_duration = 1 * second
 v.session_duration = 10 * minute
-v.max_solenoids = 11
+v.max_solenoids = 12
 
 
 
