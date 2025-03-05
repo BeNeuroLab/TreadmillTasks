@@ -53,14 +53,14 @@ def run_start():
     hw.speaker.set_volume(10)
     hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration)
-    print('Session started')
+    print('session_started')
     set_timer('timeout_timer', v.target_duration)
  
 def run_end():
     hw.speaker.off()
     hw.reward.stop()
     hw.cameraTrigger.stop()
-    print('Session ended. Correct trials: {}/{}'.format(v.correct_trials, v.total_trials))
+    print('session_ended_correct_trials_{}/{}'.format(v.correct_trials, v.total_trials))
  
 def intertrial(event):
     if event == 'entry':
@@ -92,7 +92,7 @@ def stimulus_on(event):
         else:
             set_timer('sweep_timer', v.sweep_duration)   
     elif event == 'lick':
-        print("Premature lick, no reward")
+        print("premature_lick_no_reward")
 
 def reward_freq (event):
     "reward state"
@@ -109,7 +109,7 @@ def reward(event):
     if event == 'entry':
         hw.reward.release()
         v.correct_trials += 1
-        print('reward number {}/{} ({})'.format(v.correct_trials, v.total_trials, v.trial_type))
+        print('reward_number_{}/{}_({})'.format(v.correct_trials, v.total_trials, v.trial_type))
         timed_goto_state('intertrial', 1000)
         reset_timer('timeout_timer', v.target_duration)
         v.trial_in_block += 1  # Move to next trial in block
