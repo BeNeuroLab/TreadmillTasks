@@ -91,13 +91,13 @@ def trial(event):
         freq = hw.bci_link.spk
         if freq is None:
             freq = v.freq_bins[5]  # Default to a mid-range frequency
-        print("{}_spk_frequency".format(freq))
+        print("{}, spk_frequency".format(freq))
         hw.speaker.sine(freq)
         zone = determine_zone(freq)
         if zone in ['low', 'high']:
             goto_state('threshold_crossed')  # Cancel trial timeout and move to threshold_crossed state
         else:
-            print("{}_frequency_update".format(freq))
+            print("{}, frequency_update".format(freq))
     elif event == 'session_timer':
         stop_framework()
 
@@ -130,7 +130,7 @@ def reward(event):
     elif event == 'lick':
         hw.reward.release()
         v.reward_count += 1
-        print("{}, reward_number".format(v.reward_count))
+        print("{}, reward number".format(v.reward_count))
         hw.speaker.off()
         goto_state('intertrial')
     elif event == 'session_timer':
