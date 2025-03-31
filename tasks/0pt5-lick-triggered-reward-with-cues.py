@@ -16,7 +16,7 @@ initial_state = 'trial'
 
 # -------------------------------------------------------------------------
 v.session_duration = 30 * minute
-v.reward_duration = 40 * ms
+v.reward_duration = 50 * ms
 v.reward_number = 0
 
 v.spk_freqs = [2181, 12336]
@@ -56,6 +56,7 @@ def trial(event):
             v.led_target = v.leds[1]
         hw.light.cue(v.led_target)
         hw.speaker.sine(v.sound_target)
+        print('{} Hz'.format(v.sound_target))
         goto_state('reward')
 
 def reward (event):

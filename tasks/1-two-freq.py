@@ -18,7 +18,7 @@ initial_state = 'intertrial'
 # Variables
 v.session_duration = 45 * minute
 v.stimulus_duration = 2 * second
-v.reward_duration = 40 * ms
+v.reward_duration = 60 * ms
 v.iti_duration = 3 * second  # Inter-trial interval
 v.spk_freqs = [2181, 12336]
 v.leds = [2, 4]
@@ -66,6 +66,7 @@ def stimulus_on(event):
             v.led_target = v.leds[1]
         hw.light.cue(v.led_target)
         hw.speaker.sine(v.sound_target)
+        print("frequency {}".format(v.sound_target))
         set_timer('stimulus_timer', v.stimulus_duration)
     elif event == 'lick':
         goto_state('reward')
@@ -80,7 +81,7 @@ def reward(event):
     if event == 'entry':
         hw.reward.release()
         v.correct_trials += 1
-        print('reward number {}/{} ({})'.format(v.correct_trials, v.total_trials, v.spk_freqs))
+        print('reward number {}/{} ({})'.format(v.correct_trials, v.total_trials, v.sound_target))
         timed_goto_state('intertrial', 1000)
         reset_timer('timeout_timer',v.target_duration)
         

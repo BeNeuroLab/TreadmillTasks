@@ -38,8 +38,8 @@ mid_idx = len(v.spk_freqs) // 2  # Index of middle frequency
 v.current_freq_index = mid_idx  # Start from the middle frequency
 
 # Block configuration:
-v.reward_ratio = 2   # For example, 2 rewarded trials per rewarded type (can be set to 1, 2, 3, …)
-v.block_size = 2 * v.reward_ratio + 2
+v.reward_ratio = 1   # For example, 2 rewarded trials per rewarded type (can be set to 1, 2, 3, …)
+# v.block_size = 2 * v.reward_ratio + 2
 
 
 # -------------------------------------------------------------------------
@@ -78,6 +78,7 @@ def run_start():
     print('session_started')
     set_timer('timeout_timer', v.target_duration)
     # Build the initial block of trials.
+    v.block_size = 2 * v.reward_ratio + 2
     v.trial_types = build_trial_block()
  
 def run_end():
@@ -117,11 +118,11 @@ def stimulus_on(event):
             print('{}, trial_type'.format(1))
             print('descending rewarded')
         elif v.trial_type == 'ascending catch':
-            hw.light.cue(v.leds[1])
+            hw.light.cue(v.leds[0])
             print('{}, trial_type'.format(2))
             print('ascending catch')
         elif v.trial_type == 'descending catch':
-            hw.light.cue(v.leds[0])
+            hw.light.cue(v.leds[1])
             print('{}, trial_type'.format(3))
             print('descending catch')
         
