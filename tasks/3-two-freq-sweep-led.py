@@ -54,14 +54,21 @@ def run_start():
     hw.speaker.set_volume(10)
     hw.cameraTrigger.start()
     hw.light.all_off()
+    hw.motionSensor.record()
+    hw.motionSensor.threshold = 10
     set_timer('session_timer', v.session_duration)
-    print('session_started')
     set_timer('timeout_timer', v.target_duration)
+    print('{}, before_camera_trigger'.format(get_current_time()))
+    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
+    hw.cameraTrigger.start()
+
  
 def run_end():
     hw.speaker.off()
     hw.light.all_off()
     hw.reward.stop()
+    hw.motionSensor.off()
+    hw.motionSensor.stop()
     hw.cameraTrigger.stop()
     print('session_ended_correct_trials_{}/{}'.format(v.correct_trials, v.total_trials))
  

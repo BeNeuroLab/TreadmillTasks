@@ -33,16 +33,19 @@ v.timeout_duration = 15 * second
 def run_start():
     hw.reward.reward_duration = v.reward_duration
     hw.speaker.set_volume(10)
+    hw.motionSensor.record()
+    hw.motionSensor.threshold = 10
+    set_timer('session_timer', v.session_duration, True)
+    print('{}, before_camera_trigger'.format(get_current_time()))
+    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.cameraTrigger.start()
-    hw.light.all_off()
-    set_timer('session_timer', v.session_duration)
-    print('Session started')
-    set_timer('timeout_timer',v.target_duration)
  
 def run_end():
     hw.speaker.off()
     hw.light.all_off()
     hw.reward.stop()
+    hw.motionSensor.off()
+    hw.motionSensor.stop()
     hw.cameraTrigger.stop()
     print('Session ended. Correct trials: {}/{}'.format(v.correct_trials, v.total_trials))
  

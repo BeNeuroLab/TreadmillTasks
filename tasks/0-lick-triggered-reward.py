@@ -25,13 +25,19 @@ v.led_len = 50 * ms
 def run_start():
     "Code here is executed when the framework starts running."
     hw.reward.reward_duration = v.reward_duration
+    hw.motionSensor.record()
+    hw.motionSensor.threshold = 10
     set_timer('session_timer', v.session_duration, True)
     print('{}, before_camera_trigger'.format(get_current_time()))
+    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
+
     hw.cameraTrigger.start()
 
 def run_end():
     "Code here is executed when the framework stops running."
     hw.reward.stop()
+    hw.motionSensor.off()
+    hw.motionSensor.stop()
     hw.cameraTrigger.stop()
     hw.off()
 
