@@ -37,7 +37,7 @@ v.next_led___ = v.leds___[-1]
 # -------------------------------------------------------------------------
 def run_start():
     "Code here is executed when the framework starts running."
-    hw.sound.set_volume(8)  # Between 1 - 30
+    hw.sound.set_volume(10)  # Between 1 - 30
     utime.sleep_ms(20)  # wait for the sound player to be ready
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.record()
