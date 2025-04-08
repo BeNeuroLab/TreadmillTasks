@@ -9,6 +9,7 @@ states = ['trial',
 
 events = ['lick',
           'session_timer',
+          'motion',
           'spk_update']
 
 initial_state = 'trial'

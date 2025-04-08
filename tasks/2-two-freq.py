@@ -8,7 +8,7 @@ from devices import *
 states = ['intertrial', 'stimulus_on', 'reward', 'timeout']
  
 # Events
-events = ['session_timer', 'lick', 'stimulus_timer', 'timeout_timer']
+events = ['session_timer', 'lick', 'stimulus_timer','motion', 'timeout_timer']
  
 # Initial state
 initial_state = 'intertrial'

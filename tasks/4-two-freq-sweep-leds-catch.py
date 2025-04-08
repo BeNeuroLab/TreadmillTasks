@@ -9,7 +9,7 @@ import random
 states = ['intertrial', 'stimulus_on', 'reward', 'timeout', 'reward_freq']
  
 # Events
-events = ['session_timer', 'sweep_timer', 'lick', 'stimulus_timer', 'timeout_timer']
+events = ['session_timer', 'sweep_timer', 'lick', 'stimulus_timer', 'motion','timeout_timer']
  
 # Initial state
 initial_state = 'intertrial'
