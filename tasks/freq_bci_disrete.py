@@ -183,7 +183,8 @@ def all_states(event):
             if idx_change_instruction is None:
                 idx_change_instruction = 0
                 # print("{}, WARNING: Received None from BCI link, treating as 0 change.".format(get_current_time())) # Optional Warning
-
+            if idx_change_instruction == 2:
+                idx_change_instruction = -1
             if idx_change_instruction in [-1, 0, 1]:
                 if idx_change_instruction != 0:
                     # Calculate the potential new index
