@@ -25,8 +25,8 @@ v.reward_period_duration = 2 * second
 v.iti_duration = 5 * second  # Inter-trial interval
 # v.spk_freqs = [2181,2378,2594,2828,3084,3364,3668,4000,4362,4757,5187,5657,6169,6727,7336,8000,8724,9514,10375,11314,12336]  # Frequency sweep range
 v.spk_freqs = [2181,2594,3084,3668,4362,5187,6169,7336,8724,10375,12338] # 4tr octave list
-v.leds_left = [1, 2] # left leds to turn on
-v.leds_right = [4, 5] # right leds to turn on
+v.leds_left = [2] # left leds to turn on
+v.leds_right = [4] # right leds to turn on
 
 v.trial_in_block = 0  # Track position within the block
 v.correct_trials = 0
