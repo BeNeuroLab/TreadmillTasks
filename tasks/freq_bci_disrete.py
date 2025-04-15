@@ -39,7 +39,9 @@ v.reward_count = 0
 # --- Variable for index-based control ---
 # Current index in the v.freq_bins list
 v.current_freq_idx = 0
-# ------------------------------------------------
+# --- Flag to control when cursor updates affect index/speaker ---
+v.accept_cursor_updates = True
+# -------------------------------------------------------------
 
 # -------------------------------------------------------------------------
 # Run Start/End
@@ -54,6 +56,8 @@ def run_start():
     # --- Initialize index ---
     # Set initial index for the very first trial start (will be reset on subsequent trials)
     v.current_freq_idx = len(v.freq_bins) // 2
+    # Set initial state for accepting cursor updates
+    v.accept_cursor_updates = True # Start in trial state where updates are accepted
     print('{}, Initial Freq Index Set To: {}'.format(get_current_time(), v.current_freq_idx))
     # ------------------------
 
@@ -74,42 +78,45 @@ def run_end():
 def trial(event):
     """
     In the trial state:
-      - On entry, reset freq index to middle, turn speaker on to middle freq, start max trial timer.
+      - On entry, reset freq index to middle, turn speaker on, allow cursor updates, start max trial timer.
       - On cursor_update (handled in all_states), the index is updated.
         If the index reaches either boundary (0 or max), transition to threshold_crossed.
       - Speaker plays the tone corresponding to the current index during updates.
     """
     if event == 'entry':
+        # Allow cursor updates to affect index/speaker in this state
+        v.accept_cursor_updates = True
         # Reset frequency index to the middle bin
         v.current_freq_idx = len(v.freq_bins) // 2
         middle_freq = v.freq_bins[v.current_freq_idx]
         # Start speaker playing the middle frequency
         hw.speaker.sine(middle_freq)
-        print("{}, Entering Trial State, Index RESET to: {}, Freq: {:.0f} Hz".format(
+        print("{}, Entering Trial State, Index RESET to: {}, Freq: {:.0f} Hz (Accepting Updates)".format(
             get_current_time(), v.current_freq_idx, middle_freq))
 
         # Automatically move to intertrial after trial_duration if no threshold crossing.
         timed_goto_state('intertrial', v.trial_duration)
 
     elif event == 'cursor_update':
-        # Index/speaker update handled in all_states.
+        # Check performed only if v.accept_cursor_updates is True (handled in all_states)
         # Check if the current index is at a boundary.
         is_at_boundary = (v.current_freq_idx == 0 or
                           v.current_freq_idx == len(v.freq_bins) - 1)
         if is_at_boundary:
             print("{}, Boundary Index Reached: {}".format(get_current_time(), v.current_freq_idx))
-            goto_state('threshold_crossed') # Cancel trial timeout timer implicitly
-    # Note: session_timer handled in all_states
+            goto_state('threshold_crossed') # Moving state implicitly cancels timed_goto_state('intertrial',...)
 
 def threshold_crossed(event):
     """
     Threshold index reached.
-      - On entry, start hold timer to transition to reward state.
+      - On entry, allow cursor updates (to reset trial), start hold timer.
       - Licks during hold are ignored.
-      - Any cursor_update during hold resets back to trial state.
+      - Any cursor_update during hold resets back to trial state (handled in all_states logic).
     """
     if event == 'entry':
-        print("{}, Entering Threshold Crossed State (Index: {}), Holding for {:.1f}ms".format(
+        # Allow cursor updates to affect index/speaker (specifically to trigger reset to trial)
+        v.accept_cursor_updates = True
+        print("{}, Entering Threshold Crossed State (Index: {}), Holding for {:.1f}ms (Accepting Updates)".format(
             get_current_time(), v.current_freq_idx, v.hold_duration))
         # Start hold timer, go to reward if timer completes.
         timed_goto_state('reward', v.hold_duration)
@@ -118,22 +125,21 @@ def threshold_crossed(event):
         pass # Ignore licks during hold
     elif event == 'cursor_update':
         # Any BCI update during hold resets the trial.
-        # Index/speaker update is handled in all_states *before* this is called.
+        # Logic executed only if v.accept_cursor_updates is True
         print("{}, Cursor Updated During Hold, Resetting to Trial".format(get_current_time()))
-        goto_state('trial') # Cancel reward timer implicitly
-    elif event == 'exit':
-        # Clear the timer if exiting the state before completion (e.g. due to cursor_update)
-         clear_timed_goto('reward')
-    # Note: session_timer handled in all_states
+        goto_state('trial') # Moving state implicitly cancels timed_goto_state('reward', ...)
+    # Removed 'exit' handler - implicit cancellation by goto_state is sufficient
 
 def reward(event):
     """
     Ready to reward state (hold period completed).
-      - On entry, start timer; if no lick occurs, go to intertrial.
+      - On entry, disallow cursor updates, start timeout timer.
       - A lick triggers reward delivery and immediate transition to intertrial.
     """
     if event == 'entry':
-        print("{}, Entering Reward State (Waiting for Lick, Timeout: {:.1f}s)".format(
+        # Disallow cursor updates from affecting index/speaker in this state
+        v.accept_cursor_updates = False
+        print("{}, Entering Reward State (Waiting for Lick, Timeout: {:.1f}s) (Ignoring Updates)".format(
             get_current_time(), v.reward_timer_duration / second))
         # Wait for lick, timeout to intertrial if no lick.
         timed_goto_state('intertrial', v.reward_timer_duration)
@@ -142,25 +148,22 @@ def reward(event):
         v.reward_count += 1
         print("{}, Lick Detected, Reward #{} Delivered".format(get_current_time(), v.reward_count))
         hw.speaker.off() # Turn off speaker after successful reward
-        goto_state('intertrial') # Cancel timeout timer implicitly
-    elif event == 'exit':
-         # Clear the timer if exiting the state before completion (e.g. due to lick)
-         clear_timed_goto('intertrial')
-    # Note: session_timer handled in all_states
+        goto_state('intertrial') # Moving state implicitly cancels timed_goto_state('intertrial', ...)
+    # Removed 'exit' handler - implicit cancellation by goto_state is sufficient
 
 def intertrial(event):
     """
     Intertrial interval.
-      - On entry, speaker off, start fixed timer to transition back to trial.
+      - On entry, speaker off, disallow cursor updates, start fixed timer.
     """
     if event == 'entry':
+         # Disallow cursor updates from affecting index/speaker in this state
+        v.accept_cursor_updates = False
         hw.speaker.off() # Ensure speaker is off
-        print("{}, Entering Intertrial State (Duration: {:.1f}s)".format(
+        print("{}, Entering Intertrial State (Duration: {:.1f}s) (Ignoring Updates)".format(
             get_current_time(), v.IT_duration / second))
         # Always use a fixed ITI duration.
         timed_goto_state('trial', v.IT_duration)
-    # No cursor_update handling needed here anymore.
-    # session_timer handled in all_states
 
 # -------------------------------------------------------------------------
 # Event-handling functions
@@ -168,55 +171,45 @@ def intertrial(event):
 
 def all_states(event):
     """
-    Executed before state-specific code. Handles session timer and cursor updates.
+    Executed before state-specific code. Handles session timer and cursor updates (if allowed by flag).
     """
     if event == 'cursor_update':
-        # Read the index change instruction (-1, 0, 1)
-        # IMPORTANT: Ensure hw.bci_link.spk actually provides -1, 0, or 1.
-        idx_change_instruction = hw.bci_link.spk
+        # Only process the update if the current state allows it
+        if v.accept_cursor_updates:
+            # Read the index change instruction (-1, 0, 1)
+            idx_change_instruction = hw.bci_link.spk
 
-        # Handle potential None value from BCI link (treat as 0 change)
-        if idx_change_instruction is None:
-            idx_change_instruction = 0
-            # print("{}, WARNING: Received None from BCI link, treating as 0 change.".format(get_current_time())) # Optional Warning
+            # Handle potential None value from BCI link (treat as 0 change)
+            if idx_change_instruction is None:
+                idx_change_instruction = 0
+                # print("{}, WARNING: Received None from BCI link, treating as 0 change.".format(get_current_time())) # Optional Warning
 
-
-        if idx_change_instruction in [-1, 0, 1]:
-            current_state_name = get_current_state() # Get current state name for context
-            if current_state_name not in ['intertrial', 'reward']: # Only update index/speaker if not in ITI or reward wait
+            if idx_change_instruction in [-1, 0, 1]:
                 if idx_change_instruction != 0:
                     # Calculate the potential new index
                     potential_new_idx = v.current_freq_idx + idx_change_instruction
-
-                    # Clamp the index to stay within the bounds of v.freq_bins list
-                    # Lower bound: 0, Upper bound: len(v.freq_bins) - 1
+                    # Clamp the index
                     new_idx = max(0, min(len(v.freq_bins) - 1, potential_new_idx))
-
-                    # Update the current index only if it actually changed
+                    # Update index and speaker if changed
                     if new_idx != v.current_freq_idx:
                         v.current_freq_idx = new_idx
-                        # Get the frequency value for the new index
                         current_freq = v.freq_bins[v.current_freq_idx]
-                        # Update the speaker tone
                         hw.speaker.sine(current_freq)
                         print('{}, BCI Instr: {}, New Idx: {}, New Freq: {:.0f} Hz'.format(
                             get_current_time(), idx_change_instruction, v.current_freq_idx, current_freq))
-                    else:
-                         # Instruction was -1 or 1, but already at boundary.
+                    else: # At boundary
                          current_freq = v.freq_bins[v.current_freq_idx]
                          hw.speaker.sine(current_freq) # Still update speaker
                          # Optional: print('{}, BCI Instr: {}, At Boundary (Idx: {}), Freq: {:.0f} Hz'.format(
                          #    get_current_time(), idx_change_instruction, v.current_freq_idx, current_freq))
-                else:
-                     # Instruction is 0 (stay), ensure speaker is playing the current frequency
+                else: # Instruction is 0 (stay)
                      current_freq = v.freq_bins[v.current_freq_idx]
-                     hw.speaker.sine(current_freq)
+                     hw.speaker.sine(current_freq) # Ensure speaker plays current freq
                      # Optional: print('{}, BCI Instr: 0 (Stay), Idx: {}, Freq: {:.0f} Hz'.format(
                      #    get_current_time(), v.current_freq_idx, current_freq))
-            # else: In intertrial or reward state, BCI updates are ignored for index/speaker changes.
-        else:
-            # Handle unexpected BCI input value
-            print('{}, ERROR: Unexpected BCI instruction received: {}'.format(get_current_time(), idx_change_instruction))
+            else: # Unexpected BCI value
+                print('{}, ERROR: Unexpected BCI instruction received: {}'.format(get_current_time(), idx_change_instruction))
+        # else: v.accept_cursor_updates is False, ignore the cursor update for index/speaker changes.
 
     elif event == 'session_timer':
         print('{}, Session Timer Expired'.format(get_current_time()))
