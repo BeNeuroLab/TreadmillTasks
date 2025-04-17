@@ -18,8 +18,8 @@ initial_state = 'intertrial'
 # Variables
 v.session_duration = 45 * minute
 v.stimulus_duration = 2 * second
-v.reward_duration = 60 * ms
-v.iti_duration = 3 * second  # Inter-trial interval
+v.reward_duration = 50 * ms
+v.iti_duration = 4 * second  # Inter-trial interval
 v.spk_freqs = [2181, 12336]
 v.leds = [2, 4]
 v.correct_trials = 0

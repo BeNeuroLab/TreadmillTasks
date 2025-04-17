@@ -15,7 +15,7 @@ events = ['lick',
 initial_state = 'trial'
 
 # -------------------------------------------------------------------------
-v.session_duration = 15 * minute
+v.session_duration = 10 * minute
 v.reward_duration = 60 * ms
 v.reward_number = 0
 

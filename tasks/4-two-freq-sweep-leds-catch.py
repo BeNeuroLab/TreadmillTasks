@@ -19,7 +19,7 @@ initial_state = 'intertrial'
 # Variables
 v.session_duration = 45 * minute
 v.stimulus_duration = 2 * second
-v.sweep_duration_range = [.1, .2] # seconds
+v.sweep_duration_range = [.15, .15] # seconds
 v.reward_duration = 40 * ms
 v.reward_period_duration = 2 * second
 v.iti_duration = 5 * second  # Inter-trial interval
@@ -40,7 +40,7 @@ mid_idx = len(v.spk_freqs) // 2  # Index of middle frequency
 v.current_freq_index = mid_idx  # Start from the middle frequency
 
 # Block configuration:
-v.reward_ratio = 1   # For example, 2 rewarded trials per rewarded type (can be set to 1, 2, 3, …)
+v.reward_ratio = 4   # For example, 2 rewarded trials per rewarded type (can be set to 1, 2, 3, …)
 # v.block_size = 2 * v.reward_ratio + 2
 
 

@@ -41,7 +41,7 @@ v.leds = [2, 4] # LED pins corresponding to [low_target, high_target]
 v.trial_types = ['low_target', 'high_target'] # Types of trials
 v.trial_type = v.trial_types[0] # Current trial type
 v.target_idx = 0 # Index of the target frequency bin (0 or max)
-v.trial_in_block = len(v.trial_types) # Start >= block size to force shuffle on first ITI entry
+#v.trial_in_block = len(v.trial_types) # Start >= block size to force shuffle on first ITI entry
 v.correct_trials = 0
 v.total_trials = 0
 # --------------------------------
@@ -57,11 +57,11 @@ v.accept_cursor_updates = True
 # -------------------------------------------------------------------------
 # Utility Functions
 # -------------------------------------------------------------------------
-def shuffle_list(lst): # Fisher-Yates Shuffle
-    """Shuffles a list in place."""
-    for i in range(len(lst) - 1, 0, -1):
-        j = random.randint(0, i)
-        lst[i], lst[j] = lst[j], lst[i]  # Swap elements
+#def shuffle_list(lst): # Fisher-Yates Shuffle
+##    """Shuffles a list in place."""
+#    for i in range(len(lst) - 1, 0, -1):
+#        j = random.randint(0, i)
+#        lst[i], lst[j] = lst[j], lst[i]  # Swap elements
 
 # -------------------------------------------------------------------------
 # Run Start/End
@@ -82,7 +82,7 @@ def run_start():
     v.correct_trials = 0
     v.total_trials = 0
     # Force shuffle before the first trial starts
-    v.trial_in_block = len(v.trial_types)
+    #v.trial_in_block = len(v.trial_types)
     print('{}, Task Started. Initial Freq Index: {}'.format(get_current_time(), v.current_freq_idx))
     # ------------------------
 
@@ -116,7 +116,8 @@ def trial(event):
     if event == 'entry':
         v.total_trials += 1
         # Determine trial type and set target index/LED
-        v.trial_type = v.trial_types[v.trial_in_block]
+        #v.trial_type = v.trial_types[v.trial_in_block]
+        v.trial_type = random.choice(v.trial_types)
         if v.trial_type == 'low_target':
             v.target_idx = 0
             target_led = v.leds[0]
@@ -188,7 +189,7 @@ def reward(event):
         hw.reward.release()
         v.reward_count += 1 # Increment total rewards
         v.correct_trials += 1 # Increment correct trials for this block structure
-        v.trial_in_block += 1 # Advance to next trial in block
+        #v.trial_in_block += 1 # Advance to next trial in block
         print("{}, Lick Detected! Reward #{} Delivered. Correct Trials: {}/{}. Advancing block.".format(
               get_current_time(), v.reward_count, v.correct_trials, v.total_trials))
         hw.speaker.off() # Turn off speaker after successful reward
@@ -209,11 +210,11 @@ def intertrial(event):
         hw.light.all_off() # Ensure lights are off
 
         # Check if block ended, shuffle if necessary
-        if v.trial_in_block >= len(v.trial_types):
-            print("{}, End of Block Reached. Shuffling trial types.".format(get_current_time()))
-            v.trial_in_block = 0
-            shuffle_list(v.trial_types)
-            print("{}, Next Block Order: {}".format(get_current_time(), v.trial_types))
+        #if v.trial_in_block >= len(v.trial_types):
+         #   print("{}, End of Block Reached. Shuffling trial types.".format(get_current_time()))
+        #    v.trial_in_block = 0
+         #   shuffle_list(v.trial_types)
+         #   print("{}, Next Block Order: {}".format(get_current_time(), v.trial_types))
 
         print("{}, Entering Intertrial State (Duration: {:.1f}s)".format(
             get_current_time(), v.IT_duration / second))
