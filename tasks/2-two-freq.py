@@ -19,6 +19,7 @@ initial_state = 'intertrial'
 v.session_duration = 45 * minute
 v.stimulus_duration = 2 * second
 v.reward_duration = 50 * ms
+v.reward_period_duration = 2 * second
 v.iti_duration = 4 * second  # Inter-trial interval
 v.spk_freqs = [2181, 12336]
 v.leds = [2, 4]
@@ -85,7 +86,7 @@ def reward(event):
         hw.reward.release()
         v.correct_trials += 1
         print('reward number {}/{} ({})'.format(v.correct_trials, v.total_trials, v.sound_target))
-        timed_goto_state('intertrial', 1000)
+        timed_goto_state('intertrial', v.reward_period_duration)
         reset_timer('timeout_timer',v.target_duration)
         
 def timeout(event):
