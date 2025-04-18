@@ -19,9 +19,9 @@ initial_state = 'intertrial'
 # Variables
 v.session_duration = 45 * minute
 v.stimulus_duration = 2 * second
-v.reward_duration = 50 * ms 
+v.reward_duration = 60 * ms 
 v.reward_period_duration = 2 * second
-v.iti_duration = 3 * second  # Inter-trial interval
+v.iti_duration = 2 * second  # Inter-trial interval
 
 # Frequencies: First is GO, Second is NO-GO
 v.spk_freqs = [2181, 12336] 
@@ -29,7 +29,9 @@ v.go_stim_freq = v.spk_freqs[1] # Explicitly define Go frequency
 v.nogo_stim_freq = v.spk_freqs[0] # Explicitly define No-Go frequency
 
 # Punishment Timeout (for licking No-Go stimulus)
-v.punish_timeout_duration = 3 * second # Duration animal must withhold licking during punishment timeout
+v.punish_timeout_duration = 2 * second # Duration animal must withhold licking during punishment timeout
+v.punishment_on = False # if false, no punishment
+v.reward_only = True # if true, only present rewarded stimulus
 
 # Inactivity Timeout (Original Timeout)
 v.target_duration = 40 * second  # Time without licking to trigger inactivity timeout
@@ -96,7 +98,11 @@ def intertrial(event):
 def stimulus_on(event):
     # Presents the auditory stimulus (Go or No-Go).
     if event == 'entry':
-        v.current_stim_freq = choice(v.spk_freqs) 
+        v.current_stim_freq = choice(v.spk_freqs)
+
+        if v.reward_only: 
+            v.current_stim_freq = v.go_stim_freq
+
         hw.speaker.sine(v.current_stim_freq) 
         print('{}, frequency'.format(v.current_stim_freq))
         set_timer('stimulus_timer', v.stimulus_duration)
@@ -125,10 +131,7 @@ def stimulus_on(event):
     elif event == 'timeout_timer':
          # Inactivity timer expired during stimulus presentation
         goto_state('timeout') # Go to inactivity timeout
-            
-    elif event == 'exit':
-        hw.speaker.off() 
-        disarm_timer('stimulus_timer')
+        
 
 def reward(event):
     # Delivers reward for correct Go response.
@@ -148,11 +151,15 @@ def punish_timeout(event):
         
     elif event == 'stimulus_timer':
         hw.speaker.off() 
+        if v.punishment_on == False:
+            reset_timer('punish_timeout_timer', v.iti_duration)
+
 
     elif event == 'lick':
         print('Lick during punishment timeout - Resetting timer')
         # Reset *both* timers on lick during punishment
-        reset_timer('punish_timeout_timer', v.punish_timeout_duration)
+        if v.punishment_on:
+            reset_timer('punish_timeout_timer', v.punish_timeout_duration)
         reset_timer('timeout_timer', v.target_duration) 
         
     elif event == 'punish_timeout_timer':
