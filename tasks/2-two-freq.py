@@ -8,7 +8,7 @@ from devices import *
 states = ['intertrial', 'stimulus_on', 'reward', 'timeout']
  
 # Events
-events = ['session_timer', 'lick', 'stimulus_timer','motion', 'timeout_timer']
+events = ['session_timer', 'lick', 'stimulus_timer','motion', 'timeout_timer', 'no_lick_timer']
  
 # Initial state
 initial_state = 'intertrial'
@@ -28,6 +28,7 @@ v.total_trials = 0
 
 v.target_duration = 40 * second
 v.timeout_duration = 15 * second
+v.no_lick_duration = 1 * second  # Set your desired no-lick duration here
 
 # -------------------------------------------------------------------------
  
@@ -54,9 +55,18 @@ def intertrial(event):
     if event == 'entry':
         hw.speaker.off()
         hw.light.all_off()
-        timed_goto_state('stimulus_on', v.iti_duration)
+        v.iti_elapsed = False
+        set_timer('iti_timer', v.iti_duration)
+        set_timer('no_lick_timer', v.no_lick_duration)
+        # timed_goto_state('stimulus_on', v.iti_duration)
+    elif event == 'iti_timer':
+        v.iti_elapsed = True
     elif event == 'lick':
+        reset_timer('no_lick_timer', v.no_lick_duration)
         reset_timer('timeout_timer',v.target_duration)
+    elif event == 'no_lick_timer':
+        if v.iti_elapsed:
+            goto_state('stimulus_on')
     elif event == 'timeout_timer':
         goto_state('timeout')
  
