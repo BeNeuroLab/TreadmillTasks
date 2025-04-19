@@ -36,3 +36,8 @@ class UARTlink(IO_object):
 
     def _process_interrupt(self):
         fw.event_queue.put((self.timestamp, fw.event_typ, fw.events[self.name]))
+
+    # NEW: convenience method so the task can TX easily
+    def send_int(self, value: int) -> None:
+        """Send a 2‑byte little‑endian integer to the host."""
+        self.uart.write(value.to_bytes(2, 'little'))
