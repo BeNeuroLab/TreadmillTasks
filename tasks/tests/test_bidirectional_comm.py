@@ -16,7 +16,7 @@ bci = UARTlink('bci_link', timer_freq=200)   # 2×(100 Hz PC poll)
 
 # ---------- states and events ----------------------------------------
 states = ['run']
-events = ['heartbeat']
+events = ['heartbeat','bci_link']
 initial_state = 'run'
 
 # ---------- behaviour ------------------------------------------------
@@ -32,6 +32,6 @@ def run(event):
     # ---------- async RX via interrupt queue -------------------------
     elif event == 'bci_link':               # device name becomes event
         val = bci.spk                       # latest 2‑byte int
-        print(f'TASK RX←PC : {val}')
+        print('TASK RX←PC : '.format(val))
         bci.send_int(val)                   # echo back
-        print(f'TASK TX→PC : {val} (echo)')
+        print('TASK TX→PC : (echo)'.format(val))
