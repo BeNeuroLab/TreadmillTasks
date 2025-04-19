@@ -20,7 +20,7 @@ v.session_duration = 45 * minute
 v.stimulus_duration = 2 * second
 v.reward_duration = 50 * ms
 v.reward_period_duration = 2 * second
-v.iti_duration = 5 * second  # Inter-trial interval
+v.iti_duration = 4 * second  # Inter-trial interval
 v.spk_freqs = [2181, 12336]
 v.leds = [2, 4]
 v.correct_trials = 0
@@ -28,7 +28,7 @@ v.total_trials = 0
 
 v.target_duration = 40 * second
 v.timeout_duration = 15 * second
-# v.no_lick_duration = 1 * second  # Set your desired no-lick duration here
+v.no_lick_duration = 1 * second  # Set your desired no-lick duration here
 
 # -------------------------------------------------------------------------
  
@@ -57,24 +57,24 @@ def intertrial(event):
         hw.light.all_off()
         v.iti_elapsed = False
         v.lick_elapsed = False
-        # set_timer('iti_timer', v.iti_duration)
-        # set_timer('no_lick_timer', v.no_lick_duration)
-        timed_goto_state('stimulus_on', v.iti_duration)
-    # elif event == 'iti_timer':
-    #     v.iti_elapsed = True
+        set_timer('iti_timer', v.iti_duration)
+        set_timer('no_lick_timer', v.no_lick_duration)
+        # timed_goto_state('stimulus_on', v.iti_duration)
+    elif event == 'iti_timer':
+        v.iti_elapsed = True
 
-    #     if v.lick_elapsed:
-    #         goto_state('stimulus_on')
+        if v.lick_elapsed:
+            goto_state('stimulus_on')
     elif event == 'lick':
-        # reset_timer('no_lick_timer', v.no_lick_duration)
+        reset_timer('no_lick_timer', v.no_lick_duration)
         reset_timer('timeout_timer',v.target_duration)
-        # v.lick_elapsed = False
+        v.lick_elapsed = False
 
-    # elif event == 'no_lick_timer':
-    #     v.lick_elapsed = True
+    elif event == 'no_lick_timer':
+        v.lick_elapsed = True
 
-    #     if v.iti_elapsed:
-    #         goto_state('stimulus_on')
+        if v.iti_elapsed:
+            goto_state('stimulus_on')
     elif event == 'timeout_timer':
         goto_state('timeout')
  

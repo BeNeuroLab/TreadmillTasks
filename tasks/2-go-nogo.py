@@ -31,7 +31,7 @@ v.nogo_stim_freq = v.spk_freqs[0] # Explicitly define No-Go frequency
 # Punishment Timeout (for licking No-Go stimulus)
 v.punish_timeout_duration = 2 * second # Duration animal must withhold licking during punishment timeout
 v.punishment_on = False # if false, no punishment
-v.reward_only = True # if true, only present rewarded stimulus
+v.reward_only = False # if true, only present rewarded stimulus
 
 # Inactivity Timeout (Original Timeout)
 v.target_duration = 40 * second  # Time without licking to trigger inactivity timeout
