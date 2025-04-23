@@ -45,7 +45,17 @@ v.correct_nogo_trials = 0 # Correct withhold during No-Go stimulus
 v.total_go_trials = 0     # Number of Go stimuli presented
 v.total_nogo_trials = 0   # Number of No-Go stimuli presented
 
+v.trial_in_block = 2  # Track position within the block
+
 v.current_stim_freq = 0 # Variable to store the frequency of the current trial
+
+# -------------------------------------------------------------------------
+
+def shuffle_list(lst): # Fisher-Yates Shuffle
+    for i in range(len(lst) - 1, 0, -1):
+        j = random.randint(0, i)
+        lst[i], lst[j] = lst[j], lst[i]  # Swap elements
+
 
 # -------------------------------------------------------------------------
  
@@ -88,6 +98,9 @@ def intertrial(event):
     if event == 'entry':
         hw.speaker.off() 
         timed_goto_state('stimulus_on', v.iti_duration)
+        if v.trial_in_block >= 2:  # End of block, reset and shuffle
+            v.trial_in_block = 0
+            shuffle_list(v.trial_types)  # Shuffle order of next block
     elif event == 'lick':
         # Reset inactivity timer on any lick during ITI
         reset_timer('timeout_timer', v.target_duration) 
@@ -98,8 +111,9 @@ def intertrial(event):
 def stimulus_on(event):
     # Presents the auditory stimulus (Go or No-Go).
     if event == 'entry':
-        v.current_stim_freq = choice(v.spk_freqs)
-
+        # v.current_stim_freq = choice(v.spk_freqs)
+        v.current_stim_freq = v.spk_freqs[v.trial_in_block] # Select trial type from the shuffled block
+        v.trial_in_block += 1  # Move to next trial in block
         if v.reward_only: 
             v.current_stim_freq = v.go_stim_freq
 
