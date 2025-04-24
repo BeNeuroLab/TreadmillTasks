@@ -1,7 +1,7 @@
 from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
-
+import random
 # -------------------------------------------------------------------------
  
 # States
@@ -25,6 +25,7 @@ v.iti_duration = 2 * second  # Inter-trial interval
 
 # Frequencies: First is GO, Second is NO-GO
 v.spk_freqs = [2181, 12336] 
+v.trial_types = [0,1]
 v.go_stim_freq = v.spk_freqs[1] # Explicitly define Go frequency
 v.nogo_stim_freq = v.spk_freqs[0] # Explicitly define No-Go frequency
 
