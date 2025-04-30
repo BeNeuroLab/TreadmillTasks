@@ -22,11 +22,9 @@ v.session_duration = 45 * minute
 v.stimulus_duration = 2 * second
 v.reward_duration = 60 * ms 
 v.reward_period_duration = 2 * second
-v.iti_duration = 2 * second  # Inter-trial interval
 
 # Frequencies: First is GO, Second is NO-GO
 v.spk_freqs = [2181, 12336] 
-v.trial_types = [0,1]
 v.go_stim_freq = v.spk_freqs[1] # Explicitly define Go frequency
 v.nogo_stim_freq = v.spk_freqs[0] # Explicitly define No-Go frequency
 
@@ -47,14 +45,16 @@ v.correct_nogo_trials = 0 # Correct withhold during No-Go stimulus
 v.total_go_trials = 0     # Number of Go stimuli presented
 v.total_nogo_trials = 0   # Number of No-Go stimuli presented
 
-v.trial_in_block = 2  # Track position within the block
-
 v.current_stim_freq = 0 # Variable to store the frequency of the current trial
-
+v.last_trial_correct = True
 # --- parameters you can adjust ---
 v.block_size        = 20          # number of trials in a block
 v.go_fraction       = 0.70        # overall Go probability
 v.max_run_length    = 3           # cap on identical trials in a row
+
+v.min_iti = 3 * second      # shortest gap after correct trials
+v.max_iti = 6 * second      # longest gap after correct trials
+v.error_factor = 2          # multiply ITI after FA or premature lick
 # ---------------------------------
 
 def max_run_length(seq):
@@ -82,14 +82,12 @@ def make_block():
 
     # shuffle until the longest identical run is within the limit
     while True:
-        random.shuffle(trials)          # or use pyControl's shuffle_list(trials)
+        shuffle_list(trials)          # or use pyControl's shuffle_list(trials)
         if max_run_length(trials) <= v.max_run_length:
             break
 
     v.trial_list = trials
     v.trial_i    = 0
-
-
 
 # -------------------------------------------------------------------------
 
@@ -98,7 +96,10 @@ def shuffle_list(lst): # Fisher-Yates Shuffle
         j = random.randint(0, i)
         lst[i], lst[j] = lst[j], lst[i]  # Swap elements
 
-
+def choose_iti(correct=True):
+    """Return an ITI in ms, longer after an error."""
+    base = random.randint(v.min_iti, v.max_iti)
+    return base if correct else base * v.error_factor
 # -------------------------------------------------------------------------
  
 def run_start():
@@ -140,11 +141,10 @@ def run_end():
 def intertrial(event):
     # Idle state between trials.
     if event == 'entry':
-        hw.speaker.off() 
-        timed_goto_state('stimulus_on', v.iti_duration)
-        if v.trial_in_block >= 2:  # End of block, reset and shuffle
-            v.trial_in_block = 0
-            shuffle_list(v.trial_types)  # Shuffle order of next block
+        hw.speaker.off()
+        iti = choose_iti(v.last_trial_correct)   # set this flag in reward/punish exits
+        timed_goto_state('stimulus_on', iti)
+
     elif event == 'lick':
         # Reset inactivity timer on any lick during ITI
         reset_timer('timeout_timer', v.target_duration) 
@@ -203,6 +203,7 @@ def reward(event):
     if event == 'entry':
         hw.reward.release() 
         v.correct_go_trials += 1
+        v.last_trial_correct = True
         print('reward number {}/{}'.format(v.correct_go_trials, v.total_go_trials))
         reset_timer('timeout_timer', v.target_duration) 
         timed_goto_state('intertrial', v.reward_period_duration) 
@@ -211,13 +212,14 @@ def punish_timeout(event):
     # Timeout state entered after incorrect lick to No-Go stimulus.
     # Animal must refrain from licking for the specified duration.
     if event == 'entry':
+        v.last_trial_correct = False
         print('Punishment Timeout Started ({}s)'.format(v.punish_timeout_duration/second))
         set_timer('punish_timeout_timer', v.punish_timeout_duration)
         
     elif event == 'stimulus_timer':
         hw.speaker.off() 
         if v.punishment_on == False:
-            reset_timer('punish_timeout_timer', v.iti_duration)
+            reset_timer('punish_timeout_timer', v.min_iti)
 
 
     elif event == 'lick':
