@@ -2,7 +2,6 @@ from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
 import random
-from itertools import groupby   # <-- add just after the other imports
 
 # -------------------------------------------------------------------------
  
@@ -58,18 +57,37 @@ v.go_fraction       = 0.70        # overall Go probability
 v.max_run_length    = 3           # cap on identical trials in a row
 # ---------------------------------
 
-def make_block():
-    """Create a Go/No-Go list that respects v.max_run_length."""
-    n_go   = int(v.block_size * v.go_fraction)
-    trials = [1]*n_go + [0]*(v.block_size - n_go)  # 1 = Go, 0 = No-Go
+def max_run_length(seq):
+    """Return length of the longest stretch of identical values in seq."""
+    if not seq:
+        return 0
+    run_len   = 1
+    max_len   = 1
+    last_item = seq[0]
+    for item in seq[1:]:
+        if item == last_item:
+            run_len += 1
+            if run_len > max_len:
+                max_len = run_len
+        else:
+            run_len   = 1
+            last_item = item
+    return max_len
 
-    while True:                       # reshuffle until the run-length limit is met
-        random.shuffle(trials)
-        if max(len(list(g)) for _, g in groupby(trials)) <= v.max_run_length:
+
+def make_block():
+    """Create a pseudorandom mini-block that respects v.max_run_length."""
+    n_go   = int(v.block_size * v.go_fraction)
+    trials = [1] * n_go + [0] * (v.block_size - n_go)   # 1 = Go, 0 = No-Go
+
+    # shuffle until the longest identical run is within the limit
+    while True:
+        random.shuffle(trials)          # or use pyControl's shuffle_list(trials)
+        if max_run_length(trials) <= v.max_run_length:
             break
 
     v.trial_list = trials
-    v.trial_i    = 0                  # index of the next trial in the list
+    v.trial_i    = 0
 
 
 
