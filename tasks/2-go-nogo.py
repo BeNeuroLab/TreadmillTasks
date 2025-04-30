@@ -2,6 +2,8 @@ from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
 import random
+from itertools import groupby   # <-- add just after the other imports
+
 # -------------------------------------------------------------------------
  
 # States
@@ -50,6 +52,27 @@ v.trial_in_block = 2  # Track position within the block
 
 v.current_stim_freq = 0 # Variable to store the frequency of the current trial
 
+# --- parameters you can adjust ---
+v.block_size        = 20          # number of trials in a block
+v.go_fraction       = 0.70        # overall Go probability
+v.max_run_length    = 3           # cap on identical trials in a row
+# ---------------------------------
+
+def make_block():
+    """Create a Go/No-Go list that respects v.max_run_length."""
+    n_go   = int(v.block_size * v.go_fraction)
+    trials = [1]*n_go + [0]*(v.block_size - n_go)  # 1 = Go, 0 = No-Go
+
+    while True:                       # reshuffle until the run-length limit is met
+        random.shuffle(trials)
+        if max(len(list(g)) for _, g in groupby(trials)) <= v.max_run_length:
+            break
+
+    v.trial_list = trials
+    v.trial_i    = 0                  # index of the next trial in the list
+
+
+
 # -------------------------------------------------------------------------
 
 def shuffle_list(lst): # Fisher-Yates Shuffle
@@ -72,6 +95,8 @@ def run_start():
     print('{}, Session Started'.format(get_current_time()))
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI)) 
     hw.cameraTrigger.start() 
+    # call once at start-up
+    make_block()
  
 def run_end():
     # Turn off hardware components.
@@ -113,10 +138,17 @@ def stimulus_on(event):
     # Presents the auditory stimulus (Go or No-Go).
     if event == 'entry':
         # v.current_stim_freq = choice(v.spk_freqs)
-        v.current_stim_freq = v.spk_freqs[v.trial_in_block] # Select trial type from the shuffled block
-        v.trial_in_block += 1  # Move to next trial in block
-        if v.reward_only: 
+        # ---- choose Go (1) or No-Go (0) from the pseudorandom list ----
+        trial_type = v.trial_list[v.trial_i]
+        v.trial_i += 1
+        if v.trial_i >= len(v.trial_list):    # reached end of block?  build the next one
+            make_block()
+
+        v.current_stim_freq = v.go_stim_freq if trial_type else v.nogo_stim_freq
+
+        if v.reward_only:                     # keep your existing “reward-only” override
             v.current_stim_freq = v.go_stim_freq
+        # ----------------------------------------------------------------
 
         hw.speaker.sine(v.current_stim_freq) 
         print('{}, frequency'.format(v.current_stim_freq))
