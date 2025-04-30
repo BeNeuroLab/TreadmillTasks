@@ -19,9 +19,9 @@ initial_state = 'intertrial'
  
 # Variables
 v.session_duration = 45 * minute
-v.stimulus_duration = 2 * second
+v.stimulus_duration = 0.5 * second
 v.reward_duration = 60 * ms 
-v.reward_period_duration = 2 * second
+v.reward_period_duration = 0.5 * second
 
 # Frequencies: First is GO, Second is NO-GO
 v.spk_freqs = [2181, 12336] 
@@ -179,6 +179,7 @@ def stimulus_on(event):
     elif event == 'lick':
         reset_timer('timeout_timer', v.target_duration) 
         if v.current_stim_freq == v.go_stim_freq:
+            hw.speaker.off()
             goto_state('reward')
         elif v.current_stim_freq == v.nogo_stim_freq:
             goto_state('punish_timeout')
