@@ -47,7 +47,7 @@ v.max_iti        = 7 * second
 v.error_factor   = 1.5           # ITI ×2 after an error
 
 # Punishment timeout
-v.punish_timeout_duration = 2 * second
+v.punish_timeout_duration = .5 * second
 v.punishment_on           = False      # if True, lick resets timeout
 
 # Inactivity timeout
@@ -169,8 +169,8 @@ def stimulus_on(event):
             v.total_nogo_trials += 1
 
     elif event == 'lick':
-        hw.speaker.off()
-        disarm_timer('stimulus_timer')
+        # hw.speaker.off()
+        # disarm_timer('stimulus_timer')
         v.last_trial_correct = (v.current_stim_freq == v.go_stim_freq)
         goto_state('reward' if v.last_trial_correct else 'punish_timeout')
 
@@ -222,7 +222,8 @@ def punish_timeout(event):
 
     elif event == 'punish_timeout_timer':
         reset_timer('timeout_timer', v.target_duration)
-        goto_state('stimulus_on')
+        goto_state('intertrial')
+        # goto_state('stimulus_on')
 
     elif event == 'exit':
         disarm_timer('punish_timeout_timer')
