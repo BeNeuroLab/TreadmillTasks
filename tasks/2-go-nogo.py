@@ -26,7 +26,7 @@ initial_state = 'intertrial'
 v.session_duration       = 45 * minute
 
 # Stimulus & response timing
-v.stimulus_duration      = 0.5 * second
+v.stimulus_duration      = 1.0 * second
 v.response_window        = 1.0 * second
 v.reward_duration        = 60  * ms
 v.reward_period_duration = 0.5 * second
@@ -42,9 +42,9 @@ v.go_fraction    = 0.70        # Go probability
 v.max_run_length = 3           # never >3 identical trials
 
 # ITI parameters
-v.min_iti        = 3 * second
-v.max_iti        = 6 * second
-v.error_factor   = 2           # ITI ×2 after an error
+v.min_iti        = 5 * second
+v.max_iti        = 7 * second
+v.error_factor   = 1.5           # ITI ×2 after an error
 
 # Punishment timeout
 v.punish_timeout_duration = 2 * second
