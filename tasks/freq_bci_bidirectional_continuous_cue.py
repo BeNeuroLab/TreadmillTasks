@@ -27,25 +27,26 @@ initial_state = 'intertrial' # Start in intertrial to shuffle first block
 # Variables
 # -------------------------------------------------------------------------
 v.session_duration = 45 * minute
-v.reward_duration = 50 * ms
+v.reward_duration = 60 * ms
 v.hold_duration = 10 * ms  # Hold period at target index before reward state
 v.trial_duration = 10 * second  # Maximum trial duration if target not reached
 v.IT_duration = 4 * second  # Intertrial interval duration
 v.reward_timer_duration = 2 * second # Max duration in reward state waiting for lick
 v.stimulus_duration = 1 * second # Duration of stimulus presentation (not used in this task)
-v.cue_duration = 500 * ms # Duration for the initial target frequency cue
+v.cue_duration = 1000 * ms # Duration for the initial target frequency cue
 v.cue_active = False # Flag to indicate if the initial cue is currently playing
 
 # List of discrete frequency values the cursor can represent
 v.freq_bins = [2181, 2594, 3084, 3668, 4362, 5187, 6169, 7336, 8724, 10375, 12338]
 v.leds = [2, 4] # LED pins corresponding to [low_target, high_target]
-v.baseline_freq_range = [4000,7000]
+v.baseline_freq_range = [2000,10000]
 # --- Trial Structure Variables ---
-v.trial_types = ['low_target', 'high_target'] # Types of trials
+v.trial_types = ['high_target'] # Types of trials
 v.trial_type = v.trial_types[0] # Current trial type
 # Force shuffle before the first trial starts
 v.trial_in_block = len(v.trial_types)
 v.target_idx = 0 # Index of the target frequency bin (0 or max)
+v.target_freq = 10000
 v.correct_trials = 0
 v.total_trials = 0
 # --------------------------------
@@ -53,7 +54,7 @@ v.total_trials = 0
 v.reward_count = 0 # Keep track of total rewards delivered
 v.change_state = True
 v.trial_state = 0
-v.IT_mode                = "baseline"        # "fixed" or "baseline"
+v.IT_mode = "baseline"        # "fixed" or "baseline"
 
 # -------------------------------------------------------------------------
 # Utility Functions
@@ -155,7 +156,7 @@ def trial(event):
             # print("{}, cursor_update (BCI Freq: {}). Cue active, speaker NOT updated.".format(get_current_time(), freq)) # For debugging
 
         # Logic for checking if target is reached (assuming freq is an index as per original structure)
-        if freq == v.target_idx:
+        if freq >= v.target_freq:
              print("{}, Target Index Reached via BCI: {}".format(get_current_time(), freq))
              goto_state('threshold_crossed')
 
@@ -171,7 +172,9 @@ def threshold_crossed(event):
         # If BCI updates during hold, it resets.
         # Speaker will also update here if not v.cue_active (which it won't be).
         freq = hw.bci_link.spk
-        if freq is None: freq = v.freq_bins[len(v.freq_bins) // 2]
+        if freq is None: 
+            freq = v.freq_bins[len(v.freq_bins) // 2]
+        #else:  
         hw.speaker.sine(freq) # Speaker reflects BCI during failed hold attempt
         print("{}, Cursor Updated During Hold, Resetting to Trial".format(get_current_time()))
         goto_state('trial')
