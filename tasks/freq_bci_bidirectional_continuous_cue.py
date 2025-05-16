@@ -46,7 +46,7 @@ v.trial_type = v.trial_types[0] # Current trial type
 # Force shuffle before the first trial starts
 v.trial_in_block = len(v.trial_types)
 v.target_idx = 0 # Index of the target frequency bin (0 or max)
-v.target_freq = 10000
+v.target_freq = 11000
 v.correct_trials = 0
 v.total_trials = 0
 # --------------------------------
@@ -54,7 +54,7 @@ v.total_trials = 0
 v.reward_count = 0 # Keep track of total rewards delivered
 v.change_state = True
 v.trial_state = 0
-v.IT_mode = "baseline"        # "fixed" or "baseline"
+v.IT_mode = "fixed"        # "fixed" or "baseline"
 
 # -------------------------------------------------------------------------
 # Utility Functions
@@ -224,6 +224,8 @@ def intertrial(event):
             if v.baseline_freq_range[0] <= freq <= v.baseline_freq_range[1]:
                 print("{}, Baseline frequency detected, returning to trial".format(get_current_time()))
                 timed_goto_state('trial', v.IT_duration)
+        else:
+            print("{}, Cursor update during intertrial, no action taken.".format(get_current_time()))
 
 # -------------------------------------------------------------------------
 # Event-handling functions
