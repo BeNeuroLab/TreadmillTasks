@@ -56,6 +56,10 @@ v.change_state = True
 v.trial_state = 0
 v.IT_mode = "fixed"        # "fixed" or "baseline"
 
+v.lick = 0 # did animal lick during reward
+v.no_lick = 2 # dispense lick if not engaged
+v.num_lick = 1
+
 # -------------------------------------------------------------------------
 # Utility Functions
 # -------------------------------------------------------------------------
@@ -168,6 +172,14 @@ def threshold_crossed(event):
             get_current_time(), v.trial_type, v.hold_duration))
         timed_goto_state('reward', v.hold_duration)
 
+        if v.lick == 0:
+            v.no_lick += 1
+        v.lick = 0
+
+        if v.no_lick > v.num_lick:
+            hw.reward.release()
+            v.no_lick = 0
+
     elif event == 'cursor_update':
         # If BCI updates during hold, it resets.
         # Speaker will also update here if not v.cue_active (which it won't be).
@@ -181,14 +193,16 @@ def threshold_crossed(event):
 
 def reward(event):
     if event == 'entry':
-        hw.speaker.off() # Ensure speaker is off before reward or if transitioning from a state where it might be on
+        # hw.speaker.off() # Ensure speaker is off before reward or if transitioning from a state where it might be on
         print("{}, Entering Reward Window (Waiting for Lick, Timeout: {:.1f}s)".format(
             get_current_time(), v.reward_timer_duration / second))
         timed_goto_state('intertrial', v.reward_timer_duration)
     elif event == 'lick':
         hw.reward.release()
+        hw.speaker.off()
         v.reward_count += 1
         v.correct_trials += 1
+        v.lick = 1
         print("{}, Lick Detected! Reward #{} Delivered. Correct Trials: {}/{}. Advancing block.".format(
               get_current_time(), v.reward_count, v.correct_trials, v.total_trials))
         timed_goto_state('intertrial', v.stimulus_duration)
@@ -199,6 +213,7 @@ def intertrial(event):
         v.trial_state = 0
         hw.bci_link.send_int(v.trial_state)
         v.change_state = True 
+
 
         hw.speaker.off()
         hw.light.all_off()
