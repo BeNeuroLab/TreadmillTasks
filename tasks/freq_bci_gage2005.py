@@ -158,6 +158,8 @@ def reward(event):
             get_current_time(), v.reward_timer_duration / second))
         timed_goto_state('intertrial', v.reward_timer_duration)
 
+        hw.bci_link.send_int(3) # entering rewarded state
+
         if v.lick_assist:
             if v.lick == 0:
                 v.no_lick += 1
