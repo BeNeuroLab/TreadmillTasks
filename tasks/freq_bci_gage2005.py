@@ -18,7 +18,6 @@ events = [
     'cursor_update',  # Event triggered by receiving BCI data (-1, 0, 1)
     'lick',
     'motion',
-    'cue_end',
     'it_end'       # Event triggered when the initial cue presentation ends
 ]
 
@@ -30,15 +29,14 @@ initial_state = 'intertrial' # Start in intertrial to shuffle first block
 v.session_duration = 45 * minute
 v.reward_duration = 60 * ms
 v.hold_duration = 10 * ms  # Hold period at target index before reward state
-v.baseline_hold = 10 * ms # Hold period of baseline period
+v.baseline_hold = 500 * ms # Hold period of baseline period
 v.trial_duration = 10 * second  # Maximum trial duration if target not reached
 v.IT_duration = 4 * second  # Intertrial interval duration
 v.reward_timer_duration = 2 * second # Max duration in reward state waiting for lick
 v.stimulus_duration = 0.25 * second # Duration of stimulus presentation after rewarded lick
-v.cue_duration = 1000 * ms # Duration for the initial target frequency cue
-v.cue_active = False # Flag to indicate if the initial cue is currently playing
 v.it_active = False # Flag to indicate if the IT period is active during baseline mode
 v.baseline_hold_active = False
+v.hold_required = False # does the animal need to hold in baseline period or not
 
 # List of discrete frequency values the cursor can represent
 v.freq_bins = [2181, 2594, 3084, 3668, 4362, 5187, 6169, 7336, 8724, 10375, 12338]
@@ -101,35 +99,25 @@ def trial(event):
         
         if v.change_state:
             v.total_trials += 1
-            hw.bci_link.send_int(1) 
+            hw.bci_link.send_int(2) 
             v.change_state = False 
-            hw.speaker.sine(v.cue_freq) # Play target frequency cue
-            v.cue_active = True # Set cue active flag
-            set_timer('cue_end', v.cue_duration)
+            hw.speaker.sine(freq)
 
-            print("{}, Trial #{} Start. Target Index: {}, Playing Cue Freq: {}".format(
-                get_current_time(), v.total_trials, v.target_idx, v.cue_freq))
-            print("{}, Sending 1 to BCI (Cue Start). Cue is active.".format(get_current_time()))
+            print("{}, Sending 2 to BCI (Trial #{} Start). Target Index: {}".format(
+                get_current_time(), v.total_trials, v.target_idx))
 
             timed_goto_state('intertrial', v.trial_duration)
-
-    elif event == 'cue_end':
-        v.cue_active = False # Clear cue active flag
-        hw.speaker.off() # Stop cue sound. BCI cursor_update will now control the speaker.
-        hw.bci_link.send_int(2) # Send 2 to BCI to indicate cue end
-        print("{}, Cue ended. Sending 2 to BCI. Cue is now inactive. Waiting for cursor update.".format(get_current_time()))
 
     elif event == 'cursor_update':
         freq = hw.bci_link.spk 
         if freq is None:
             freq = v.freq_bins[len(v.freq_bins) // 2] 
         
-        if not v.cue_active: # Only update speaker if cue is not active
-            hw.speaker.sine(freq) 
+        hw.speaker.sine(freq) 
 
-            if freq >= v.target_freq:
-                print("{}, Target Index Reached via BCI: {}".format(get_current_time(), freq))
-                goto_state('threshold_crossed')
+        if freq >= v.target_freq:
+            print("{}, Target Index Reached via BCI: {}".format(get_current_time(), freq))
+            goto_state('threshold_crossed')
 
 def threshold_crossed(event):
     if event == 'entry':
@@ -141,7 +129,6 @@ def threshold_crossed(event):
 
     elif event == 'cursor_update':
         # If BCI updates during hold, it resets.
-        # Speaker will also update here if not v.cue_active (which it won't be).
         freq = hw.bci_link.spk
         if freq is None: 
             freq = v.freq_bins[len(v.freq_bins) // 2]
@@ -204,14 +191,18 @@ def intertrial(event):
                 freq = v.freq_bins[len(v.freq_bins) // 2]
             if not v.it_active and not v.baseline_hold_active:
                 if v.baseline_freq_range[0] <= freq <= v.baseline_freq_range[1]:
-                    print("{}, Baseline frequency detected, returning to trial".format(get_current_time()))
+                    hw.bci_link.send_int(1) 
+                    print("{}, Baseline frequency detected".format(get_current_time()))
                     set_timer('baseline_hold', v.baseline_hold)
                     v.baseline_hold_active = True
                 
             elif v.baseline_hold_active and freq > v.baseline_freq_range[1]:
-                disarm_timer('baseline_hold')
-                v.baseline_hold_active = False
-                print("{}, Cursor above baseline frequency".format(get_current_time()))
+
+                if v.hold_required:
+                    disarm_timer('baseline_hold')
+                    v.baseline_hold_active = False
+                    print("{}, Cursor above baseline frequency".format(get_current_time()))
+                    # If v.hold_required is False, the timer will continue even if freq > baseline_freq_range[1]
         else:
             print("{}, Cursor update during intertrial, no action taken.".format(get_current_time()))
 
