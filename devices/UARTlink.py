@@ -11,9 +11,7 @@ class UARTlink(IO_object):
         timer_freq: int, frequency of the timer, twice the client frequency
         """
         self.uart = UART(1, 9600)  # uart1=port 12, init with given baudrate
-        self.uart.init(9600, bits=8, parity=None, stop=1,
-                       timeout=0,          # wait forever for 1st byte
-                       timeout_char=0)     # never wait for gap
+        self.uart.init(9600, bits=8, parity=None, stop=1)
         self.buffer = bytearray(8)
         self.name = name
         self.timer_freq = timer_freq
@@ -26,16 +24,14 @@ class UARTlink(IO_object):
     def _timer_ISR(self, t):
         if self.uart.any() > 0:  # there is a message
             self.uart.readinto(self.buffer, 2)
-            val = int.from_bytes(self.buffer[:2], 'little')
-            if val != self.prev_spk:
+            self.prev_spk = int.from_bytes(self.buffer[:2], 'little')
+            if self.spk != self.prev_spk:
                 self.timestamp = fw.current_time
                 interrupt_queue.put(self.ID)
-                self.prev_spk = val
+                self.prev_spk = self.spk
 
     def _initialise(self):
-        self.uart.init(9600, bits=8, parity=None, stop=1,
-                timeout=0,          # wait forever for 1st byte
-                timeout_char=0)     # never wait for gap
+
         self.timer.init(freq=self.timer_freq)   # this should be 2*(client frequency)
         self.timer.callback(self._timer_ISR)
 
