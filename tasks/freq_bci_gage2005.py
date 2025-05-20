@@ -18,7 +18,8 @@ events = [
     'cursor_update',  # Event triggered by receiving BCI data (-1, 0, 1)
     'lick',
     'motion',
-    'it_end'       # Event triggered when the initial cue presentation ends
+    'it_end',       # Event triggered when the initial cue presentation ends
+    'baseline_hold'
 ]
 
 initial_state = 'intertrial' # Start in intertrial to shuffle first block
@@ -96,7 +97,7 @@ def trial(event):
       - Times out to intertrial if target not reached within v.trial_duration.
     """
     if event == 'entry':
-        
+        freq = v.baseline_freq_range[-1]
         if v.change_state:
             v.total_trials += 1
             hw.bci_link.send_int(2) 
@@ -123,8 +124,8 @@ def threshold_crossed(event):
     if event == 'entry':
         # If cursor was updated during hold, speaker might be on. Ensure it's off or controlled as desired.
         # For now, assuming speaker state from trial's cursor_update is acceptable or handled by BCI not sending during hold.
-        print("{}, Target Reached ({}), Entering Hold ({:.1f}ms)".format(
-            get_current_time(), v.trial_type, v.hold_duration))
+        print("{}, Target Reached, Entering Hold ({:.1f}ms)".format(
+            get_current_time(), v.hold_duration))
         timed_goto_state('reward', v.hold_duration)
 
     elif event == 'cursor_update':
