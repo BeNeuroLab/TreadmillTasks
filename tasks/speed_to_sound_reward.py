@@ -31,16 +31,18 @@ initial_state = 'intertrial'
 v.session_duration = 30 * minute
 v.reward_duration = 50 * ms
 v.IT_duration = 2 * second  # Fixed duration part of ITI
-v.stationary_duration_ms = 2000 * ms # Mouse must be still for this long to start next trial
+v.stationary_duration_ms = 1000 * ms # Mouse must be still for this long to start next trial
 
 # Motion to Sound Mapping
 v.min_speed_cm_s = 1     # Speed (cm/s) that produces the lowest frequency (avoid 0 to prevent silence if mouse is barely moving but triggering motion events)
-v.max_speed_cm_s = 40    # Speed (cm/s) at which the highest frequency is produced (NEEDS CALIBRATION)
+v.max_speed_cm_s = 20    # Speed (cm/s) at which the highest frequency is produced (NEEDS CALIBRATION)
 v.min_freq_hz = 2000     # Lowest frequency (Hz)
-v.max_freq_hz = 10000    # Highest frequency (Hz)
-v.target_freq_hz = 8000  # Target frequency (Hz) to trigger reward (NEEDS CALIBRATION)
+v.max_freq_hz = 15000    # Highest frequency (Hz)
+v.target_freq_hz = 12000  # Target frequency (Hz) to trigger reward (NEEDS CALIBRATION)
 v.sound_smoothing_factor = 0.3 # Factor for smoothing frequency changes (0-1, 1=no smoothing)
 
+v.start_freq_min_hz = 2000
+v.start_freq_max_hz = 4000
 
 # Motion sensor parameters
 v.motion_sensitivity = 5 # Threshold for motion detection (cm). Default for MotionDetector is 1.
@@ -126,7 +128,7 @@ def wait_for_stillness(event):
 def running(event):
     if event == 'entry':
         print('{}, Starting running segment. Max duration: {}s'.format(get_current_time(), v.trial_timeout_duration / second))
-        v.current_freq_hz = v.min_freq_hz # Start with min frequency
+        v.current_freq_hz = randint(v.start_freq_min_hz, v.start_freq_max_hz)
         hw.speaker.sine(v.current_freq_hz)
         v.last_dx_counts = 0 # Reset accumulated displacement for speed calculation within this state
         v.last_dy_counts = 0
