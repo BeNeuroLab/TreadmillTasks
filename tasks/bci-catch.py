@@ -121,10 +121,10 @@ def catch_reward(event):
     if event == 'entry':
         hw.light.all_off()
         hw.sound.all_off()
-        v.n_ommitted_reward += 1
-        print('{}, ommitted_reward'.format(v.n_ommitted_reward))
         timed_goto_state('trial', v.IT_duration)
     elif event == 'lick':  # reward should be released
+        v.n_ommitted_reward += 1
+        print('{}, ommitted_reward'.format(v.n_ommitted_reward))
         goto_state('reward')
 
 
