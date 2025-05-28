@@ -142,8 +142,9 @@ def threshold_crossed(event):
 
 def reward(event):
     if event == 'entry':
-        print("{}, Entering Reward Window (Waiting for Lick, Timeout: {:.1f}s)".format(
-            get_current_time(), v.reward_timer_duration / second))
+        v.reward_count += 1
+        hw.reward.release()
+        print("{}, reward_number".format(v.reward_count))
         timed_goto_state('intertrial', v.reward_timer_duration)
 
         hw.bci_link.send_int(3) # entering rewarded state
@@ -157,12 +158,9 @@ def reward(event):
             v.lick = 0
 
     elif event == 'lick':
-        hw.reward.release()
-        v.reward_count += 1
+        
         v.correct_trials += 1
         v.lick = 1
-        print("{}, Lick Detected! Reward #{} Delivered. Correct Trials: {}/{}. Advancing block.".format(
-              get_current_time(), v.reward_count, v.correct_trials, v.total_trials))
         timed_goto_state('intertrial', v.stimulus_duration)
 
 def intertrial(event):
