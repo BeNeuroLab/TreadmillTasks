@@ -27,7 +27,7 @@ v.session_duration = 45 * minute
 
 # Trial structure timing (NEW)
 v.no_lick_duration = 1.0 * second    # No lick period (1 s)
-v.stimulus_duration = 0.1 * second   # Tone presentation (100 ms)
+v.stimulus_duration = 0.5 * second   # Tone presentation (100 ms)
 v.dead_period_duration = 0.2 * second  # Dead period (200 ms)
 v.response_window_duration = 2.5 * second # Response period (2.5 s)
 v.hit_delay = 4.0 * second           # Hit delay (4 s)
@@ -35,7 +35,7 @@ v.miss_cr_delay = 2.0 * second       # Miss and Correct Reject delay (2 s)
 v.fa_delay = 7.0 * second            # False Alarm delay (7 s)
 
 # Reward timing
-v.reward_duration = 60 * ms            # Duration of single reward pulse
+v.reward_duration = 50 * ms            # Duration of single reward pulse
 
 # Frequencies (Hz): index 0 = No-Go, 1 = Go
 v.spk_freqs = [2181, 12336]
@@ -104,7 +104,7 @@ def choose_iti():
     "Return ITI; increase it after an error (Miss or FA)."
     base = random.randint(v.min_iti, v.max_iti)
     is_error = (v.last_trial_outcome == 'Miss' or v.last_trial_outcome == 'FA')
-    return base * v.error_factor if is_error else base
+    return 0.01 * second
 
 def process_lick():
     """
@@ -209,6 +209,7 @@ def stimulus_on(event):
 
     elif event == 'lick':
         # Allow early licks during stim presentation (can be FA or Hit)
+        hw.speaker.off()
         process_lick()
 
     elif event == 'stimulus_timer':
