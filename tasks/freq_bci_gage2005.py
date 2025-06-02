@@ -70,7 +70,7 @@ def run_start():
     hw.motionSensor.threshold = 10
     hw.speaker.off()
     set_timer('session_timer', v.session_duration, True)
-    print('{}, Task Started.'.format(get_current_time()))
+    print('task_started')
     print('{}, before_camera_trigger'.format(get_current_time()))
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     hw.cameraTrigger.start()
@@ -82,8 +82,9 @@ def run_end():
     hw.motionSensor.stop()
     hw.cameraTrigger.stop()
     hw.off()
-    print('{}, Run End. Correct Trials: {}/{}, Total Rewards: {}'.format(
-        get_current_time(), v.correct_trials, v.total_trials, v.reward_count))
+    print('session_ended')
+    print('{}/{}, correct_trials'.format(v.correct_trials, v.total_trials))
+    print('{}, total_rewards'.format(v.reward_count))
 
 # -------------------------------------------------------------------------
 # States
@@ -103,9 +104,9 @@ def trial(event):
             hw.bci_link.send_int(2) 
             v.change_state = False 
             hw.speaker.sine(freq)
-
-            print("{}, Sending 2 to BCI (Trial #{} Start). Target Index: {}".format(
-                get_current_time(), v.total_trials, v.target_idx))
+            print('sending_2_to_BCI')
+            print("{}, trial_start".format(v.total_trials))
+            print("{}, target_index".format(v.target_idx))
 
             timed_goto_state('intertrial', v.trial_duration)
 
@@ -117,15 +118,13 @@ def trial(event):
         hw.speaker.sine(freq) 
 
         if freq >= v.target_freq:
-            print("{}, Target Index Reached via BCI: {}".format(get_current_time(), freq))
             goto_state('threshold_crossed')
 
 def threshold_crossed(event):
     if event == 'entry':
         # If cursor was updated during hold, speaker might be on. Ensure it's off or controlled as desired.
         # For now, assuming speaker state from trial's cursor_update is acceptable or handled by BCI not sending during hold.
-        print("{}, Target Reached, Entering Hold ({:.1f}ms)".format(
-            get_current_time(), v.hold_duration))
+        print("threshold_crossed")
         timed_goto_state('reward', v.hold_duration)
 
     elif event == 'cursor_update':
@@ -137,7 +136,7 @@ def threshold_crossed(event):
         hw.speaker.sine(freq) # Speaker reflects BCI during failed hold attempt
 
         if freq < v.target_freq:
-            print("{}, Cursor decreased below target, Resetting to Trial".format(get_current_time()))
+            print("cursor_below_treshold")
             goto_state('trial')
 
 def reward(event):
@@ -169,8 +168,7 @@ def intertrial(event):
         v.change_state = True 
         hw.speaker.off()
 
-        print("{}, Entering Intertrial State (Duration: {:.1f}s)".format(
-            get_current_time(), v.IT_duration / second))
+        print("{}, intertrial_start".format(v.IT_duration))
         
         if v.IT_mode == "fixed":
             timed_goto_state('trial', v.IT_duration)
@@ -191,7 +189,7 @@ def intertrial(event):
             if not v.it_active and not v.baseline_hold_active:
                 if v.baseline_freq_range[0] <= freq <= v.baseline_freq_range[1]:
                     hw.bci_link.send_int(1) 
-                    print("{}, Baseline frequency detected".format(get_current_time()))
+                    print("baseline_reached")
                     set_timer('baseline_hold', v.baseline_hold)
                     v.baseline_hold_active = True
                 
@@ -200,13 +198,12 @@ def intertrial(event):
                 if v.hold_required:
                     disarm_timer('baseline_hold')
                     v.baseline_hold_active = False
-                    print("{}, Cursor above baseline frequency".format(get_current_time()))
+                    print("cursor_above_baseline")
                     # If v.hold_required is False, the timer will continue even if freq > baseline_freq_range[1]
         else:
-            print("{}, Cursor update during intertrial, no action taken.".format(get_current_time()))
+            print("intertrial_cursor_update")
 
     elif event == 'baseline_hold':
-        print("{}, Baseline hold complete, transitioning to trial.".format(get_current_time()))
         v.baseline_hold_active = False
         goto_state('trial')
 
@@ -215,5 +212,5 @@ def intertrial(event):
 # -------------------------------------------------------------------------
 def all_states(event):
     if event == 'session_timer':
-        print('{}, Session Timer Expired'.format(get_current_time()))
+        print('session_timer_expired')
         stop_framework()
