@@ -54,10 +54,10 @@ v.reward_count = 0 # Keep track of total rewards delivered
 v.change_state = True
 v.IT_mode = "baseline"        # "fixed" or "baseline"
 
-v.lick_assist = True # give rewards if animal is not engaged
-v.lick = 0 # did animal lick during reward
-v.no_lick = 2 # dispense lick if not engaged
-v.num_lick = 2
+# v.lick_assist = True # give rewards if animal is not engaged
+# v.lick = 0 # did animal lick during reward
+# v.no_lick = 2 # dispense lick if not engaged
+# v.num_lick = 2
 
 # -------------------------------------------------------------------------
 # Run Start/End
@@ -148,18 +148,18 @@ def reward(event):
 
         hw.bci_link.send_int(3) # entering rewarded state
 
-        if v.lick_assist:
-            if v.lick == 0:
-                v.no_lick += 1
-                if v.no_lick >= v.num_lick:
-                    hw.reward.release()
-                    v.no_lick = 0
-            v.lick = 0
+        # if v.lick_assist:
+        #     if v.lick == 0:
+        #         v.no_lick += 1
+        #         if v.no_lick >= v.num_lick:
+        #             hw.reward.release()
+        #             v.no_lick = 0
+        #     v.lick = 0
 
     elif event == 'lick':
         
         v.correct_trials += 1
-        v.lick = 1
+        # v.lick = 1
         timed_goto_state('intertrial', v.stimulus_duration)
 
 def intertrial(event):
