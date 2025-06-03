@@ -114,7 +114,7 @@ def trial(event):
         freq = hw.bci_link.spk 
         if freq is None:
             freq = v.freq_bins[len(v.freq_bins) // 2] 
-        
+        print("{}, cursor_update_freq".format(freq))
         hw.speaker.sine(freq) 
 
         if freq >= v.target_freq:
