@@ -26,7 +26,7 @@ initial_state = 'trial'
 
 # -------------------------------------------------------------------------
 v.session_duration = 60 * minute
-v.reward_duration = 40 * ms
+v.reward_duration = 30 * ms
 v.hold_duration = 200 * ms
 
 v.reward_number = 0
