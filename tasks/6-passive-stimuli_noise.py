@@ -58,21 +58,21 @@ def generate_all_combinations():
     # Order: Silence, LED Left, LED Right, Freqs, Freqs+Left, Freqs+Right
     combinations.append((None, None)) # TypeID 0
     combinations.append((None, 'white_noise')) # TypeID 1: White Noise Only
-    combinations.append((v.led_config_left, None)) # TypeID 1
-    combinations.append((v.led_config_right, None)) # TypeID 2
+    combinations.append((v.led_config_left, None)) # TypeID 2
+    combinations.append((v.led_config_right, None)) # TypeID 3
     start_freq_id = len(combinations)
 
     # Frequencies only
     for i, freq in enumerate(v.spk_freqs):
-        combinations.append((None, freq)) # TypeID 3, 6, 9, ...
+        combinations.append((None, freq)) # TypeID 4, 5, 6, ...
 
     # Frequencies + Left LED
     for i, freq in enumerate(v.spk_freqs):
-        combinations.append((v.led_config_left, freq)) # TypeID 4, 7, 10, ...
+        combinations.append((v.led_config_left, freq)) # TypeID 15, 16, 17, ...
 
     # Frequencies + Right LED
     for i, freq in enumerate(v.spk_freqs):
-        combinations.append((v.led_config_right, freq)) # TypeID 5, 8, 11, ...
+        combinations.append((v.led_config_right, freq)) # TypeID 26, 27, 28, ...
 
     return combinations
 
@@ -116,8 +116,12 @@ def run_start():
     v.trial_combinations = build_trial_block()
 
     set_timer('session_timer', v.session_duration) # Keep session timer as a backup
-    print('{}, Session Started. Target Blocks: {}. CPI: {}'.format(
-          get_current_time(), v.max_blocks, hw.motionSensor.sensor_x.CPI))
+    
+    # BND-compatible print statements
+    print('{} 1, session_started'.format(get_current_time()))
+    print('{} {}, target_blocks'.format(get_current_time(), v.max_blocks))
+    print('{} {}, cpi_value'.format(get_current_time(), hw.motionSensor.sensor_x.CPI))
+    
     hw.cameraTrigger.start() # Ensure camera trigger is running
 
 def run_end():
@@ -130,8 +134,11 @@ def run_end():
     hw.motionSensor.off()
     hw.motionSensor.stop()
     hw.cameraTrigger.stop()
-    print('{}, Session Ended. Blocks Completed: {}. Total trials presented: {}'.format(
-          get_current_time(), v.completed_blocks, v.total_trials))
+    
+    # BND-compatible print statements
+    print('{} 1, session_ended'.format(get_current_time()))
+    print('{} {}, total_blocks_completed'.format(get_current_time(), v.completed_blocks))
+    print('{} {}, total_trials_presented'.format(get_current_time(), v.total_trials))
 
 # -------------------------------------------------------------------------
 # State behaviour
@@ -151,12 +158,12 @@ def intertrial(event):
         # Check if the current block is finished
         if v.trial_in_block >= v.block_size:
             v.completed_blocks += 1
-            print('{}, Block {} completed.'.format(get_current_time(), v.completed_blocks))
+            # BND-compatible print statement
+            print('{} {}, block_completed'.format(get_current_time(), v.completed_blocks))
 
             # Check if max blocks reached
             if v.completed_blocks >= v.max_blocks:
-                print('{}, Maximum blocks ({}) reached. Stopping framework.'.format(
-                      get_current_time(), v.max_blocks))
+                print('{} 1, max_blocks_reached'.format(get_current_time()))
                 stop_framework()
                 return # Exit event handler after stopping
 
@@ -190,17 +197,22 @@ def stimulus_presentation(event):
             trial_type_id = -1 # Error indicator
             print("Error: Current stimulus not found in master list!")
 
-        # --- Updated Print Statement ---
-        print('{}, Block: {}, Trial: {}/{}, TypeID: {}, Stimulus: {}'.format(
-              get_current_time(),
-              v.completed_blocks + 1, # Current Block Number
-              v.trial_in_block + 1,   # Trial number within block
-              v.block_size,           # Total trials in block
-              trial_type_id,          # Unique identifier for this stimulus type
-              current_stimulus))      # The actual stimulus (LED, Freq)
-        # --- End Updated Print Statement ---
+        # --- BND-Compatible Print Statements (NO LED DATA, NUMERIC ONLY) ---
+        # Print trial information as separate values
+        print('{} {}, block_number'.format(get_current_time(), v.completed_blocks + 1))
+        print('{} {}, trial_number'.format(get_current_time(), v.trial_in_block + 1))
+        print('{} {}, stimulus_type_id'.format(get_current_time(), trial_type_id))
+        
+        # SKIP LED PRINT STATEMENTS - User doesn't need LED data
+        
+        # Print sound information if applicable (white_noise = 0)
+        if freq_setting == 'white_noise':
+            print('{} 0, sound_frequency'.format(get_current_time()))  # Convert white_noise to 0
+        elif isinstance(freq_setting, (int, float)):
+            print('{} {}, sound_frequency'.format(get_current_time(), freq_setting))
+        # --- End BND-Compatible Print Statements ---
 
-        # Configure LEDs
+        # Configure LEDs (still control them, just don't log)
         if led_setting == v.led_config_left:
             hw.light.cue_array(v.led_indices_left)
             # print('  LED: Left ON') # Less verbose logging
@@ -249,5 +261,5 @@ def all_states(event):
     """
     if event == 'session_timer':
         # Session duration reached (backup stop condition)
-        print('{}, Session Timer Expired (Backup Stop)'.format(get_current_time()))
+        print('{} 1, session_timer_expired'.format(get_current_time()))
         stop_framework()
