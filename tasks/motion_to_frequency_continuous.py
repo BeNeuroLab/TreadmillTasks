@@ -34,18 +34,18 @@ v.session_duration = 30 * minute
 
 # Trial parameters
 v.intertrial_duration = 5 * second
-v.trial_timeout = 30 * second       # Max time to reach target frequency
+v.trial_timeout = 15 * second       # Max time to reach target frequency
 v.motion_wait_time = 2 * second     # Time without motion before trial can start
-v.reward_duration = 50 * ms
+v.reward_duration = 30 * ms
 
 # Distance and frequency mapping
-v.goal_distance = 1000       # Distance units to reach goal frequency
+v.goal_distance = 50       # Distance units to reach goal frequency
 v.current_distance = 0       # Accumulated distance traveled
 v.start_freq_hz = 2000      # Starting frequency (Hz)
 v.goal_freq_hz = 12000       # Goal frequency (Hz)
 
 # Discrete frequency steps
-v.num_steps = 12            # Number of discrete frequency steps (like semitones)
+v.num_steps = 5            # Number of discrete frequency steps (like semitones)
 v.current_step = 0          # Current frequency step
 v.current_freq = v.start_freq_hz
 
@@ -196,7 +196,7 @@ def reward(event):
         
     elif event == 'lick':
         v.reward_number += 1
-        hw.reward.deliver()
+        hw.reward.release()
         print('{}, reward_number'.format(v.reward_number))
         set_timer('trial_start', v.intertrial_duration, True)
         goto_state('intertrial')
