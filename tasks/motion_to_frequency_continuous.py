@@ -34,7 +34,7 @@ initial_state = 'intertrial'
 v.session_duration = 30 * minute
 
 # Trial parameters
-v.intertrial_duration = 5 * second
+v.intertrial_duration = 4 * second
 v.trial_timeout = 15 * second       # Max time to reach target frequency
 v.motion_wait_time = 2 * second     # Time without motion before trial can start
 v.reward_duration = 30 * ms
@@ -202,7 +202,7 @@ def trial(event):
 
 def reward(event):
     if event == 'entry':
-        hw.speaker.off()
+        
         set_timer('reward_timer', 5*second, True)  # 5 seconds to get reward
         
     elif event == 'exit':
@@ -211,6 +211,7 @@ def reward(event):
     elif event == 'lick':
         v.reward_number += 1
         hw.reward.release()
+        hw.speaker.off()
         print('{}, reward_number'.format(v.reward_number))
         set_timer('trial_start', v.intertrial_duration, True)
         goto_state('intertrial')
