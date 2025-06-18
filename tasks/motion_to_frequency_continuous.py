@@ -17,7 +17,7 @@ events = [
     'session_timer',
     'motion',        # Motion events from sensor
     'lick',
-    'trial_start',
+    'trial_begin',
     'trial_timer',
     'reward_timer',
     'motion_check_timer',
@@ -79,7 +79,7 @@ def calculate_frequency_for_step(step):
 def update_frequency_from_distance():
     """Update frequency based on current distance traveled"""
     # Calculate progress as fraction of goal distance
-    progress = min(v.current_distance / v.goal_distance, 1.0)
+    progress = int(min(v.current_distance / v.goal_distance, 1.0))
     
     # Calculate which discrete step we should be at
     new_step = int(progress * v.num_steps)
@@ -90,7 +90,7 @@ def update_frequency_from_distance():
         v.current_freq = calculate_frequency_for_step(v.current_step)
         hw.speaker.sine(v.current_freq)
         
-        print('{:.1f}, distance'.format(v.current_distance))
+        print('{}, distance'.format(v.current_distance))
         print('{}, frequency'.format(v.current_freq))
         
         # Check if we've reached the goal
@@ -213,7 +213,7 @@ def reward(event):
         hw.reward.release()
         hw.speaker.off()
         print('{}, reward_number'.format(v.reward_number))
-        set_timer('trial_start', v.intertrial_duration, True)
+        set_timer('trial_begin', v.intertrial_duration, True)
         goto_state('intertrial')
         
     elif event == 'reward_timer':
