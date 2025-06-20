@@ -36,18 +36,18 @@ v.session_duration = 30 * minute
 # Trial parameters
 v.intertrial_duration = 4 * second
 v.trial_timeout = 15 * second       # Max time to reach target frequency
-v.motion_wait_time = 2 * second     # Time without motion before trial can start
+v.motion_wait_time = 1 * second     # Time without motion before trial can start
 v.reward_duration = 30 * ms
 v.target_present_duration = 1 * second  # Duration to play goal frequency
 
 # Distance and frequency mapping
-v.goal_distance = 50       # Distance units to reach goal frequency
+v.goal_distance = 30       # Distance units to reach goal frequency
 v.current_distance = 0       # Accumulated distance traveled
 v.start_freq_hz = 2000      # Starting frequency (Hz)
 v.goal_freq_hz = 12000       # Goal frequency (Hz)
 
 # Discrete frequency steps
-v.num_steps = 5            # Number of discrete frequency steps (like semitones)
+v.num_steps = 3            # Number of discrete frequency steps (like semitones)
 v.current_step = 0          # Current frequency step
 v.current_freq = v.start_freq_hz
 
@@ -79,7 +79,7 @@ def calculate_frequency_for_step(step):
 def update_frequency_from_distance():
     """Update frequency based on current distance traveled"""
     # Calculate progress as fraction of goal distance
-    progress = int(min(v.current_distance / v.goal_distance, 1.0))
+    progress = min(v.current_distance / v.goal_distance, 1.0)
     
     # Calculate which discrete step we should be at
     new_step = int(progress * v.num_steps)
