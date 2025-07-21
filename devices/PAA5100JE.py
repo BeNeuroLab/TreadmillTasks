@@ -24,7 +24,7 @@ class PAA5100JE():
                      
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
-        SPIparams = {'baudrate': 400000, 'polarity': 1, 'phase': 1,
+        SPIparams = {'baudrate': 1000000, 'polarity': 1, 'phase': 1,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
         
         if '1' in SPI_type:
@@ -43,13 +43,13 @@ class PAA5100JE():
         # Define Chip Select (CS) pin (active low)
         self.select = Digital_output(pin=CS, inverted=True)
 
-        # time.sleep_ms(1)
-        # self.select.off() # Deselect the device by setting CS high
-        # time.sleep_ms(1)
-        # self.select.on() # Select the device by setting CS low
-        # time.sleep_ms(5)
-        # self.select.off()
-        # time.sleep_ms(1)
+        time.sleep_ms(1)
+        self.select.off() # Deselect the device by setting CS high
+        time.sleep_ms(1)
+        self.select.on() # Select the device by setting CS low
+        time.sleep_ms(1)
+        self.select.off()
+        time.sleep_ms(1)
                      
         # Reset the sensor
         self.firmware = PAA5100JE_firmware()
@@ -64,8 +64,8 @@ class PAA5100JE():
         # Registers initialization protocol
         PROGMEM = self.firmware.init_registers()
         self._bulk_write(PROGMEM[0:10])
-        
-        if self._read(0x67) & 0b10000000:
+        res = self._read(0x67) & 0x80
+        if res == 0x80:
             self._write(0x48, 0x04)
         else:
             self._write(0x48, 0x02)
@@ -99,9 +99,8 @@ class PAA5100JE():
         time.sleep_ms(10)
         # Check for successful initialization
         prod_ID = self._read(0x00)
-        prod_rev  = self._read(0x00)
-        assert prod_ID == 0x49, "Bad init. Prod_ID={}, rev={}".format(prod_ID, prod_rev)
-
+        assert prod_ID == 0x49
+                     
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
         if degrees == 0:
@@ -136,9 +135,9 @@ class PAA5100JE():
         time.sleep_us(1)
         self.spi.write(address)   # find specific address of the device
         self.spi.write(value)   # write value into the above address of the device
-        time.sleep_us(2)  # tSCLK-NCS for write operation
+        time.sleep_us(5)  # tSWW
         self.select.off()
-        time.sleep_us(10) # buffer time
+        time.sleep_us(5) # buffer time
    
     def _read(self, address: int):
         """Read register"""
@@ -147,16 +146,16 @@ class PAA5100JE():
         address = address.to_bytes(1, 'little')  # Convert the integer to a single byte
         
         self.select.on()
-        # time.sleep_us(1)
+        time.sleep_us(1)
         self.spi.write(address)
-        time.sleep_us(8)  # tSRAD + tSWR
+        time.sleep_us(5)  # tSRAD + tSWR
         
         data = self.spi.read(1)
         
         val = int.from_bytes(data, 'little')  # converts received data back to integer for further calculations
         time.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
         self.select.off()
-        time.sleep_us(1)  # tSRW/tSRR minus tSCLK-NCS
+        time.sleep_us(5)  # tSRW/tSRR minus tSCLK-NCS
         return val
 
     def _bulk_write(self, data: int):
