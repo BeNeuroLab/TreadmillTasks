@@ -99,7 +99,9 @@ class PAA5100JE():
         time.sleep_ms(10)
         # Check for successful initialization
         prod_ID = self._read(0x00)
-        assert prod_ID == 0x49
+        prod_rev  = self._read(0x00)
+        assert prod_ID == 0x49, "Bad init. Prod_ID={}, rev={}".format(prod_ID, prod_rev)
+
                      
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
