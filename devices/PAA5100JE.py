@@ -64,11 +64,12 @@ class PAA5100JE():
         # Registers initialization protocol
         PROGMEM = self.firmware.init_registers()
         self._bulk_write(PROGMEM[0:10])
-        res = self._read(0x67) & 0x80
-        if res == 0x80:
+
+        if self._read(0x67) & 0b10000000:
             self._write(0x48, 0x04)
         else:
             self._write(0x48, 0x02)
+
         self._bulk_write(PROGMEM[10:20])
         
         if self._read(0x73) == 0x00:
@@ -102,7 +103,7 @@ class PAA5100JE():
         prod_rev  = self._read(0x00)
         assert prod_ID == 0x49, "Bad init. Prod_ID={}, rev={}".format(prod_ID, prod_rev)
 
-                     
+
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
         if degrees == 0:
