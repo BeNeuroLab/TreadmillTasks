@@ -59,7 +59,6 @@ class PAA5100JE():
         # Read motion registers once after reset
         for offset in range(5):
             self._read(self.firmware.REG_DATA_READY + offset)
-        time.sleep_ms(1)
                            
         # Registers initialization protocol
         PROGMEM = self.firmware.init_registers()
@@ -100,8 +99,8 @@ class PAA5100JE():
         time.sleep_ms(10)
         # Check for successful initialization
         prod_ID = self._read(0x00)
-        prod_rev  = self._read(0x00)
-        assert prod_ID == 0x49, "Bad init. Prod_ID={}, rev={}".format(prod_ID, prod_rev)
+        prod_rev  = self._read(0x01)
+        assert prod_ID == 0x49, "Bad init. Prod_ID={}, Rev={}, SPI={}".format(prod_ID, prod_rev, self.spi)
 
 
     def set_rotation(self, degrees:int =0):
