@@ -24,7 +24,7 @@ class PAA5100JE():
                      
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
-        SPIparams = {'baudrate': 1000000, 'polarity': 1, 'phase': 1,
+        SPIparams = {'baudrate': 400000, 'polarity': 0, 'phase': 0,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
         
         if '1' in SPI_type:
@@ -47,7 +47,7 @@ class PAA5100JE():
         self.select.off() # Deselect the device by setting CS high
         time.sleep_ms(1)
         self.select.on() # Select the device by setting CS low
-        time.sleep_ms(1)
+        time.sleep_ms(50)
         self.select.off()
         time.sleep_ms(1)
                      
