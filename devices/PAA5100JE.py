@@ -31,7 +31,7 @@ class PAA5100JE():
                      
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
-        SPIparams = {'baudrate': 1000000, 'polarity': 1, 'phase': 1,
+        SPIparams = {'baudrate': 2000000, 'polarity': 1, 'phase': 1,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
         
         if '1' in SPI_type:
