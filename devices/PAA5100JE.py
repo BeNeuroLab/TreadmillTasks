@@ -100,7 +100,7 @@ class PAA5100JE():
         # Check for successful initialization
         prod_ID = self._read(0x00)
         prod_rev  = self._read(0x01)
-        assert prod_ID == 0x49, "Bad init. Prod_ID={}, Rev={}, SPI={}".format(prod_ID, prod_rev, self.spi)
+        assert prod_ID == 0x49, "Bad init. Prod_ID={:#x}, Rev={:#x}, SPI={}".format(prod_ID, prod_rev, self.spi)
 
 
     def set_rotation(self, degrees:int =0):
