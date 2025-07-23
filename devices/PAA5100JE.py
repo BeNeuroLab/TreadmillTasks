@@ -9,6 +9,13 @@ def to_signed_16(value):
         value -= 0x10000  # Convert to negative
     return value
 
+def twos_comp(val, bits=16):
+    """compute the 2's complement of int value val"""
+    if (val & (1 << (bits - 1))) != 0:  # if sign bit is set e.g., 8bit: 128-255
+        val = val - (1 << bits)         # compute negative value
+    return val                          # return positive value as is
+
+
 class PAA5100JE():
     """
     Optical tracking sensor:
@@ -102,6 +109,15 @@ class PAA5100JE():
         prod_ID = self._read(0x00)
         prod_rev  = self._read(0x01)
         assert prod_ID == 0x49, "Bad init. Prod_ID={:#x}, Rev={:#x}, SPI={}".format(prod_ID, prod_rev, self.spi)
+        # CPI from: https://github.com/zic-95/PAA5100JE/blob/1644a74095bf5f9345d43fffa26aea2661e1c56c/src/PAA5100JE.cpp#L75
+        # distance from sensor fixed at 1cm=0.01m
+        height = 0.01 # m
+        self.CPI = 11.914 * (1 / (height));  # PixArt formulae
+        
+        burst_address = self.firmware.REG_MOTION_BURST
+        burst_address &= ~0x80  # Flip MSB to 1
+        self.burst_address = burst_address.to_bytes(1, 'little')
+
 
 
     def set_rotation(self, degrees:int =0):
@@ -167,23 +183,19 @@ class PAA5100JE():
             address, value = data[x : x + 2]
             self._write(address, value)
             
-    def read_registers(self, address: int, buf: bytearray):
-        """Read an array of data from the registers, used for reading motion burst"""
-        address &= ~0x80  # Flip MSB to 1
-        address = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
-        
+    def read_burst(self, buf: bytearray):
+        """Read an array of data from the registers, used for reading motion burst"""       
         self.select.on()
         time.sleep_us(1)
-        self.spi.write(address)
+        self.spi.write(self.burst_address)
         time.sleep_us(5)
         # Read 12 bytes of data from the motion burst register
-        for i in range(12):
-            buf[i] = self.spi.read(1)
+        self.spi.readinto(buf)
         time.sleep_us(5)
         self.select.off()
         time.sleep_us(50)
         # Check for data being successfully read into the buffer
-        assert buf[10] == 0x1F, str(buf[10])
+        # assert buf[10] == 0x1F, str(buf[10])
 
     def shut_down(self, deinitSPI:bool =True):
         """Shutdown the sensor"""
@@ -219,7 +231,11 @@ class MotionDetector2(Analog_input):
         self.y_buffer = bytearray(12)
         self.x_buffer_mv = memoryview(self.x_buffer)
         self.y_buffer_mv = memoryview(self.y_buffer)
-                     
+
+        self.delta_x_mv = self.x_buffer_mv[2:4]
+        self.delta_y_mv = self.y_buffer_mv[4:6]
+
+
         self.delta_x, self.delta_y = 0, 0    # accumulated position
         self._delta_x, self._delta_y = 0, 0  # instantaneous position
         self.x, self.y = 0, 0  # to be accessed from the task, unit=mm
@@ -244,7 +260,7 @@ class MotionDetector2(Analog_input):
 
     @threshold.setter
     def threshold(self, new_threshold):
-        self._threshold = int((new_threshold)**2) * self.calib_coef
+        self._threshold = int((new_threshold / 2.54 * self.sensor_x.CPI)**2) * self.calib_coef
         self.reset_delta()
         
     def reset_delta(self):
@@ -255,12 +271,12 @@ class MotionDetector2(Analog_input):
         """read motion once"""
         # All units are in millimeters
         # Read motion in x direction
-        self.sensor_x.read_registers(self.firmware.REG_MOTION_BURST, self.x_buffer_mv)
-        self._delta_x = to_signed_16((self.x_buffer_mv[3] << 8) | self.x_buffer_mv[2])
+        self.sensor_x.read_burst(self.x_buffer_mv)
+        self._delta_x = twos_comp(int.from_bytes(self.delta_x_mv, 'little'))
 
         # Read motion in y direction
-        self.sensor_y.read_registers(self.firmware.REG_MOTION_BURST, self.y_buffer_mv)
-        self._delta_y = to_signed_16((self.y_buffer_mv[5] << 8) | self.y_buffer_mv[4])
+        self.sensor_y.read_burst(self.y_buffer_mv)
+        self._delta_y = twos_comp(int.from_bytes(self.delta_y_mv, 'little'))
         
         # Record accumulated motion
         self.delta_y += self._delta_y
@@ -277,7 +293,7 @@ class MotionDetector2(Analog_input):
             self.y = self.delta_y
             self.reset_delta()
             self.timestamp = fw.current_time
-            interrupt_queue.put(self.ID)  # Note: no self.ID for this sensor, cannot interrupt queue so data were not sent
+            interrupt_queue.put(self.ID)
 
     def _stop_acquisition(self):
         """Stop sampling analog input values."""
