@@ -24,7 +24,7 @@ class PAA5100JE():
                      
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
-        SPIparams = {'baudrate': 400000, 'polarity': 0, 'phase': 0,
+        SPIparams = {'baudrate': 1000000, 'polarity': 1, 'phase': 1,
                      'bits': 8, 'firstbit': machine.SPI.MSB}
         
         if '1' in SPI_type:
@@ -55,7 +55,8 @@ class PAA5100JE():
         self.firmware = PAA5100JE_firmware()
         self._write(self.firmware.REG_POWER_UP_RESET, 0x5A)
 
-        time.sleep_ms(20)
+        time.sleep_ms(1)
+
         # Read motion registers once after reset
         for offset in range(5):
             self._read(self.firmware.REG_DATA_READY + offset)
@@ -136,10 +137,10 @@ class PAA5100JE():
         self.select.on()
         time.sleep_us(1)
         self.spi.write(address)   # find specific address of the device
-        self.spi.write(value)   # write value into the above address of the device
-        time.sleep_us(5)  # tSWW
+        self.spi.write(value)     # write value into the above address of the device
+        time.sleep_us(5)          # tSCLK-NCS for write operation
         self.select.off()
-        time.sleep_us(5) # buffer time
+        time.sleep_us(5)          # tSWW/tSWR (=120us) minus tSCLK-NCS.
    
     def _read(self, address: int):
         """Read register"""
@@ -150,14 +151,14 @@ class PAA5100JE():
         self.select.on()
         time.sleep_us(1)
         self.spi.write(address)
-        time.sleep_us(5)  # tSRAD + tSWR
+        time.sleep_us(5)  # tSRAD
         
         data = self.spi.read(1)
         
         val = int.from_bytes(data, 'little')  # converts received data back to integer for further calculations
         time.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
         self.select.off()
-        time.sleep_us(5)  # tSRW/tSRR minus tSCLK-NCS
+        time.sleep_us(5)  # tSRW/tSRR (=20us) minus tSCLK-NCS
         return val
 
     def _bulk_write(self, data: int):
@@ -207,8 +208,8 @@ class MotionDetector2(Analog_input):
                  sampling_rate=100, event='motion'):
         
         # Create SPI objects
-        self.motSen_x = PAA5100JE('SPI2', cs1)
-        self.motSen_y = PAA5100JE('SPI2', cs2)
+        self.sensor_x = PAA5100JE('SPI2', cs1)
+        self.sensor_y = PAA5100JE('SPI2', cs2)
 
         self.calib_coef = calib_coef
         self.threshold = threshold
@@ -254,11 +255,11 @@ class MotionDetector2(Analog_input):
         """read motion once"""
         # All units are in millimeters
         # Read motion in x direction
-        self.motSen_x.read_registers(self.firmware.REG_MOTION_BURST, self.x_buffer_mv, 12)
+        self.sensor_x.read_registers(self.firmware.REG_MOTION_BURST, self.x_buffer_mv, 12)
         self._delta_x = to_signed_16((self.x_buffer_mv[3] << 8) | self.x_buffer_mv[2])
 
         # Read motion in y direction
-        self.motSen_y.read_registers(self.firmware.REG_MOTION_BURST, self.y_buffer_mv, 12)
+        self.sensor_y.read_registers(self.firmware.REG_MOTION_BURST, self.y_buffer_mv, 12)
         self._delta_y = to_signed_16((self.y_buffer_mv[5] << 8) | self.y_buffer_mv[4])
         
         # Record accumulated motion
@@ -283,8 +284,8 @@ class MotionDetector2(Analog_input):
         self.timer.deinit()
         self.data_chx.stop()
         self.data_chy.stop()
-        self.motSen_x.shut_down(deinitSPI=False)      
-        self.motSen_y.shut_down()
+        self.sensor_x.shut_down(deinitSPI=False)      
+        self.sensor_y.shut_down()
         self.acquiring = False
         self.reset_delta()
         
