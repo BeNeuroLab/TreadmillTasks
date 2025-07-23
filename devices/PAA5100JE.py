@@ -167,7 +167,7 @@ class PAA5100JE():
             address, value = data[x : x + 2]
             self._write(address, value)
             
-    def read_registers(self, address: int, buf: bytearray, len: int):
+    def read_registers(self, address: int, buf: bytearray):
         """Read an array of data from the registers, used for reading motion burst"""
         address &= ~0x80  # Flip MSB to 1
         address = address.to_bytes(1, 'little')  # Convert the address from integer to a single byte
@@ -255,11 +255,11 @@ class MotionDetector2(Analog_input):
         """read motion once"""
         # All units are in millimeters
         # Read motion in x direction
-        self.sensor_x.read_registers(self.firmware.REG_MOTION_BURST, self.x_buffer_mv, 12)
+        self.sensor_x.read_registers(self.firmware.REG_MOTION_BURST, self.x_buffer_mv)
         self._delta_x = to_signed_16((self.x_buffer_mv[3] << 8) | self.x_buffer_mv[2])
 
         # Read motion in y direction
-        self.sensor_y.read_registers(self.firmware.REG_MOTION_BURST, self.y_buffer_mv, 12)
+        self.sensor_y.read_registers(self.firmware.REG_MOTION_BURST, self.y_buffer_mv)
         self._delta_y = to_signed_16((self.y_buffer_mv[5] << 8) | self.y_buffer_mv[4])
         
         # Record accumulated motion
