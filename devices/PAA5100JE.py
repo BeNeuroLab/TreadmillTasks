@@ -1,13 +1,11 @@
-import time, gc, math, machine
-from array import array
-from pyControl.hardware import *
-from devices.PAA5100JE_firmware import *
+import time
+import gc
+import math
+import machine
 
-def to_signed_16(value):
-    """Convert a 16-bit integer to a signed 16-bit integer."""
-    if value & 0x8000:  # Check if the sign bit is set
-        value -= 0x10000  # Convert to negative
-    return value
+from pyControl.hardware import *
+import devices.PAA5100JE_firmware as PAA5100JE_firmware
+
 
 def twos_comp(val, bits=16):
     """compute the 2's complement of int value val"""
@@ -18,22 +16,23 @@ def twos_comp(val, bits=16):
 
 class PAA5100JE():
     """
-    Optical tracking sensor:
+    Optical optical flow sensor:
     C++ code reference can be found on: https://github.com/pimoroni/pimoroni-pico.git
     and on https://github.com/zic-95/PAA5100JE/blob/main/src/PAA5100JE.cpp
     """
     def __init__(self, 
-                 SPI_type: str, 
-                 CS: str, 
-                 MI: str = None, 
-                 MO: str = None, 
-                 SCK: str = None):
-                     
+                SPI_type: str, 
+                CS: str, 
+                MI: str = None, 
+                MO: str = None, 
+                SCK: str = None
+                ):
+
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
         SPIparams = {'baudrate': 2000000, 'polarity': 1, 'phase': 1,
-                     'bits': 8, 'firstbit': machine.SPI.MSB}
-        
+                    'bits': 8, 'firstbit': machine.SPI.MSB}
+
         if '1' in SPI_type:
             self.spi = machine.SPI(1, **SPIparams)
 
@@ -42,11 +41,11 @@ class PAA5100JE():
 
         elif 'soft' in SPI_type.lower():  # Works for newer versions of micropython
             self.spi = machine.SoftSPI(sck=machine.Pin(SCK, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
-                                       mosi=machine.Pin(MO, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
-                                       miso=machine.Pin(MI, mode=machine.Pin.IN),
-                                       **SPIparams
-                                       )
-                         
+                                    mosi=machine.Pin(MO, mode=machine.Pin.OUT, pull=machine.Pin.PULL_DOWN),
+                                    miso=machine.Pin(MI, mode=machine.Pin.IN),
+                                    **SPIparams
+                                    )
+
         # Define Chip Select (CS) pin (active low)
         self.select = Digital_output(pin=CS, inverted=True)
 
@@ -57,68 +56,22 @@ class PAA5100JE():
         time.sleep_ms(50)
         self.select.off()
         time.sleep_ms(1)
-                     
-        # Reset the sensor
-        self.firmware = PAA5100JE_firmware()
-        self._write(self.firmware.REG_POWER_UP_RESET, 0x5A)
 
-        time.sleep_ms(1)
+        self.power_up()  # Power up the sensor
 
-        # Read motion registers once after reset
-        for offset in range(5):
-            self._read(self.firmware.REG_DATA_READY + offset)
-                           
-        # Registers initialization protocol
-        PROGMEM = self.firmware.init_registers()
-        self._bulk_write(PROGMEM[0:10])
-
-        if self._read(0x67) & 0b10000000:
-            self._write(0x48, 0x04)
-        else:
-            self._write(0x48, 0x02)
-
-        self._bulk_write(PROGMEM[10:20])
-        
-        if self._read(0x73) == 0x00:
-            c1 = int(self._read(0x70))
-            c2 = int(self._read(0x71))
-            if c1 <= 28:
-                c1 += 14
-            if c1 > 28:
-                c1 += 11
-            c1 = max(0, min(0x3F, c1))
-            c2 = (c2 * 45) // 100
-    
-            self._bulk_write([
-                0x7F, 0x00,
-                0x61, 0xAD,
-                0x51, 0x70,
-                0x7F, 0x0E
-            ])
-            self._write(0x70, c1)
-            self._write(0x71, c2)
-
-        self._bulk_write(PROGMEM[20:154])
-        time.sleep_ms(10)
-        self._bulk_write(PROGMEM[154:186])
-        time.sleep_ms(10)
-        self._bulk_write(PROGMEM[186:])
-        
-        time.sleep_ms(10)
         # Check for successful initialization
         prod_ID = self._read(0x00)
         prod_rev  = self._read(0x01)
         assert prod_ID == 0x49, "Bad init. Prod_ID={:#x}, Rev={:#x}, SPI={}".format(prod_ID, prod_rev, self.spi)
+
         # CPI from: https://github.com/zic-95/PAA5100JE/blob/1644a74095bf5f9345d43fffa26aea2661e1c56c/src/PAA5100JE.cpp#L75
         # distance from sensor fixed at 2cm=0.02m
-        height = 0.02 # m
-        self.CPI = 11.914 * (1 / (height));  # PixArt formulae
-        
-        burst_address = self.firmware.REG_MOTION_BURST
+        HEIGHT = 0.02 # m
+        self.CPI = 11.914 * (1 / (HEIGHT))  # PixArt formulae
+
+        burst_address = PAA5100JE_firmware.REG_MOTION_BURST
         burst_address &= ~0x80  # Flip MSB to 1
         self.burst_address = burst_address.to_bytes(1, 'little')
-
-
 
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
@@ -142,7 +95,7 @@ class PAA5100JE():
             value |= 0b01000000
         if invert_x:
             value |= 0b00100000
-        self._write(self.firmware.REG_ORIENTATION, value)
+        self._write(PAA5100JE_firmware.REG_ORIENTATION, value)
     
     def _write(self, address: int, value: int):
         """Write value into register"""
@@ -157,7 +110,7 @@ class PAA5100JE():
         time.sleep_us(5)          # tSCLK-NCS for write operation
         self.select.off()
         time.sleep_us(5)          # tSWW/tSWR (=120us) minus tSCLK-NCS.
-   
+
     def _read(self, address: int):
         """Read register"""
         # Create a buffer to send
@@ -168,22 +121,22 @@ class PAA5100JE():
         time.sleep_us(1)
         self.spi.write(address)
         time.sleep_us(5)  # tSRAD
-        
+
         data = self.spi.read(1)
-        
+
         val = int.from_bytes(data, 'little')  # converts received data back to integer for further calculations
         time.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
         self.select.off()
         time.sleep_us(5)  # tSRW/tSRR (=20us) minus tSCLK-NCS
         return val
 
-    def _bulk_write(self, data: int):
+    def _bulk_write(self, data: list[int]):
         """Write a list of commands into registers"""
         for x in range(0, len(data), 2):
             address, value = data[x : x + 2]
             self._write(address, value)
-            
-    def read_burst(self, buf: bytearray):
+
+    def read_burst(self, buf: bytearray | memoryview):
         """Read an array of data from the registers, used for reading motion burst"""       
         self.select.on()
         time.sleep_us(1)
@@ -194,8 +147,55 @@ class PAA5100JE():
         time.sleep_us(5)
         self.select.off()
         time.sleep_us(50)
-        # Check for data being successfully read into the buffer
-        # assert buf[10] == 0x1F, str(buf[10])
+
+    def power_up(self):
+        """
+        Perform the power up sequenceL `_secret_sauce`
+        """
+        # Reset the sensor
+        self._write(PAA5100JE_firmware.REG_POWER_UP_RESET, 0x5A)
+        time.sleep_ms(1)
+
+        # Read motion registers once after reset
+        for offset in range(5):
+            self._read(PAA5100JE_firmware.REG_DATA_READY + offset)
+
+        # Registers initialization protocol
+        PROGMEM = PAA5100JE_firmware.PROGMEM
+        self._bulk_write(PROGMEM[0:10])
+
+        if self._read(0x67) & 0b10000000:
+            self._write(0x48, 0x04)
+        else:
+            self._write(0x48, 0x02)
+        self._bulk_write(PROGMEM[10:20])
+
+        if self._read(0x73) == 0x00:
+            c1 = int(self._read(0x70))
+            c2 = int(self._read(0x71))
+            if c1 <= 28:
+                c1 += 14
+            if c1 > 28:
+                c1 += 11
+            c1 = max(0, min(0x3F, c1))
+            c2 = (c2 * 45) // 100
+
+            self._bulk_write([
+                0x7F, 0x00,
+                0x61, 0xAD,
+                0x51, 0x70,
+                0x7F, 0x0E
+            ])
+            self._write(0x70, c1)
+            self._write(0x71, c2)
+
+        self._bulk_write(PROGMEM[20:154])
+        time.sleep_ms(10)
+        self._bulk_write(PROGMEM[154:186])
+        time.sleep_ms(10)
+        self._bulk_write(PROGMEM[186:])
+        time.sleep_ms(10)
+
 
     def shut_down(self, deinitSPI:bool =True):
         """Shutdown the sensor"""
@@ -209,16 +209,18 @@ class PAA5100JE():
         time.sleep_ms(1)
         if deinitSPI:
             self.spi.deinit()
-        
+
+
 class MotionDetector2(Analog_input):
     """
     Using the Analog_input code to interface with 2 PAA5100JE sensors
     reading `x` (SPI2) and `y` (SPI2) separately.
     """
     def __init__(self, reset: str, cs1: str, cs2: str,
-                 name='MotSen', threshold=1, calib_coef=1,  
-                 sampling_rate=100, event='motion'):
-        
+                name='MotSen', threshold=1, calib_coef=1,  
+                sampling_rate=100, event='motion'
+                ):
+
         # Create SPI objects
         self.sensor_x = PAA5100JE('SPI2', cs1)
         self.sensor_y = PAA5100JE('SPI2', cs2)
@@ -231,28 +233,27 @@ class MotionDetector2(Analog_input):
         self.y_buffer = bytearray(12)
         self.x_buffer_mv = memoryview(self.x_buffer)
         self.y_buffer_mv = memoryview(self.y_buffer)
-
         self.delta_x_mv = self.x_buffer_mv[2:4]
         self.delta_y_mv = self.y_buffer_mv[4:6]
-
 
         self.delta_x, self.delta_y = 0, 0    # accumulated position
         self._delta_x, self._delta_y = 0, 0  # instantaneous position
         self.x, self.y = 0, 0  # to be accessed from the task, unit=mm
-        
+
         # Parent
         Analog_input.__init__(self, pin=None, name=name + '-X', sampling_rate=int(sampling_rate),
-                              threshold=threshold, rising_event=event, falling_event=None,
-                              data_type='l')
+                            threshold=threshold, rising_event=event, falling_event=None,
+                            data_type='l'
+                            )
         self.data_chx = self.data_channel
         self.data_chy = Data_channel(name + '-Y', sampling_rate, data_type='l')
         self.crossing_direction = True  # to conform to the Analog_input syntax
         self.timestamp = fw.current_time
         self.acquiring = False
-        
+
         gc.collect()
         time.sleep_ms(2)
-    
+
     @property
     def threshold(self):
         "return the value in mms"
@@ -262,14 +263,13 @@ class MotionDetector2(Analog_input):
     def threshold(self, new_threshold):
         self._threshold = int((new_threshold / 2.54 * self.sensor_x.CPI)**2) * self.calib_coef
         self.reset_delta()
-        
+
     def reset_delta(self):
         """reset the accumulated position data"""
         self.delta_x, self.delta_y = 0, 0
-    
+
     def read_sample(self):
-        """read motion once"""
-        # All units are in millimeters
+        """read motion in the interrupt routine"""
         # Read motion in x direction
         self.sensor_x.read_burst(self.x_buffer_mv)
         self._delta_x = twos_comp(int.from_bytes(self.delta_x_mv, 'little'))
@@ -304,7 +304,7 @@ class MotionDetector2(Analog_input):
         self.sensor_y.shut_down()
         self.acquiring = False
         self.reset_delta()
-        
+
     def _start_acquisition(self):
         """Start sampling analog input values"""
         self.timer.init(freq=self.data_chx.sampling_rate)
