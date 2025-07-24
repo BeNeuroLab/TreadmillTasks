@@ -203,7 +203,7 @@ class PAA5100JE():
         time.sleep_ms(1)
         self.select.on()
         time.sleep_ms(60)
-        self._write(self.firmware.REG_SHUTDOWN, 0xB6)
+        self._write(PAA5100JE_firmware.REG_SHUTDOWN, 0xB6)
         time.sleep_ms(1)
         self.select.off()
         time.sleep_ms(1)
