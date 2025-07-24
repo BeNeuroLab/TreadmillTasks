@@ -110,8 +110,8 @@ class PAA5100JE():
         prod_rev  = self._read(0x01)
         assert prod_ID == 0x49, "Bad init. Prod_ID={:#x}, Rev={:#x}, SPI={}".format(prod_ID, prod_rev, self.spi)
         # CPI from: https://github.com/zic-95/PAA5100JE/blob/1644a74095bf5f9345d43fffa26aea2661e1c56c/src/PAA5100JE.cpp#L75
-        # distance from sensor fixed at 1cm=0.01m
-        height = 0.01 # m
+        # distance from sensor fixed at 2cm=0.02m
+        height = 0.02 # m
         self.CPI = 11.914 * (1 / (height));  # PixArt formulae
         
         burst_address = self.firmware.REG_MOTION_BURST
@@ -213,7 +213,7 @@ class PAA5100JE():
 class MotionDetector2(Analog_input):
     """
     Using the Analog_input code to interface with 2 PAA5100JE sensors
-    reading `x` (SPI2) and `y` (softSPI) separately.
+    reading `x` (SPI2) and `y` (SPI2) separately.
     """
     def __init__(self, reset: str, cs1: str, cs2: str,
                  name='MotSen', threshold=1, calib_coef=1,  
