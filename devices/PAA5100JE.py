@@ -86,7 +86,7 @@ class PAA5100JE():
         else:
             raise TypeError("Degrees must be one of 0, 90, 180 or 270")
 
-    def set_orientation(self, invert_x:bool =True, invert_y:bool =True, swap_xy:bool =True):
+    def set_orientation(self, invert_x:bool =False, invert_y:bool =False, swap_xy:bool =False):
         """Set orientation of PAA5100 manually."""
         value = 0
         if swap_xy:
@@ -222,8 +222,12 @@ class MotionDetector2(Analog_input):
                 ):
 
         # Create SPI objects
-        self.sensor_x = PAA5100JE('SPI2', cs1)
-        self.sensor_y = PAA5100JE('SPI2', cs2)
+        self.sensor_x = PAA5100JE('SPI2', cs2)
+        self.sensor_y = PAA5100JE('SPI2', cs1)
+
+        # for consistency with PMW3360 sensors
+        self.sensor_x.set_orientation(invert_x=True)
+        self.sensor_y.set_orientation(invert_y=True)
 
         self.calib_coef = calib_coef
         self.threshold = threshold
