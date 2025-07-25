@@ -211,7 +211,7 @@ class PAA5100JE():
             self.spi.deinit()
 
 
-class MotionDetector2(Analog_input):
+class MotionDetector(Analog_input):
     """
     Using the Analog_input code to interface with 2 PAA5100JE sensors
     reading `x` (SPI2) and `y` (SPI2) separately.
