@@ -2,6 +2,31 @@ import pyb, machine, time
 import pyControl.hardware as _h
 
 
+
+class LedStirp(IO_object):
+    def __init__(self):
+        """
+        LED strip control class
+        """
+    def cue(self, dir_percent:int):
+        """turn on the LED corresponding to the given percentagedirection
+        It MUST be between 0 and 100
+        """
+        assert 0 <= dir_percent <= 100, "Invalid direction"
+        self.send_int(dir_percent)
+
+    def start(self):
+        self.uart_led = UART(4, 9600)  # uart1=port 10, init with given baudrate
+        self.uart_led.init(9600, bits=8, parity=None, stop=1)
+
+    def stop(self):
+        self.uart_led.deinit()
+
+    def send_int(self, value: int) -> None:
+        """Send a 2-byte little-endian integer to the host."""
+        self.uart_led.write(value.to_bytes(2, 'little'))
+
+
 class LEDStim:
     "LED stimuli."
     def __init__(self):
