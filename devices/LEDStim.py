@@ -1,13 +1,13 @@
-import pyb, machine, time
+import pyb
 import pyControl.hardware as _h
 
 
 
-class LedStirp(IO_object):
-    def __init__(self):
-        """
-        LED strip control class
-        """
+class LedStirp(_h.IO_object):
+    """
+    LED strip control class
+    """
+
     def cue(self, dir_percent:int):
         """turn on the LED corresponding to the given percentagedirection
         It MUST be between 0 and 100
