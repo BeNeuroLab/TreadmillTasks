@@ -16,7 +16,7 @@ class LedStirp(IO_object):
         self.send_int(dir_percent)
 
     def start(self):
-        self.uart_led = UART(4, 9600)  # uart1=port 10, init with given baudrate
+        self.uart_led = pyb.UART(4, 9600)  # uart1=port 10, init with given baudrate
         self.uart_led.init(9600, bits=8, parity=None, stop=1)
 
     def stop(self):
