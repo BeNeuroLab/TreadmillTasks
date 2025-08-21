@@ -5,6 +5,8 @@ import pyControl.hardware as _h
 class LedStirp(_h.IO_object):
     """
     LED strip control class
+    based on:
+    https://github.com/CeciliaGallego/dostar-led-stip/blob/main/code.py
     """
 
     def cue(self, dir_percent:int):
@@ -21,10 +23,25 @@ class LedStirp(_h.IO_object):
 
     def stop(self):
         self.uart_led.deinit()
+    
+    def all_red(self):
+        "turn off all LEDs, everything red"
+        self.send_int(201)
+
+    def all_off(self):
+        "turn off all LEDs"
+        self.send_int(200)
+
+    def cue_bilateral(self, bilatral = True):
+        "switch whether cue is symmetrical (central target) or not"
+        if bilatral:
+            self.send_int(210)
+        else:
+            self.send_int(211)
 
     def send_int(self, value: int) -> None:
         """Send a 2-byte little-endian integer to the host."""
-        self.uart_led.write(value.to_bytes(2, 'little'))
+        self.uart_led.write(value.to_bytes(1))
 
 
 class LEDStim:

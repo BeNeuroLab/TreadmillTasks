@@ -32,7 +32,7 @@ class UARTlink(_h.IO_object):
                 _h.interrupt_queue.put(self.ID)
                 self.prev_spk = self.spk
                 if self.do_led_strip:
-                    self.uart_led.write(self.buffer)
+                    self.uart_led.write(self.spk.to_bytes(1))
 
     def start(self):
         "this method must be called in the `run_start` of any task file"
