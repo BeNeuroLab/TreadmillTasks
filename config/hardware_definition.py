@@ -5,14 +5,18 @@ board = Breakout_dseries_1_6()
 # Instantiate Devices.
 bci_link = UARTlink('cursor_update', timer_freq=100)
 
-motionSensor = MotionDetector(name='MotSen1', event='motion',
-                              reset=board.port_1.DIO_C,
-                              cs1=board.port_2.DIO_A,
-                              cs2=board.port_2.DIO_B,
-                              calib_coef=1, threshold=1, sampling_rate=100)
+motionSensor = MotionDetector(
+    name='MotSen1', 
+    event='motion',
+    reset=board.port_1.DIO_C,
+    cs1=board.port_2.DIO_A,
+    cs2=board.port_2.DIO_B,
+    calib_coef=1,
+    threshold=1, 
+    sampling_rate=100
+)
 
-light = LEDStim()
-light.all_off()
+light = LedStirp()
 
 lickometer = Lickometer(lick_port=board.port_6, sol_port=board.port_4, rising_event_A='lick', debounce=5)
 reward = Reward(lickometer.SOL_1 , reward_duration=50)
