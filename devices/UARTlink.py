@@ -1,8 +1,8 @@
-from pyControl.hardware import *
+import pyControl.hardware as _h
 from pyb import UART, Timer
 
 
-class UARTlink(IO_object):
+class UARTlink(_h.IO_object):
     def __init__(self, bci_event_name, timer_freq = 100, do_led_strip = False):
         """
         uart device class: for BCI comm and for led strip
@@ -17,8 +17,8 @@ class UARTlink(IO_object):
         self.buffer = bytearray(8)
         self.name = bci_event_name
         self.timer_freq = timer_freq
-        assign_ID(self)
-        self.timer = Timer(available_timers.pop())
+        _h.assign_ID(self)
+        self.timer = Timer(_h.available_timers.pop())
         self.timestamp = 0
         self.spk = 0
         self.prev_spk = 0
@@ -29,12 +29,13 @@ class UARTlink(IO_object):
             self.spk = int.from_bytes(self.buffer, 'little')
             if self.spk != self.prev_spk:
                 self.timestamp = fw.current_time
-                interrupt_queue.put(self.ID)
+                _h.interrupt_queue.put(self.ID)
                 self.prev_spk = self.spk
                 if self.do_led_strip:
                     self.uart_led.write(self.buffer)
 
     def start(self):
+        "this method must be called in the `run_start` of any task file"
         self.uart_bci = UART(1, 9600)  # uart1=port 12, init with given baudrate        
         self.uart_bci.init(9600, bits=8, parity=None, stop=1)
 
@@ -52,7 +53,7 @@ class UARTlink(IO_object):
             self.uart_led.deinit()
 
     def _process_interrupt(self):
-        fw.event_queue.put((self.timestamp, fw.event_typ, fw.events[self.name]))
+        _h.fw.event_queue.put((self.timestamp, _h.fw.event_typ, _h.fw.events[self.name]))
 
     def bci_send_int(self, value: int) -> None:
         """Send a 2-byte little-endian integer to the host."""

@@ -2,7 +2,6 @@ import pyb
 import pyControl.hardware as _h
 
 
-
 class LedStirp(_h.IO_object):
     """
     LED strip control class
@@ -16,6 +15,7 @@ class LedStirp(_h.IO_object):
         self.send_int(dir_percent)
 
     def start(self):
+        "this method must be called in the `run_start` of any task file"
         self.uart_led = pyb.UART(4, 9600)  # uart1=port 10, init with given baudrate
         self.uart_led.init(9600, bits=8, parity=None, stop=1)
 
