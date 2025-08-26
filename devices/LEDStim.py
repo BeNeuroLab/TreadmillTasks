@@ -18,12 +18,17 @@ class LedStirp(_h.IO_object):
 
     def start(self):
         "this method must be called in the `run_start` of any task file"
-        self.uart_led = pyb.UART(4, 9600)  # uart1=port 10, init with given baudrate
-        self.uart_led.init(9600, bits=8, parity=None, stop=1)
+        self.uart_led = pyb.UART(4)  # uart4=port 10
+        self.uart_led.init(baudrate=9600, bits=8, parity=None, stop=1)
+        self.all_red()
 
-    def stop(self):
-        self.uart_led.deinit()
-    
+    def off(self):
+        try:  # in case it hasn't been initialised
+            self.all_off()
+            self.uart_led.deinit()
+        except:
+            pass
+
     def all_red(self):
         "turn off all LEDs, everything red"
         self.send_int(201)
