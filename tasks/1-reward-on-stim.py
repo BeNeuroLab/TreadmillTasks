@@ -29,7 +29,8 @@ initial_state = 'trial'
 v.session_duration = 30 * minute
 v.reward_duration = 30 * ms
 
-v.sweep_bins = (.1 * second, .1 * second, .2 * second, 2 * second)
+v.sweep_bins = (.1 * second, .2 * second, .3 * second)
+v.cursor_match_dur = 3 * second
 
 v.reward_number = 0
 v.IT_duration = 5 * second
@@ -37,7 +38,7 @@ v.IT_duration = 5 * second
 
 v.leds___ = list(range(1,101))
 v.current_led___ = v.leds___[0]
-
+v.next_led___ = v.leds___[0]
 
 # -------------------------------------------------------------------------
 
@@ -69,22 +70,22 @@ def run_end():
 def trial(event):
     "trial"
     if event == 'entry':
-        new_led = v.current_led___ + 2
-        if new_led < v.leds___[-1]:
-            hw.light.cue(new_led)
-            print('{}, led_direction'.format(new_led))
-            v.current_led___ = new_led
+        hw.light.cue(v.next_led___)
+        print('{}, led_direction'.format(v.next_led___))
+        v.current_led___ = v.next_led___
+        v.next_led___ += 2
+        if v.next_led___ < v.leds___[-1]:
             timed_goto_state('trial', choice(v.sweep_bins))
         else:
-            goto_state('cursor_match')
+            timed_goto_state('cursor_match', choice(v.sweep_bins))
 
 def cursor_match(event):
     "when led is at the target"
     if event == 'entry':
         hw.light.cue(v.leds___[-1])
         print('{}, led_direction'.format(v.leds___[-1]))
-        v.current_led___ = 0
-        timed_goto_state('trial', v.sweep_bins[-1])
+        v.next_led___ = 0
+        timed_goto_state('trial', v.cursor_match_dur)
     elif event == 'lick':
         goto_state('reward')
 
@@ -95,7 +96,7 @@ def reward(event):
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
         hw.light.all_red()
-        v.current_led___ = 0
+        v.next_led___ = 0
         timed_goto_state('trial', v.IT_duration)
 
 def all_states(event):
