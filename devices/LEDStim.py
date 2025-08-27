@@ -21,13 +21,7 @@ class LedStirp(_h.IO_object):
         self.uart_led = pyb.UART(4)  # uart4=port 10
         self.uart_led.init(baudrate=9600, bits=8, parity=None, stop=1)
         self.all_red()
-
-    def off(self):
-        try:  # in case it hasn't been initialised
-            self.all_off()
-            self.uart_led.deinit()
-        except:
-            pass
+        self.cue_bilateral(True)
 
     def all_red(self):
         "turn off all LEDs, everything red"
@@ -47,6 +41,14 @@ class LedStirp(_h.IO_object):
     def send_int(self, value: int) -> None:
         """Send a 2-byte little-endian integer to the host."""
         self.uart_led.write(value.to_bytes(1, 'little'))
+
+    def off(self):
+        try:  # in case it hasn't been initialised
+            self.all_off()
+            self.uart_led.deinit()
+        except:
+            pass
+
 
 
 class LEDStim:
