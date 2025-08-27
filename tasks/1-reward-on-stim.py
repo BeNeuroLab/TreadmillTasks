@@ -95,7 +95,6 @@ def reward(event):
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
-        hw.light.all_red()
         v.next_led___ = 0
         timed_goto_state('trial', v.IT_duration)
 
