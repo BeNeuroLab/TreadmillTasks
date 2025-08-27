@@ -59,9 +59,7 @@ def run_end():
 # -------------------------------------------------------------------------
 def trial(event):
     "led at first, and spk update at later bins"
-    if event == 'entry':
-        hw.light.all_off()
-    elif event == 'lick':  # lick during the trial delays the sweep
+    if event == 'lick':  # lick during the trial delays the sweep
         hw.light.cue(v.leds___[0])
         print('{}, led_direction'.format(v.leds___[0]))
         timed_goto_state('reward', v.led_len)
