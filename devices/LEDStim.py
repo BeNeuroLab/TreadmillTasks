@@ -46,7 +46,7 @@ class LedStirp(_h.IO_object):
 
     def send_int(self, value: int) -> None:
         """Send a 2-byte little-endian integer to the host."""
-        self.uart_led.write(value.to_bytes(1))
+        self.uart_led.write(value.to_bytes(1, 'little'))
 
 
 class LEDStim:
