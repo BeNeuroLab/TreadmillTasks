@@ -1,4 +1,5 @@
 import pyControl.hardware as _h
+import pyControl.framework as fw
 from pyb import UART, Timer
 from devices.LEDStim import LedStrip
 
@@ -18,7 +19,7 @@ class UARTlink(_h.IO_object):
         self.buffer = bytearray(8)
         self.name = bci_event_name
         self.timer_freq = timer_freq
-        self.ID = _h.assign_ID(self)
+        _h.assign_ID(self)
         self.timer = Timer(_h.available_timers.pop())
         self.timestamp = 0
         self.spk = 0
@@ -55,7 +56,7 @@ class UARTlink(_h.IO_object):
             self.light.off()
 
     def _process_interrupt(self):
-        _h.fw.event_queue.put((self.timestamp, _h.fw.event_typ, _h.fw.events[self.name]))
+        fw.event_queue.put((self.timestamp, fw.event_typ, fw.events[self.name]))
 
     def send_int_to_bci(self, value: int) -> None:
         """Send a 2-byte little-endian integer to the host."""
