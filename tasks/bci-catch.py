@@ -72,6 +72,7 @@ def trial(event):
         hw.bci_link.light.all_red()
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
+        hw.bci_link.light.cue(spk_dir)
         if spk_dir == 100:
             if random() < v.catch_chance and v.n_ommitted_reward < v.max_ommitted_rewards:
                 goto_state('catch_cursor_match')
