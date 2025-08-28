@@ -13,7 +13,7 @@ class LedStrip(_h.IO_object):
         """turn on the LED corresponding to the given percentagedirection
         It MUST be between 0 and 100
         """
-        assert 0 <= dir_percent <= 100, "Invalid direction"
+        assert 1 <= dir_percent <= 100, "Invalid direction"
         self.send_int(dir_percent)
 
     def start(self):
