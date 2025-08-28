@@ -2,7 +2,7 @@ import pyb
 import pyControl.hardware as _h
 
 
-class LedStirp(_h.IO_object):
+class LedStrip(_h.IO_object):
     """
     LED strip control class
     based on:

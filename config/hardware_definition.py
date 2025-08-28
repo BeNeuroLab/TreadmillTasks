@@ -16,7 +16,7 @@ motionSensor = MotionDetector(
     sampling_rate=100
 )
 
-light = LedStirp()
+light = LedStrip()
 
 lickometer = Lickometer(lick_port=board.port_6, sol_port=board.port_4, rising_event_A='lick', debounce=5)
 reward = Reward(lickometer.SOL_1 , reward_duration=50)
