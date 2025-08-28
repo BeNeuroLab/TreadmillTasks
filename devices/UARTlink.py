@@ -18,7 +18,7 @@ class UARTlink(_h.IO_object):
         self.buffer = bytearray(8)
         self.name = bci_event_name
         self.timer_freq = timer_freq
-        _h.assign_ID(self)
+        self.ID = _h.assign_ID(self)
         self.timer = Timer(_h.available_timers.pop())
         self.timestamp = 0
         self.spk = 0
