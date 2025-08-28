@@ -46,6 +46,7 @@ def run_start():
     hw.motionSensor.record()
     hw.motionSensor.threshold = 10
     hw.light.start()
+    hw.bci_link.start()
     utime.sleep_ms(20)  # wait for the light
     hw.light.all_red()
     set_timer('session_timer', v.session_duration, True)
