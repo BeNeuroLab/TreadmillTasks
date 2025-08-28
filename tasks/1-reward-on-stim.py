@@ -1,19 +1,23 @@
-"lick -> light on -> reward -> intertrial"
+"""task with 2 LEDs only and a penalty for offlicks (no timeout)
+"""
 
+import utime
 from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
-import utime
-
 
 # -------------------------------------------------------------------------
+# States and events.
+# -------------------------------------------------------------------------
+
 states = ['trial',
-          'intertrial',
-          'reward']
+          'cursor_match',
+          'reward',
+          'penalty']
 
 events = ['lick',
-          'session_timer',
-          'motion']
+          'motion',
+          'session_timer']
 
 initial_state = 'trial'
 
@@ -21,16 +25,20 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 v.session_duration = 30 * minute
 v.reward_duration = 30 * ms
-v.reward_number = 0
 
-v.trial_len = 3 * second
-v.led_len = 500 * ms
+v.sound_bins = (1 * second, 2 * second, 3 * second)
+
+v.reward_number = 0
+v.IT_duration = 5 * second
+
 
 v.spks___ = [3]
 v.leds___ = [3]
+v.next_led___ = v.leds___[-1]
 
 
 # -------------------------------------------------------------------------
+
 def run_start():
     "Code here is executed when the framework starts running."
     hw.sound.set_volume(5)  # Between 1 - 30
@@ -58,24 +66,39 @@ def run_end():
 
 # -------------------------------------------------------------------------
 def trial(event):
-    "led at first, and spk update at later bins"
+    "trial"
     if event == 'entry':
         hw.light.all_off()
         hw.sound.all_off()
-    elif event == 'lick':  # lick during the trial delays the sweep
-        hw.light.cue(v.leds___[0])
-        print('{}, led_direction'.format(hw.light.active[0]))
+        timed_goto_state('cursor_match', choice(v.sound_bins))
+    elif event == 'lick':
+        goto_state('penalty')
+
+def cursor_match (event):
+    "when led and spk line up"
+    if event == 'entry':
         hw.sound.cue(v.spks___[0])
         print('{}, spk_direction'.format(hw.sound.active[0]))
-        timed_goto_state('reward', v.led_len)
+        hw.light.cue(v.leds___[0])
+        print('{}, led_direction'.format(hw.light.active[0]))
+        timed_goto_state('trial', v.sound_bins[-1])
+    elif event == 'lick':
+        goto_state('reward')
 
 def reward (event):
     "reward state"
     if event == 'entry':
-        timed_goto_state('trial', v.trial_len)
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
+        timed_goto_state('trial', v.IT_duration)
+
+def penalty (event):
+    "penalty state"
+    if event == 'entry':
+        timed_goto_state('trial', v.sound_bins[-1])
+    elif event == 'lick':
+        goto_state('penalty')
 
 
 def all_states(event):

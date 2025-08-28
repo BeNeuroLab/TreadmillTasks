@@ -1,5 +1,54 @@
-import pyb, machine, time
+import pyb
 import pyControl.hardware as _h
+
+
+class LedStrip(_h.IO_object):
+    """
+    LED strip control class
+    based on:
+    https://github.com/CeciliaGallego/dostar-led-stip/blob/main/code.py
+    """
+
+    def cue(self, dir_percent:int):
+        """turn on the LED corresponding to the given percentagedirection
+        It MUST be between 0 and 100
+        """
+        assert 1 <= dir_percent <= 100, "Invalid direction"
+        self.send_int(dir_percent)
+
+    def start(self):
+        "this method must be called in the `run_start` of any task file"
+        self.uart_led = pyb.UART(4)  # uart4=port 10
+        self.uart_led.init(baudrate=9600, bits=8, parity=None, stop=1)
+        self.all_red()
+        self.cue_bilateral(True)
+
+    def all_red(self):
+        "turn off all LEDs, everything red"
+        self.send_int(201)
+
+    def all_off(self):
+        "turn off all LEDs"
+        self.send_int(200)
+
+    def cue_bilateral(self, bilatral = True):
+        "switch whether cue is symmetrical (central target) or not"
+        if bilatral:
+            self.send_int(210)
+        else:
+            self.send_int(211)
+
+    def send_int(self, value: int) -> None:
+        """Send a 2-byte little-endian integer to the host."""
+        self.uart_led.write(value.to_bytes(1, 'little'))
+
+    def off(self):
+        try:  # in case it hasn't been initialised
+            self.all_off()
+            self.uart_led.deinit()
+        except:
+            pass
+
 
 
 class LEDStim:

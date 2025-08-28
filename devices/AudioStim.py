@@ -17,6 +17,7 @@ class AudioStim(Audio_player):
                 4:'W56',    # Dir4
                 5:'W64',    # Dir5
                 6:'W62'}    # Dir6
+
         #the POW pins used so that their logic level is inverted automatically.
         powerlines = ('W23', 'W25', 'W62', 'W64','W30','W32')
         self.speakers = {}

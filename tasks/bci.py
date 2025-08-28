@@ -1,33 +1,41 @@
-"lick -> light on -> reward -> intertrial"
+"""main BCI task, similar to task 5
+target always on during the speaker sweep
 
+"""
+import utime
 from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
-import utime
-
 
 # -------------------------------------------------------------------------
+# States and events.
+# -------------------------------------------------------------------------
+
 states = ['trial',
-          'intertrial',
-          'reward']
+        'cursor_match',
+        'reward'
+        ]
 
 events = ['lick',
-          'session_timer',
-          'motion']
+        'motion',
+        'cursor_update',
+        'session_timer']
 
 initial_state = 'trial'
 
 
 # -------------------------------------------------------------------------
-v.session_duration = 30 * minute
+v.session_duration = 60 * minute
 v.reward_duration = 30 * ms
-v.reward_number = 0
+v.hold_duration = 200 * ms
 
-v.trial_len = 3 * second
-v.led_len = 500 * ms
+v.reward_number = 0
+v.IT_duration = 5 * second
 
 v.spks___ = [3]
 v.leds___ = [3]
+v.next_led___ = v.leds___[-1]
+v.next_spk___ = v.spks___[-1]
 
 
 # -------------------------------------------------------------------------
@@ -58,24 +66,35 @@ def run_end():
 
 # -------------------------------------------------------------------------
 def trial(event):
-    "led at first, and spk update at later bins"
+    "Trial state"
     if event == 'entry':
         hw.light.all_off()
         hw.sound.all_off()
-    elif event == 'lick':  # lick during the trial delays the sweep
-        hw.light.cue(v.leds___[0])
-        print('{}, led_direction'.format(hw.light.active[0]))
-        hw.sound.cue(v.spks___[0])
-        print('{}, spk_direction'.format(hw.sound.active[0]))
-        timed_goto_state('reward', v.led_len)
+    elif event == 'cursor_update':
+        spk_dir = hw.bci_link.spk
+        if spk_dir == 1:
+            goto_state('cursor_match')
+
+def cursor_match(event):
+    "when led and spk line up"
+    if event == 'entry':
+        hw.sound.cue(v.next_spk___)
+        hw.light.cue(v.next_led___)
+        timed_goto_state('reward', v.hold_duration)
+    elif event == 'cursor_update':
+        spk_dir = hw.bci_link.spk
+        if spk_dir != 1:
+            goto_state('trial')
 
 def reward (event):
     "reward state"
     if event == 'entry':
-        timed_goto_state('trial', v.trial_len)
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
+        hw.light.all_off()
+        hw.sound.all_off()
+        timed_goto_state('trial', v.IT_duration)
 
 
 def all_states(event):
