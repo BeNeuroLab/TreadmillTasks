@@ -29,7 +29,7 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 v.session_duration = 90 * minute
 v.reward_duration = 30 * ms
-v.hold_duration = 300 * ms
+v.hold_duration = 200 * ms
 
 v.catch_chance = 0.05  # 10% chance of catch trial in cursor match
 v.max_ommitted_rewards = 15  # maximum number of rewards ommitted due to catch trials
@@ -67,10 +67,7 @@ def run_end():
 # -------------------------------------------------------------------------
 def trial(event):
     "Trial state"
-    if event == 'entry':
-        hw.bci_link.do_led_strip = True  # activate LED strip updating
-        hw.bci_link.light.all_red()
-    elif event == 'cursor_update':
+    if event == 'cursor_update':
         spk_dir = hw.bci_link.spk
         hw.bci_link.light.cue(spk_dir)
         if spk_dir == 100:
@@ -82,10 +79,10 @@ def trial(event):
 def cursor_match(event):
     "when led and spk line up"
     if event == 'entry':
-        hw.bci_link.do_led_strip = True  # activate LED strip updating
         timed_goto_state('reward', v.hold_duration)
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
+        hw.bci_link.light.cue(spk_dir)
         if spk_dir != 100:
             goto_state('trial')
 
@@ -95,29 +92,30 @@ def reward (event):
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
-        hw.bci_link.do_led_strip = False  # deactivate LED strip updating
         hw.bci_link.light.all_red()
         timed_goto_state('trial', v.IT_duration)
 
 def catch_cursor_match(event):
     "cursor match without led and spk"
     if event == 'entry':
-        hw.bci_link.do_led_strip = True  # activate LED strip updating
         timed_goto_state('catch_reward', v.hold_duration)
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
+        hw.bci_link.light.cue(spk_dir)
         if spk_dir != 100:
             goto_state('trial')
 
 def catch_reward(event):
     "reward state for catch trials"
     if event == 'entry':
-        hw.bci_link.do_led_strip = False  # deactivate LED strip updating
         timed_goto_state('trial', v.IT_duration)
     elif event == 'lick':  # reward should be released
         v.n_ommitted_reward += 1
         print('{}, ommitted_reward'.format(v.n_ommitted_reward))
         goto_state('reward')
+    if event == 'exit':
+        hw.bci_link.light.all_red()
+
 
 
 def all_states(event):
