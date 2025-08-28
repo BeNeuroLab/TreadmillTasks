@@ -69,7 +69,6 @@ def trial(event):
     "Trial state"
     if event == 'entry':
         hw.light.all_off()
-        hw.sound.all_off()
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
         if spk_dir == 1:
@@ -81,7 +80,6 @@ def trial(event):
 def cursor_match(event):
     "when led and spk line up"
     if event == 'entry':
-        hw.sound.cue(v.next_spk___)
         hw.light.cue(v.next_led___)
         timed_goto_state('reward', v.hold_duration)
     elif event == 'cursor_update':
@@ -96,14 +94,12 @@ def reward (event):
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
         hw.light.all_off()
-        hw.sound.all_off()
         timed_goto_state('trial', v.IT_duration)
 
 def catch_cursor_match(event):
     "cursor match without led and spk"
     if event == 'entry':
         hw.light.all_off()
-        hw.sound.all_off()
         timed_goto_state('catch_reward', v.hold_duration)
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
@@ -114,7 +110,6 @@ def catch_reward(event):
     "reward state for catch trials"
     if event == 'entry':
         hw.light.all_off()
-        hw.sound.all_off()
         timed_goto_state('trial', v.IT_duration)
     elif event == 'lick':  # reward should be released
         v.n_ommitted_reward += 1
