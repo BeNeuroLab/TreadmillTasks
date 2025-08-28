@@ -38,22 +38,16 @@ v.n_ommitted_reward = 0  # number of ommitted rewards due to catch trials
 v.reward_number = 0
 v.IT_duration = 5 * second
 
-v.spks___ = [3]
-v.leds___ = [3]
-v.next_led___ = v.leds___[-1]
-v.next_spk___ = v.spks___[-1]
-
 
 # -------------------------------------------------------------------------
 def run_start():
     "Code here is executed when the framework starts running."
-    hw.sound.set_volume(5)  # Between 1 - 30
-    utime.sleep_ms(20)  # wait for the sound player to be ready
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.record()
     hw.motionSensor.threshold = 10
-    hw.sound.start()
-    hw.light.all_off()
+    hw.light.start()
+    utime.sleep_ms(20)  # wait for the light
+    hw.light.all_red()
     set_timer('session_timer', v.session_duration, True)
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     print('{}, before_camera_trigger'.format(get_current_time()))
@@ -62,11 +56,11 @@ def run_start():
 def run_end():
     "Code here is executed when the framework stops running."
     hw.light.all_off()
+    hw.light.off()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.motionSensor.stop()
     hw.cameraTrigger.stop()
-    hw.sound.stop()
     hw.off()
 
 
