@@ -11,7 +11,7 @@ class UARTlink(_h.IO_object):
         timer_freq: int, frequency of the timer, twice the client frequency
         """
         self.uart_bci = None
-        self.uart_led = None
+        self.light = None
         self.do_led_strip = False
 
         self.buffer = bytearray(8)
@@ -29,10 +29,10 @@ class UARTlink(_h.IO_object):
             self.spk = int.from_bytes(self.buffer, 'little')
             if self.spk != self.prev_spk:
                 self.timestamp = fw.current_time
+                if self.do_led_strip:
+                    self.light.cue(self.spk)
                 _h.interrupt_queue.put(self.ID)
                 self.prev_spk = self.spk
-                if self.do_led_strip:
-                    self.uart_led.write(self.spk.to_bytes(1))
 
     def start(self, do_led_strip = False):
         "this method must be called in the `run_start` of any task file"
@@ -41,8 +41,8 @@ class UARTlink(_h.IO_object):
         self.uart_bci.init(9600, bits=8, parity=None, stop=1)
 
         if self.do_led_strip:
-            self.uart_led = UART(4, 9600)  # uart1=port 10, init with given baudrate
-            self.uart_led.init(9600, bits=8, parity=None, stop=1)
+            self.light = _h.LedStrip()
+            self.light.start()
 
         self.timer.init(freq=self.timer_freq)
         self.timer.callback(self._timer_ISR)
@@ -51,12 +51,12 @@ class UARTlink(_h.IO_object):
         self.uart_bci.deinit()
         self.timer.deinit()
         if self.do_led_strip:
-            self.uart_led.deinit()
+            self.light.off()
 
     def _process_interrupt(self):
         _h.fw.event_queue.put((self.timestamp, _h.fw.event_typ, _h.fw.events[self.name]))
 
-    def bci_send_int(self, value: int) -> None:
+    def send_int_to_bci(self, value: int) -> None:
         """Send a 2-byte little-endian integer to the host."""
         self.uart_bci.write(value.to_bytes(2, 'little'))
 
