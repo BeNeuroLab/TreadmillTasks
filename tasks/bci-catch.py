@@ -45,10 +45,9 @@ def run_start():
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.record()
     hw.motionSensor.threshold = 10
-    hw.light.start()
-    hw.bci_link.start()
+    hw.bci_link.start(do_led_strip = True)
     utime.sleep_ms(20)  # wait for the light
-    hw.light.all_red()
+    hw.bci_link.light.all_red()
     set_timer('session_timer', v.session_duration, True)
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     print('{}, before_camera_trigger'.format(get_current_time()))
@@ -56,8 +55,8 @@ def run_start():
 
 def run_end():
     "Code here is executed when the framework stops running."
-    hw.light.all_off()
-    hw.light.off()
+    hw.bci_link.light.all_off()
+    hw.bci_link.light.stop()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.motionSensor.stop()
@@ -69,10 +68,10 @@ def run_end():
 def trial(event):
     "Trial state"
     if event == 'entry':
-        hw.light.all_off()
+        hw.bci_link.light.all_red()
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
-        if spk_dir == 1:
+        if spk_dir == 100:
             if random() < v.catch_chance and v.n_ommitted_reward < v.max_ommitted_rewards:
                 goto_state('catch_cursor_match')
             else:
@@ -81,11 +80,10 @@ def trial(event):
 def cursor_match(event):
     "when led and spk line up"
     if event == 'entry':
-        hw.light.cue(v.next_led___)
         timed_goto_state('reward', v.hold_duration)
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
-        if spk_dir != 1:
+        if spk_dir != 100:
             goto_state('trial')
 
 def reward (event):
@@ -94,23 +92,23 @@ def reward (event):
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
-        hw.light.all_off()
+        hw.bci_link.light.all_red()
         timed_goto_state('trial', v.IT_duration)
 
 def catch_cursor_match(event):
     "cursor match without led and spk"
     if event == 'entry':
-        hw.light.all_off()
+        hw.bci_link.light.all_red()
         timed_goto_state('catch_reward', v.hold_duration)
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
-        if spk_dir != 1:
+        if spk_dir != 100:
             goto_state('trial')
 
 def catch_reward(event):
     "reward state for catch trials"
     if event == 'entry':
-        hw.light.all_off()
+        hw.bci_link.light.all_red()
         timed_goto_state('trial', v.IT_duration)
     elif event == 'lick':  # reward should be released
         v.n_ommitted_reward += 1
