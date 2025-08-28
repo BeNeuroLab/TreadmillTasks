@@ -17,21 +17,22 @@ initial_state = 'trial'
 
 # -------------------------------------------------------------------------
 v.session_duration = 30 * minute
-v.reward_duration = 50 * ms
+v.reward_duration = 40 * ms
 v.reward_number = 0
 
-v.spk_freqs = [12336, 12336]
-v.leds = [2, 4]
+v.spk_freq = 12336
 
 v.trial_len = 1 * second 
 
 # -------------------------------------------------------------------------
 def run_start():
     "Code here is executed when the framework starts running."
-    hw.speaker.set_volume(10)
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.record()
     hw.motionSensor.threshold = 10
+    hw.speaker.set_volume(10)
+    hw.light.start()
+    hw.light.off()
     set_timer('session_timer', v.session_duration, True)
     print('{}, before_camera_trigger'.format(get_current_time()))
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
@@ -39,7 +40,7 @@ def run_start():
 
 def run_end():
     "Code here is executed when the framework stops running."
-    hw.light.all_off()
+    hw.light.off()
     hw.speaker.off()
     hw.reward.stop()
     hw.motionSensor.off()
@@ -54,13 +55,8 @@ def trial(event):
         hw.light.all_off()
         hw.speaker.off()
     elif event == 'lick':  # lick during the trial delays the sweep
-        v.sound_target = choice(v.spk_freqs)
-        if v.sound_target < 5000:
-            v.led_target = v.leds[0]
-        else:
-            v.led_target = v.leds[1]
-        hw.speaker.sine(v.sound_target)
-        print('{} Hz'.format(v.sound_target))
+        hw.speaker.sine(v.spk_freq)
+        print('{} Hz'.format(v.spk_freq))
         goto_state('reward')
 
 def reward (event):

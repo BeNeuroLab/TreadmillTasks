@@ -107,17 +107,20 @@ def choose_iti(correct=True):
 # ------------------------------------------------------------------------- #
 def run_start():
     hw.reward.reward_duration = v.reward_duration
-    hw.speaker.set_volume(10)
     hw.motionSensor.record()
     hw.motionSensor.threshold = 10
+    hw.speaker.set_volume(10)
+    hw.light.start()
+    hw.light.off()
+    make_block()
     set_timer('session_timer', v.session_duration, True)
     set_timer('timeout_timer', v.target_duration)
     hw.cameraTrigger.start()
-    make_block()
     print('{}, Session Started'.format(get_current_time()))
     print('{}, CPI {}'.format(get_current_time(), hw.motionSensor.sensor_x.CPI))
 
 def run_end():
+    hw.light.off()
     hw.speaker.off()
     hw.reward.stop()
     hw.motionSensor.stop()
