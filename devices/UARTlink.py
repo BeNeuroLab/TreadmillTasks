@@ -1,5 +1,6 @@
 import pyControl.hardware as _h
 from pyb import UART, Timer
+from devices.LEDStim import LedStrip
 
 
 class UARTlink(_h.IO_object):
@@ -41,7 +42,7 @@ class UARTlink(_h.IO_object):
         self.uart_bci.init(9600, bits=8, parity=None, stop=1)
 
         if self.do_led_strip:
-            self.light = _h.LedStrip()
+            self.light = LedStrip()
             self.light.start()
 
         self.timer.init(freq=self.timer_freq)
