@@ -31,8 +31,6 @@ class UARTlink(_h.IO_object):
             self.spk = int.from_bytes(self.buffer, 'little')
             if self.spk != self.prev_spk:
                 self.timestamp = fw.current_time
-                if self.do_led_strip:
-                    self.light.cue(self.spk)
                 _h.interrupt_queue.put(self.ID)
                 self.prev_spk = self.spk
 
