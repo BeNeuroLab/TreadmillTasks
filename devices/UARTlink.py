@@ -59,4 +59,3 @@ class UARTlink(_h.IO_object):
     def send_int_to_bci(self, value: int) -> None:
         """Send a 2-byte little-endian integer to the host."""
         self.uart_bci.write(value.to_bytes(2, 'little'))
-
