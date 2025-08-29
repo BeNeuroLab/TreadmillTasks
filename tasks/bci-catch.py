@@ -21,6 +21,7 @@ states = ['trial',
 events = ['lick',
         'motion',
         'cursor_update',
+        'target_on_timer',
         'session_timer']
 
 initial_state = 'trial'
@@ -35,6 +36,7 @@ v.catch_chance = 0.05  # 10% chance of catch trial in cursor match
 v.max_ommitted_rewards = 15  # maximum number of rewards ommitted due to catch trials
 v.n_ommitted_reward = 0  # number of ommitted rewards due to catch trials
 
+v.led_len = 500 * ms
 v.reward_number = 0
 v.IT_duration = 5 * second
 
@@ -86,14 +88,16 @@ def cursor_match(event):
         if spk_dir != 100:
             goto_state('trial')
 
-def reward (event):
-    "reward state"
+def reward(event):
+    "reward state, turn the target off after `v.led_len`"
     if event == 'entry':
+        set_timer('target_on_timer', v.led_len, False)
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
-        hw.bci_link.light.all_red()
         timed_goto_state('trial', v.IT_duration)
+    elif event == "target_on_timer":
+        hw.bci_link.light.all_red()
 
 def catch_cursor_match(event):
     "cursor match without led and spk"
