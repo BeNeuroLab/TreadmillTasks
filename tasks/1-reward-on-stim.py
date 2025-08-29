@@ -84,7 +84,7 @@ def cursor_match(event):
     if event == 'entry':
         hw.light.cue(v.leds___[-1])
         print('{}, led_direction'.format(v.leds___[-1]))
-        v.next_led___ = 0
+        v.next_led___ = 1
         timed_goto_state('trial', v.cursor_match_dur)
     elif event == 'lick':
         goto_state('reward')
@@ -95,7 +95,7 @@ def reward(event):
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
-        v.next_led___ = 0
+        v.next_led___ = 1
         timed_goto_state('trial', v.IT_duration)
 
 def all_states(event):
