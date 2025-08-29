@@ -19,7 +19,7 @@ initial_state = 'trial'
 
 
 # -------------------------------------------------------------------------
-v.session_duration = 30 * minute
+v.session_duration = 0.2 * minute
 v.reward_duration = 40 * ms
 v.reward_number = 0
 
@@ -30,22 +30,25 @@ v.trial_len = 3 * second
 def run_start():
     "Code here is executed when the framework starts running."
     hw.reward.reward_duration = v.reward_duration
+    hw.motionSensor.threshold = 5
     hw.motionSensor.record()
-    hw.motionSensor.threshold = 10
-    utime.sleep_ms(20)  # wait for the sound player to be ready
+    hw.speaker.set_volume(10)
     hw.light.start()
     hw.light.off()
     set_timer('session_timer', v.session_duration, True)
     print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
     print('{}, before_camera_trigger'.format(get_current_time()))
+    print('{}, acquiring'.format(int(hw.motionSensor.acquiring)))
+    print('{}, sampling_rate'.format(hw.motionSensor.data_chx.sampling_rate))
     hw.cameraTrigger.start()
 
 def run_end():
     "Code here is executed when the framework stops running."
     hw.light.off()
+    hw.speaker.off()
     hw.reward.stop()
-    hw.motionSensor.off()
     hw.motionSensor.stop()
+    hw.motionSensor.off()
     hw.cameraTrigger.stop()
     hw.off()
 
