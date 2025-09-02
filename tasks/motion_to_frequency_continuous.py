@@ -31,7 +31,7 @@ initial_state = 'intertrial'
 # Variables
 # -------------------------------------------------------------------------
 # Session parameters
-v.session_duration = 30 * minute
+v.session_duration = 45 * minute
 
 # Trial parameters
 v.intertrial_duration = 4 * second
@@ -98,7 +98,7 @@ def update_frequency_from_distance():
             # Play goal frequency and then go to reward
             hw.speaker.sine(v.goal_freq_hz)
             print('{}, target_reached'.format(v.goal_freq_hz))
-            goto_state('reward')
+            set_timer('target_tone_timer', v.target_present_duration, True)
 
 def reset_trial():
     """Reset variables for a new trial"""
@@ -111,12 +111,11 @@ def reset_trial():
 # Run Start/End
 # -------------------------------------------------------------------------
 def run_start():
-    hw.reward.reward_duration = v.reward_duration
+    hw.speaker.set_volume(15)
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
-    hw.speaker.set_volume(10)
-    hw.light.start()
-    hw.light.off()
+    hw.reward.reward_duration = v.reward_duration
+    
     # Get actual CPI from sensor
     if hasattr(hw.motionSensor, 'sensor_x'):
         v.cpi = hw.motionSensor.sensor_x.CPI
@@ -134,7 +133,6 @@ def run_start():
     set_timer('session_timer', v.session_duration, True)
 
 def run_end():
-    hw.light.off()
     hw.speaker.off()
     hw.motionSensor.stop()
     hw.motionSensor.off()
@@ -149,15 +147,29 @@ def intertrial(event):
     if event == 'entry':
         hw.speaker.off()
         reset_trial()
-        # Start the timer. If it completes, the trial will begin.
-        set_timer('motion_check_timer', v.motion_wait_time, True)
+        v.motion_detected = False
+        v.intertrial_start_time = get_current_time()
+        # Start checking for motion after minimum intertrial duration
+        set_timer('motion_check_timer', v.intertrial_duration, True)
         
     elif event == 'motion':
-        set_timer('motion_check_timer', v.motion_wait_time, True)        
+        v.motion_detected = True
+        v.last_motion_time = get_current_time()
+        
     elif event == 'motion_check_timer':
-        # If this timer event occurs, it means the animal was still
-        # for v.motion_wait_time, so we can start the trial.
-        goto_state('trial')
+        # Check if we've been in intertrial for at least intertrial_duration
+        time_in_intertrial = get_current_time() - v.intertrial_start_time
+        if time_in_intertrial >= v.intertrial_duration:
+            if not v.motion_detected:
+                # No motion detected for required duration, start trial
+                goto_state('trial')
+            else:
+                # Motion was detected, reset timer and try again
+                v.motion_detected = False
+                set_timer('motion_check_timer', v.motion_wait_time, True)
+        else:
+            # Haven't reached minimum intertrial duration yet
+            set_timer('motion_check_timer', v.motion_wait_time, True)
     
     elif event == 'stop_button':
         goto_state('stopped')
