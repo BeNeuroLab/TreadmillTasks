@@ -4,7 +4,7 @@ from pyb import UART, Timer
 from devices.LEDStim import LedStrip
 
 
-class UARTlink(_h.Data_channel):
+class UARTlink(_h.IO_object):
     def __init__(self, bci_event_name, timer_freq = 100):
         """
         uart device class: for BCI comm and for led strip
@@ -12,7 +12,6 @@ class UARTlink(_h.Data_channel):
         name: the framework Event name for BCI cursor changing value
         timer_freq: int, frequency of the timer, twice the client frequency
         """
-        _h.Data_channel.__init__(self, bci_event_name, timer_freq, data_type='L')
         self.uart_bci = None
         self.light = None
         self.do_led_strip = False
@@ -30,7 +29,6 @@ class UARTlink(_h.Data_channel):
         if self.uart_bci.any() > 0:  # there is a message
             self.uart_bci.readinto(self.buffer, 2)
             self.spk = int.from_bytes(self.buffer, 'little')
-            self.put(self.spk)
             if self.spk != self.prev_spk:
                 self.timestamp = fw.current_time
                 _h.interrupt_queue.put(self.ID)
@@ -46,12 +44,10 @@ class UARTlink(_h.Data_channel):
             self.light = LedStrip()
             self.light.start()
 
-        self.record()
         self.timer.init(freq=self.timer_freq)
         self.timer.callback(self._timer_ISR)
 
     def stop(self):
-        _h.Data_channel.stop(self)
         self.uart_bci.deinit()
         self.timer.deinit()
         if self.do_led_strip:
