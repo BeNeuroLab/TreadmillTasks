@@ -73,6 +73,7 @@ def trial(event):
     if event == 'cursor_update':
         spk_dir = hw.bci_link.spk
         hw.bci_link.light.cue(spk_dir)
+        print('{}, led_number'.format(spk_dir))
         if spk_dir == 100:
             if random() < v.catch_chance and v.n_ommitted_reward < v.max_ommitted_rewards:
                 goto_state('catch_cursor_match')
@@ -86,6 +87,7 @@ def cursor_match(event):
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
         hw.bci_link.light.cue(spk_dir)
+        print('{}, led_number'.format(spk_dir))
         if spk_dir != 100:
             goto_state('trial')
 
@@ -99,6 +101,7 @@ def reward(event):
         timed_goto_state('trial', v.IT_duration)
     elif event == "target_on_timer":
         hw.bci_link.light.all_red()
+        print('0, led_number')
 
 def catch_cursor_match(event):
     "cursor match without led and spk"
@@ -107,6 +110,7 @@ def catch_cursor_match(event):
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
         hw.bci_link.light.cue(spk_dir)
+        print('{}, led_number'.format(spk_dir))
         if spk_dir != 100:
             goto_state('trial')
 
@@ -120,6 +124,7 @@ def catch_reward(event):
         goto_state('reward')
     if event == 'exit':
         hw.bci_link.light.all_red()
+        print('0, led_number')
 
 
 
