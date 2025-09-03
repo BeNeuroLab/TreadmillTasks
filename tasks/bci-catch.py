@@ -38,7 +38,8 @@ v.n_ommitted_reward = 0  # number of ommitted rewards due to catch trials
 
 v.led_len = 500 * ms
 v.reward_number = 0
-v.IT_duration = 5 * second
+v.IT_duration = 10 * second
+v.catch_wait_duration = 5 * second
 
 
 # -------------------------------------------------------------------------
@@ -112,7 +113,7 @@ def catch_cursor_match(event):
 def catch_reward(event):
     "reward state for catch trials"
     if event == 'entry':
-        timed_goto_state('trial', v.IT_duration)
+        timed_goto_state('trial', v.catch_wait_duration)
     elif event == 'lick':  # reward should be released
         v.n_ommitted_reward += 1
         print('{}, ommitted_reward'.format(v.n_ommitted_reward))
