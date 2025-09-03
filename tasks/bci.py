@@ -31,17 +31,17 @@ initial_state = 'intertrial'
 # Variables
 # -------------------------------------------------------------------------
 # Session parameters
-v.session_duration = 30 * minute
+v.session_duration = 60 * minute
 
 # Trial parameters
-v.intertrial_duration = 4 * second   # Minimum time between trials
+v.intertrial_duration = 3 * second   # Minimum time between trials
 v.trial_timeout = 15 * second        # Max time to reach target frequency
-v.motion_wait_time = 2 * second      # Time without motion before trial can start
-v.reward_duration = 30 * ms
+v.motion_wait_time = 1 * second      # Time without motion before trial can start
+v.reward_duration = 40 * ms
 
 # --- NEW/MODIFIED BCI Parameters ---
-v.hold_time = 0.5 * second           # REQUIRED: Time freq must be >= target for reward
-v.baseline_freq_hz = 2000            # REQUIRED: Freq must be <= this to start a trial
+v.hold_time = 0.12 * second           # REQUIRED: Time freq must be >= target for reward
+v.baseline_freq_hz = 4000            # REQUIRED: Freq must be <= this to start a trial
 v.goal_freq_hz = 12000               # Target frequency (Hz)
 v.start_freq_hz = 2000               # Starting frequency (Hz)
 
@@ -63,7 +63,6 @@ v.is_holding = False                 # NEW: Flag to indicate if hold timer is ac
 # -------------------------------------------------------------------------
 def reset_trial():
     """Reset variables for a new trial"""
-    # This function is simplified as many old variables are no longer needed.
     v.bci_freq = v.start_freq_hz
     v.first_motion_sent = False
     v.is_holding = False
@@ -73,6 +72,7 @@ def reset_trial():
 # -------------------------------------------------------------------------
 def run_start():
     hw.speaker.set_volume(15)
+    hw.bci_link.start()
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
     hw.reward.reward_duration = v.reward_duration
@@ -101,6 +101,7 @@ def run_end():
     hw.light.off()
     hw.motionSensor.stop()
     hw.motionSensor.off()
+    hw.bci_link.stop() # Stop the BCI UART link
     hw.cameraTrigger.stop()
     hw.off()
     print('Session Ended')
@@ -123,7 +124,7 @@ def intertrial(event):
         
     elif event == 'cursor_update':
         # Keep track of BCI frequency during the intertrial period.
-        bci_val = hw.bci_link.spk # Assumes BCI device updates the .spk attribute
+        bci_val = hw.bci_link.spk 
         if bci_val is not None:
             v.bci_freq = bci_val
             print('{}, freq'.format(v.bci_freq))
