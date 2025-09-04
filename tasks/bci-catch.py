@@ -29,7 +29,7 @@ initial_state = 'trial'
 
 # -------------------------------------------------------------------------
 v.session_duration = 90 * minute
-v.reward_duration = 30 * ms
+v.reward_duration = 35 * ms
 v.hold_duration = 200 * ms
 
 v.catch_chance = 0.05  # 10% chance of catch trial in cursor match
