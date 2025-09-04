@@ -93,6 +93,7 @@ def run_start():
     print('{}, baseline_frequency'.format(v.baseline_freq_hz))
     print('{}, goal_frequency'.format(v.goal_freq_hz))
     print('{}, before_camera_trigger'.format(get_current_time()))
+
     hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
 
@@ -166,7 +167,7 @@ def trial(event):
         # Send first motion signal to BCI
         if not v.first_motion_sent:
             v.first_motion_sent = True
-            print('first_motion_sent_to_BCI')
+            #print('first_motion_sent_to_BCI')
             
     elif event == 'cursor_update':
         # Receive frequency from BCI
@@ -182,17 +183,17 @@ def trial(event):
                     # Start the hold timer if it's not already running.
                     set_timer('hold_timer', v.hold_time, True)
                     v.is_holding = True
-                    print('{}, hold_started'.format(get_current_time()))
+                    #print('{}, hold_started'.format(get_current_time()))
             else:
                 # If frequency drops, reset the hold.
                 if v.is_holding:
                     disarm_timer('hold_timer')
                     v.is_holding = False
-                    print('{}, hold_reset'.format(get_current_time()))
+                    #print('{}, hold_reset'.format(get_current_time()))
 
     elif event == 'hold_timer':
         # Fired if the frequency was held high for the entire hold_time.
-        print('{}, hold_success'.format(get_current_time()))
+        #print('{}, hold_success'.format(get_current_time()))
         goto_state('reward')
         
     elif event == 'trial_timer':
@@ -208,7 +209,7 @@ def reward(event):
     """
     if event == 'entry':
         set_timer('reward_timer', 5*second, True)  # 5 seconds to lick for reward
-        print('reward_state_entered')
+        print('reward_entered')
         
     elif event == 'exit':
         disarm_timer('reward_timer')
