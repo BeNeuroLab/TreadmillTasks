@@ -59,7 +59,7 @@ def run_start():
 def run_end():
     "Code here is executed when the framework stops running."
     hw.bci_link.light.all_off()
-    hw.bci_link.light.stop()
+    hw.bci_link.stop()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.motionSensor.stop()
