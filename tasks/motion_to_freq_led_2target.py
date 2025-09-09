@@ -15,6 +15,7 @@ from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
 import utime
+import math
 
 
 # -------------------------------------------------------------------------
@@ -58,6 +59,13 @@ v.left_start = 10                     # Left-most LED index
 v.right_start = 90                  # Right-most LED index
 v.led_step_per_event = 6             # How much LED moves per qualifying motion event
 v.y_positive_is_right = True         # Flip if y sign is reversed on your rig
+
+# Speaker feedback (log-spaced discrete steps like motion_to_frequency_continuous)
+v.start_freq_hz = 2000               # Starting frequency (Hz)
+v.goal_freq_hz = 12000               # Goal frequency (Hz)
+v.num_steps = 3                      # Number of discrete steps
+v.current_step = 0                   # Current frequency step
+v.current_freq = v.start_freq_hz
 
 # Motion sensor
 v.motion_threshold = 1              # Motion event threshold
@@ -106,6 +114,8 @@ def move_towards_center(dy:int):
     - Wrong direction is ignored (no movement of LED).
     """
     if dy == 0:
+        # Still refresh audio to reflect current position
+        _update_audio_from_progress(_progress_from_led())
         return
 
     # Determine if dy moves in the correct direction toward center.
@@ -119,6 +129,41 @@ def move_towards_center(dy:int):
             v.current_led = max(v.center_target, v.current_led - v.led_step_per_event)
 
     show_led(v.current_led)
+    # Update audio feedback based on progress toward center
+    _update_audio_from_progress(_progress_from_led())
+
+
+def _progress_from_led() -> float:
+    """Return progress [0..1] from starting side to center based on v.current_led."""
+    if v.start_side == 'left':
+        span = max(1, v.center_target - v.left_start)
+        prog = (v.current_led - v.left_start) / span
+    else:  # right start
+        span = max(1, v.right_start - v.center_target)
+        prog = (v.right_start - v.current_led) / span
+    return max(0.0, min(1.0, prog))
+
+
+def _calculate_frequency_for_step(step:int) -> int:
+    """Log-spaced frequency between start and goal."""
+    octaves = math.log2(v.goal_freq_hz / v.start_freq_hz)
+    step_fraction = max(0, min(v.num_steps, step)) / v.num_steps
+    mult = 2 ** (octaves * step_fraction)
+    return int(v.start_freq_hz * mult)
+
+
+def _update_audio_from_progress(progress: float) -> None:
+    """Update speaker tone based on progress in discrete steps."""
+    new_step = int(progress * v.num_steps)
+    if new_step != v.current_step:
+        v.current_step = new_step
+        v.current_freq = _calculate_frequency_for_step(v.current_step)
+        hw.speaker.sine(v.current_freq)
+        print('{}, progress'.format(round(progress, 3)))
+        print('{}, frequency'.format(v.current_freq))
+    if progress >= 1.0:
+        hw.speaker.sine(v.goal_freq_hz)
+        print('{}, target_reached'.format(v.goal_freq_hz))
 
 
 # -------------------------------------------------------------------------
@@ -126,6 +171,7 @@ def move_towards_center(dy:int):
 # -------------------------------------------------------------------------
 def run_start():
     hw.reward.reward_duration = v.reward_duration
+    hw.speaker.set_volume(15)
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
 
@@ -142,6 +188,9 @@ def run_start():
     print('{}, motion_threshold'.format(v.motion_threshold))
     print('{}, motion_wait_time'.format(v.motion_wait_time))
     print('{}, trial_timeout'.format(v.trial_timeout))
+    print('{}, start_frequency'.format(v.start_freq_hz))
+    print('{}, goal_frequency'.format(v.goal_freq_hz))
+    print('{}, num_steps'.format(v.num_steps))
     print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
@@ -153,6 +202,7 @@ def run_end():
         hw.light.off()
     except Exception:
         pass
+    hw.speaker.off()
     hw.motionSensor.stop()
     hw.motionSensor.off()
     hw.cameraTrigger.stop()
@@ -164,6 +214,7 @@ def run_end():
 # -------------------------------------------------------------------------
 def intertrial(event):
     if event == 'entry':
+        hw.speaker.off()
         reset_trial_vars()
         v.intertrial_start_time = get_current_time()
         set_timer('motion_check_timer', v.intertrial_duration, True)
@@ -196,6 +247,10 @@ def trial(event):
     if event == 'entry':
         pick_start_side()
         show_led(v.current_led)
+        # Start audio at baseline
+        v.current_step = 0
+        v.current_freq = v.start_freq_hz
+        hw.speaker.sine(v.start_freq_hz)
         set_timer('trial_timer', v.trial_timeout, True)
 
     elif event == 'exit':
@@ -231,6 +286,7 @@ def reward(event):
     elif event == 'lick':
         v.reward_number += 1
         hw.reward.release()
+        hw.speaker.off()
         print('{}, reward_number'.format(v.reward_number))
         goto_state('intertrial')
 
@@ -248,8 +304,10 @@ def stopped(event):
         disarm_timer('reward_timer')
         try:
             hw.light.all_off()
+            hw.light.off()
         except Exception:
             pass
+        hw.speaker.off()
 
     elif event == 'stop_button':
         goto_state('intertrial')
@@ -263,4 +321,3 @@ def all_states(event):
         print('Session Timer Expired')
         print('{}, total_rewards'.format(v.reward_number))
         stop_framework()
-
