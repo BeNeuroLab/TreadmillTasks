@@ -54,13 +54,13 @@ v.reward_duration = 40 * ms
 
 # LED/target settings
 v.center_target = 50                 # Center index for LED strip (1..100)
-v.left_start = 1                     # Left-most LED index
-v.right_start = 100                  # Right-most LED index
-v.led_step_per_event = 2             # How much LED moves per qualifying motion event
+v.left_start = 10                     # Left-most LED index
+v.right_start = 90                  # Right-most LED index
+v.led_step_per_event = 6             # How much LED moves per qualifying motion event
 v.y_positive_is_right = True         # Flip if y sign is reversed on your rig
 
 # Motion sensor
-v.motion_threshold = 10              # Motion event threshold
+v.motion_threshold = 1              # Motion event threshold
 v.cpi = 100                          # Will be updated from sensor
 
 # Tracking
