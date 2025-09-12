@@ -30,8 +30,8 @@ v.trial_len = 3 * second
 def run_start():
     "Code here is executed when the framework starts running."
     hw.reward.reward_duration = v.reward_duration
-    hw.motionSensor.threshold = 5
     hw.motionSensor.record()
+    hw.motionSensor.threshold = 5
     hw.speaker.set_volume(10)
     hw.light.start()
     hw.light.off()
@@ -47,8 +47,8 @@ def run_end():
     hw.light.off()
     hw.speaker.off()
     hw.reward.stop()
-    hw.motionSensor.stop()
     hw.motionSensor.off()
+    hw.motionSensor.stop()
     hw.cameraTrigger.stop()
     hw.off()
 

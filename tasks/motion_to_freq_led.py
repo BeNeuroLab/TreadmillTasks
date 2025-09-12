@@ -152,8 +152,8 @@ def run_end():
         hw.light.off()
     except Exception:
         pass
-    hw.motionSensor.stop()
     hw.motionSensor.off()
+    hw.motionSensor.stop()
     hw.cameraTrigger.stop()
     hw.off()
     print('Session Ended')

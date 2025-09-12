@@ -215,8 +215,8 @@ def run_end():
     except Exception:
         pass
     hw.speaker.off()
-    hw.motionSensor.stop()
     hw.motionSensor.off()
+    hw.motionSensor.stop()
     hw.cameraTrigger.stop()
     hw.off()
 

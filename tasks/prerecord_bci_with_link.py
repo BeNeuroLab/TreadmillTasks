@@ -73,8 +73,8 @@ def run_start():
 
 def run_end():
     hw.speaker.off()
-    hw.motionSensor.stop()
     hw.motionSensor.off()
+    hw.motionSensor.stop()
     hw.bci_link.stop()
     hw.cameraTrigger.stop()
     hw.off()

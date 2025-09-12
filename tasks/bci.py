@@ -72,10 +72,10 @@ def reset_trial():
 # -------------------------------------------------------------------------
 def run_start():
     hw.speaker.set_volume(15)
-    hw.bci_link.start()
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
     hw.reward.reward_duration = v.reward_duration
+    #hw.bci_link.start()
     hw.light.start()
     hw.light.off()
     # Initialize last_motion_time at the start of the session
@@ -99,9 +99,9 @@ def run_start():
 
 def run_end():
     hw.speaker.off()
-    hw.light.off()
-    hw.motionSensor.stop()
     hw.motionSensor.off()
+    hw.motionSensor.stop()
+    hw.light.off()
     hw.bci_link.stop() # Stop the BCI UART link
     hw.cameraTrigger.stop()
     hw.off()
