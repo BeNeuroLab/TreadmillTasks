@@ -245,8 +245,9 @@ class MotionDetector(Analog_input):
 
         # Create SPI objects for X then Y with a brief gap
         self.sensor_x = PAA5100JE('SPI2', cs2)
-        time.sleep_ms(5)
+        time.sleep_ms(50)
         self.sensor_y = PAA5100JE('SPI2', cs1)
+        time.sleep_ms(50)
 
         # for consistency with PMW3360 sensors
         self.sensor_x.set_orientation(invert_x=True)
@@ -297,14 +298,17 @@ class MotionDetector(Analog_input):
 
     def read_sample(self):
         """read motion in the interrupt routine"""
-        # Read motion in x direction
-        self.sensor_x.read_burst(self.x_buffer_mv)
-        self._delta_x = twos_comp(int.from_bytes(self.delta_x_mv, 'little'))
 
         # Read motion in y direction
         self.sensor_y.read_burst(self.y_buffer_mv)
         self._delta_y = twos_comp(int.from_bytes(self.delta_y_mv, 'little'))
-        
+
+        time.sleep_us(100)
+
+        # Read motion in x direction
+        self.sensor_x.read_burst(self.x_buffer_mv)
+        self._delta_x = twos_comp(int.from_bytes(self.delta_x_mv, 'little'))
+
         # Record accumulated motion
         self.delta_y += self._delta_y
         self.delta_x += self._delta_x
