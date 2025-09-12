@@ -145,12 +145,12 @@ class PAA5100JE():
     def read_burst(self, buf: bytearray | memoryview):
         """Read an array of data from the registers, used for reading motion burst"""       
         self.select.on()
-        time.sleep_us(1)
-        self.spi.write(self.burst_address)
         time.sleep_us(5)
+        self.spi.write(self.burst_address)
+        time.sleep_us(20)  # allow data to be prepared
         # Read 12 bytes of data from the motion burst register
         self.spi.readinto(buf)
-        time.sleep_us(5)
+        time.sleep_us(10)
         self.select.off()
         time.sleep_us(50)
 
@@ -202,6 +202,8 @@ class PAA5100JE():
         time.sleep_ms(10)
         self._bulk_write(PROGMEM[186:])
         time.sleep_ms(10)
+        # Final settle to ensure registers take effect before first ID read
+        time.sleep_ms(20)
 
 
     def shut_down(self, deinitSPI:bool =True):
@@ -227,9 +229,23 @@ class MotionDetector(Analog_input):
                 name='MotSen', threshold=1, calib_coef=1,  
                 sampling_rate=100, event='motion'
                 ):
+        # Optional hardware reset line (active-low assumed)
+        self._nreset = None
+        if reset is not None:
+            try:
+                self._nreset = Digital_output(pin=reset, inverted=False)
+                # Assert reset low briefly, then release high and wait to settle
+                self._nreset.off()
+                time.sleep_ms(2)
+                self._nreset.on()
+                time.sleep_ms(60)
+            except Exception:
+                # If reset pin is not usable, continue without hardware reset
+                self._nreset = None
 
-        # Create SPI objects
+        # Create SPI objects for X then Y with a brief gap
         self.sensor_x = PAA5100JE('SPI2', cs2)
+        time.sleep_ms(5)
         self.sensor_y = PAA5100JE('SPI2', cs1)
 
         # for consistency with PMW3360 sensors
