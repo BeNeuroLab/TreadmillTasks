@@ -130,7 +130,7 @@ def run_start():
     print('{}, goal_frequency'.format(v.goal_freq_hz))
     print('{}, goal_distance'.format(v.goal_distance))
     print('{}, num_steps'.format(v.num_steps))
-    
+    print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
 

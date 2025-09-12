@@ -31,10 +31,10 @@ initial_state = 'intertrial'
 # Variables
 # -------------------------------------------------------------------------
 # Session parameters
-v.session_duration = 45 * minute
+v.session_duration = 3 * minute
 
 # Trial parameters
-v.intertrial_duration = 4 * second
+v.intertrial_duration = 20 * second
 v.trial_timeout = 15 * second       # Max time to reach target frequency
 v.motion_wait_time = 1 * second     # Time without motion before trial can start
 v.reward_duration = 40 * ms
@@ -128,7 +128,7 @@ def run_start():
     print('{}, goal_frequency'.format(v.goal_freq_hz))
     print('{}, goal_distance'.format(v.goal_distance))
     print('{}, num_steps'.format(v.num_steps))
-    
+    print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
 

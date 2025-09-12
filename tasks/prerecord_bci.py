@@ -66,7 +66,7 @@ def run_start():
     print('{}, motion_threshold'.format(v.motion_threshold))
     print('{}, motion_wait_time'.format(v.motion_wait_time))
     print('{}, goal_frequency'.format(v.goal_freq_hz))
-    
+    print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
     set_timer('session_timer', v.session_duration, True)
 

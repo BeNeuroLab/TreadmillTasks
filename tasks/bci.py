@@ -75,7 +75,7 @@ def run_start():
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
     hw.reward.reward_duration = v.reward_duration
-    #hw.bci_link.start()
+    hw.bci_link.start()
     hw.light.start()
     hw.light.off()
     # Initialize last_motion_time at the start of the session
@@ -216,7 +216,7 @@ def reward(event):
         
     elif event == 'lick':
         v.reward_number += 1
-        hw.reward.release()
+        # hw.reward.release()
         hw.speaker.off()
         print('{}, reward_number'.format(v.reward_number))
         goto_state('intertrial') # Go directly to intertrial to start the cycle again
