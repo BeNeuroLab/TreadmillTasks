@@ -31,7 +31,7 @@ def run_start():
     "Code here is executed when the framework starts running."
     hw.reward.reward_duration = v.reward_duration
     hw.motionSensor.record()
-    hw.motionSensor.threshold = 5
+    hw.motionSensor.threshold = 2
     hw.speaker.set_volume(10)
     hw.light.start()
     hw.light.off()

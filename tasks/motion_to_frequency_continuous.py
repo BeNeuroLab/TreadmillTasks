@@ -10,22 +10,19 @@ states = [
     'intertrial',
     'trial',
     'reward',
-    'stopped'
 ]
 
 events = [
+    'lick',
     'session_timer',
     'motion',        # Motion events from sensor
-    'lick',
     'trial_begin',
     'trial_timer',
     'reward_timer',
     'motion_check_timer',
-    'target_tone_timer',  # Timer for goal frequency playback
-    'stop_button'
 ]
 
-initial_state = 'intertrial'
+initial_state = 'trial'
 
 # -------------------------------------------------------------------------
 # Variables
@@ -34,7 +31,7 @@ initial_state = 'intertrial'
 v.session_duration = 3 * minute
 
 # Trial parameters
-v.intertrial_duration = 20 * second
+v.intertrial_duration = 4 * second
 v.trial_timeout = 15 * second       # Max time to reach target frequency
 v.motion_wait_time = 1 * second     # Time without motion before trial can start
 v.reward_duration = 40 * ms
@@ -60,6 +57,8 @@ v.reward_number = 0
 v.last_motion_time = 0      # Track when last motion occurred
 v.motion_detected = False   # Flag for motion during wait period
 v.intertrial_start_time = 0 # Track when intertrial started
+
+v.first_trial = 1
 
 # -------------------------------------------------------------------------
 # Helper Functions
@@ -98,7 +97,7 @@ def update_frequency_from_distance():
             # Play goal frequency and then go to reward
             hw.speaker.sine(v.goal_freq_hz)
             print('{}, target_reached'.format(v.goal_freq_hz))
-            set_timer('target_tone_timer', v.target_present_duration, True)
+            timed_goto_state('reward',v.target_present_duration)
 
 def reset_trial():
     """Reset variables for a new trial"""
@@ -115,12 +114,13 @@ def run_start():
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
     hw.reward.reward_duration = v.reward_duration
-    
+    hw.light.start()
+    hw.light.off()
     # Get actual CPI from sensor
     if hasattr(hw.motionSensor, 'sensor_x'):
         v.cpi = hw.motionSensor.sensor_x.CPI
     
-    print('{}, CPI'.format(v.cpi))
+    #print('{}, CPI'.format(v.cpi))
     print('{}, motion_threshold'.format(v.motion_threshold))
     print('{}, motion_wait_time'.format(v.motion_wait_time))
     print('{}, trial_timeout'.format(v.trial_timeout))
@@ -133,7 +133,9 @@ def run_start():
     set_timer('session_timer', v.session_duration, True)
 
 def run_end():
+    hw.light.off()
     hw.speaker.off()
+    hw.reward.stop()
     hw.motionSensor.off()
     hw.motionSensor.stop()
     hw.cameraTrigger.stop()
@@ -150,7 +152,13 @@ def intertrial(event):
         v.motion_detected = False
         v.intertrial_start_time = get_current_time()
         # Start checking for motion after minimum intertrial duration
-        set_timer('motion_check_timer', v.intertrial_duration, True)
+
+        if v.first_trial == 1:
+            set_timer('motion_check_timer', 30 * second, True)
+            v.first_trial = 0
+        else:
+            set_timer('motion_check_timer', v.intertrial_duration, True)
+
         
     elif event == 'motion':
         v.motion_detected = True
@@ -170,9 +178,7 @@ def intertrial(event):
         else:
             # Haven't reached minimum intertrial duration yet
             set_timer('motion_check_timer', v.motion_wait_time, True)
-    
-    elif event == 'stop_button':
-        goto_state('stopped')
+
 
 def trial(event):
     if event == 'entry':
@@ -192,18 +198,11 @@ def trial(event):
     elif event == 'trial_timer':
         # Trial timeout - failed to reach target
         goto_state('intertrial')
-    
-    elif event == 'target_tone_timer':
-        # Goal frequency playback finished, go to reward
-        goto_state('reward')
-    
-    elif event == 'stop_button':
-        goto_state('stopped')
+
 
 def reward(event):
     if event == 'entry':
-        
-        set_timer('reward_timer', 5*second, True)  # 5 seconds to get reward
+        set_timer('reward_timer', 3*second, True)  # 5 seconds to get reward
         
     elif event == 'exit':
         disarm_timer('reward_timer')
@@ -220,19 +219,8 @@ def reward(event):
         # No lick within timeout
         goto_state('intertrial')
     
-    elif event == 'stop_button':
-        goto_state('stopped')
 
-def stopped(event):
-    if event == 'entry':
-        hw.speaker.off()
-        disarm_timer('motion_check_timer')
-        disarm_timer('trial_timer')
-        disarm_timer('reward_timer')
-        disarm_timer('target_tone_timer')
-    
-    elif event == 'stop_button':
-        goto_state('intertrial')
+
 
 # -------------------------------------------------------------------------
 # Event handlers

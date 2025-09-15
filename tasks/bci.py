@@ -47,7 +47,7 @@ v.start_freq_hz = 2000               # Starting frequency (Hz)
 
 # Motion sensor parameters
 v.cpi = 100                          # Counts per inch (will be updated from sensor)
-v.motion_threshold = 10              # Motion event threshold
+v.motion_threshold = 2              # Motion event threshold
 
 # Trial tracking
 v.reward_number = 0
