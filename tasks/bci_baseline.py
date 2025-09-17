@@ -29,7 +29,7 @@ initial_state = 'intertrial'
 # Variables
 # -------------------------------------------------------------------------
 # Session parameters
-v.session_duration = 60 * minute
+v.session_duration = 5 * minute
 
 # Trial parameters
 v.intertrial_duration = 3 * second   # Minimum time between trials
@@ -209,7 +209,7 @@ def reward(event):
         
     elif event == 'lick':
         v.reward_number += 1
-        hw.reward.release()
+        #hw.reward.release() no reward 
         hw.speaker.off()
         print('{}, reward_number'.format(v.reward_number))
         goto_state('intertrial') # Go directly to intertrial to start the cycle again
