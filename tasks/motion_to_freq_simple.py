@@ -14,11 +14,11 @@ initial_state = 'trial'  # keep same start as your original; change to 'intertri
 # -------------------------------------------------------------------------
 # Session / trial params
 # -------------------------------------------------------------------------
-v.session_duration       = 3 * minute
+v.session_duration       = 45 * minute
 
-v.intertrial_duration    = 4 * second           # minimum intertrial time
+v.intertrial_duration    = 3 * second           # minimum intertrial time
 v.motion_wait_time       = 1 * second           # must be this long without motion before starting a trial
-v.first_trial_extra_wait = 30 * second          # keep your longer first-trial wait (optional)
+v.first_trial_extra_wait = 3 * second          # keep your longer first-trial wait (optional)
 
 v.trial_timeout          = 15 * second          # max trial length
 v.reward_window          = 3 * second           # time allowed to lick for reward (uses timed_goto_state)
@@ -27,17 +27,17 @@ v.reward_duration        = 40 * ms
 v.target_present_duration= 1 * second           # hold goal frequency before reward state
 
 # Distance/frequency mapping
-v.goal_distance   = 30          # arbitrary distance units
+v.goal_distance   = 10          # arbitrary distance units
 v.current_distance= 0
 v.start_freq_hz   = 2000
 v.goal_freq_hz    = 12000
-v.num_steps       = 3
+v.num_steps       = 5
 v.current_step    = 0
 v.current_freq    = v.start_freq_hz
 
 # Motion sensor
 v.cpi               = 100
-v.motion_threshold  = 10
+v.motion_threshold  = 2
 
 # Tracking
 v.reward_number     = 0
