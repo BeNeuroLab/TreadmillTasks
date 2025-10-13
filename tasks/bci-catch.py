@@ -72,13 +72,16 @@ def trial(event):
     "Trial state"
     if event == 'cursor_update':
         spk_dir = hw.bci_link.spk
-        hw.bci_link.light.cue(spk_dir)
-        print('{}, led_number'.format(spk_dir))
         if spk_dir == 100:
             if random() < v.catch_chance and v.n_ommitted_reward < v.max_ommitted_rewards:
                 goto_state('catch_cursor_match')
             else:
+                hw.bci_link.light.cue(spk_dir)
+                print('{}, led_number'.format(spk_dir))
                 goto_state('cursor_match')
+        else:
+            hw.bci_link.light.cue(spk_dir)
+            print('{}, led_number'.format(spk_dir))
 
 def cursor_match(event):
     "when led and spk line up"
@@ -109,9 +112,9 @@ def catch_cursor_match(event):
         timed_goto_state('catch_reward', v.hold_duration)
     elif event == 'cursor_update':
         spk_dir = hw.bci_link.spk
-        hw.bci_link.light.cue(spk_dir)
-        print('{}, led_number'.format(spk_dir))
         if spk_dir != 100:
+            hw.bci_link.light.cue(spk_dir)
+            print('{}, led_number'.format(spk_dir))
             goto_state('trial')
 
 def catch_reward(event):
