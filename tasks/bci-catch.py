@@ -104,7 +104,7 @@ def reward(event):
         timed_goto_state('trial', v.IT_duration)
     elif event == "target_on_timer":
         hw.bci_link.light.all_red()
-        print('0, led_number')
+        print('-1, led_number')
 
 def catch_cursor_match(event):
     "cursor match without led and spk"
@@ -127,7 +127,6 @@ def catch_reward(event):
         goto_state('reward')
     if event == 'exit':
         hw.bci_link.light.all_red()
-        print('0, led_number')
 
 
 
