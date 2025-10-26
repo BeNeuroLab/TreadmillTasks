@@ -24,7 +24,6 @@ events = [
     'cursor_update',       # BCI frequency updates
     'lick',
     'trial_timer',         # Trial timeout
-    'reward_timer',        # Timer for lick window
     'motion_check_timer',  # Timer to check for trial start conditions
     'hold_timer',          # NEW: Timer for holding frequency at target
 ]
@@ -42,11 +41,12 @@ v.intertrial_duration = 3 * second   # Minimum time between trials
 v.trial_timeout = 15 * second        # Max time to reach target frequency
 v.motion_wait_time = 1 * second      # Time without motion before trial can start
 v.reward_duration = 40 * ms
+v.reward_state_duration = 1 * second   # Time to remain in reward state before intertrial
 
 # BCI Parameters
 v.hold_time = 0.12 * second          # Time freq must be >= target for reward
 v.baseline_freq_hz = 4000            # Freq must be <= this to start a trial
-v.goal_freq_hz = 12000               # Target frequency (Hz)
+v.goal_freq_hz = 10000               # Target frequency (Hz)
 v.start_freq_hz = 2000               # Starting frequency (Hz)
 
 # Motion sensor parameters
@@ -155,6 +155,10 @@ def trial(event):
         # Successful hold earns reward
         goto_state('reward')
 
+    elif event == 'trial_timer':
+        # Trial timed out without reward; return to intertrial
+        goto_state('intertrial')
+
 def intertrial(event):
     """
     Start a trial only if:
@@ -198,15 +202,10 @@ def reward(event):
     if event == 'entry':
         v.reward_number += 1
         hw.reward.release()
-        hw.speaker.off()
         print('{}, reward_number'.format(v.reward_number))
-        set_timer('reward_timer', 200 * ms, True)
+        timed_goto_state('intertrial', v.reward_state_duration)
 
-    elif event == 'exit':
-        disarm_timer('reward_timer')
-
-    elif event == 'reward_timer':
-        goto_state('intertrial')
+    # No additional handling needed; transition scheduled by timed_goto_state
 
 # -------------------------------------------------------------------------
 # Event handlers
