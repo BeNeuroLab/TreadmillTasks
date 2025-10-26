@@ -30,8 +30,7 @@ class PAA5100JE():
 
         # Initialize SPI
         # SPI_type = 'SPI1' or 'SPI2' or 'softSPI'
-        # Use a conservative SPI speed for reliable startup
-        SPIparams = {'baudrate': 1000000, 'polarity': 1, 'phase': 1,
+        SPIparams = {'baudrate': 2000000, 'polarity': 1, 'phase': 1,
                     'bits': 8, 'firstbit': machine.SPI.MSB}
 
         if '1' in SPI_type:
@@ -60,15 +59,10 @@ class PAA5100JE():
 
         self.power_up()  # Power up the sensor
 
-        # Check for successful initialization with one clean retry
+        # Check for successful initialization
         prod_ID = self._read(0x00)
-        prod_rev = self._read(0x01)
-        if prod_ID != 0x49:
-            # Retry once after a fresh power-up sequence
-            self.power_up()
-            prod_ID = self._read(0x00)
-            prod_rev = self._read(0x01)
-            assert prod_ID == 0x49, "Bad init. Prod_ID={:#x}, Rev={:#x}, SPI={}".format(prod_ID, prod_rev, self.spi)
+        prod_rev  = self._read(0x01)
+        assert prod_ID == 0x49, "Bad init. Prod_ID={:#x}, Rev={:#x}, SPI={}".format(prod_ID, prod_rev, self.spi)
 
         # CPI from: https://github.com/zic-95/PAA5100JE/blob/1644a74095bf5f9345d43fffa26aea2661e1c56c/src/PAA5100JE.cpp#L75
         # distance from sensor fixed at 2cm=0.02m
@@ -113,9 +107,9 @@ class PAA5100JE():
         time.sleep_us(1)
         self.spi.write(address)   # find specific address of the device
         self.spi.write(value)     # write value into the above address of the device
-        time.sleep_us(10)         # small guard before CS high (tSCLK-NCS)
+        time.sleep_us(5)          # tSCLK-NCS for write operation
         self.select.off()
-        time.sleep_us(120)        # tSWW/tSWR guard before next access
+        time.sleep_us(5)          # tSWW/tSWR (=120us) minus tSCLK-NCS.
 
     def _read(self, address: int):
         """Read register"""
@@ -126,14 +120,14 @@ class PAA5100JE():
         self.select.on()
         time.sleep_us(1)
         self.spi.write(address)
-        time.sleep_us(20)  # tSRAD guard time before data valid
+        time.sleep_us(5)  # tSRAD
 
         data = self.spi.read(1)
 
         val = int.from_bytes(data, 'little')  # converts received data back to integer for further calculations
-        time.sleep_us(2)  # small guard before CS high
+        time.sleep_us(1)  # tSCLK-NCS for read operation is 120ns
         self.select.off()
-        time.sleep_us(20)  # tSRW/tSRR guard before next access
+        time.sleep_us(5)  # tSRW/tSRR (=20us) minus tSCLK-NCS
         return val
 
     def _bulk_write(self, data: list[int]):
@@ -145,12 +139,12 @@ class PAA5100JE():
     def read_burst(self, buf: bytearray | memoryview):
         """Read an array of data from the registers, used for reading motion burst"""       
         self.select.on()
-        time.sleep_us(5)
+        time.sleep_us(1)
         self.spi.write(self.burst_address)
-        time.sleep_us(20)  # allow data to be prepared
+        time.sleep_us(5)
         # Read 12 bytes of data from the motion burst register
         self.spi.readinto(buf)
-        time.sleep_us(10)
+        time.sleep_us(5)
         self.select.off()
         time.sleep_us(50)
 
@@ -160,8 +154,7 @@ class PAA5100JE():
         """
         # Reset the sensor
         self._write(PAA5100JE_firmware.REG_POWER_UP_RESET, 0x5A)
-        # Allow the device to fully wake and stabilize
-        time.sleep_ms(60)
+        time.sleep_ms(1)
 
         # Read motion registers once after reset
         for offset in range(5):
@@ -202,8 +195,6 @@ class PAA5100JE():
         time.sleep_ms(10)
         self._bulk_write(PROGMEM[186:])
         time.sleep_ms(10)
-        # Final settle to ensure registers take effect before first ID read
-        time.sleep_ms(20)
 
 
     def shut_down(self, deinitSPI:bool =True):
@@ -229,25 +220,10 @@ class MotionDetector(Analog_input):
                 name='MotSen', threshold=1, calib_coef=1,  
                 sampling_rate=100, event='motion'
                 ):
-        # Optional hardware reset line (active-low assumed)
-        self._nreset = None
-        if reset is not None:
-            try:
-                self._nreset = Digital_output(pin=reset, inverted=False)
-                # Assert reset low briefly, then release high and wait to settle
-                self._nreset.off()
-                time.sleep_ms(2)
-                self._nreset.on()
-                time.sleep_ms(60)
-            except Exception:
-                # If reset pin is not usable, continue without hardware reset
-                self._nreset = None
 
-        # Create SPI objects for X then Y with a brief gap
+        # Create SPI objects
         self.sensor_x = PAA5100JE('SPI2', cs2)
-        time.sleep_ms(50)
         self.sensor_y = PAA5100JE('SPI2', cs1)
-        time.sleep_ms(50)
 
         # for consistency with PMW3360 sensors
         self.sensor_x.set_orientation(invert_x=True)
@@ -298,17 +274,14 @@ class MotionDetector(Analog_input):
 
     def read_sample(self):
         """read motion in the interrupt routine"""
-
-        # Read motion in y direction
-        self.sensor_y.read_burst(self.y_buffer_mv)
-        self._delta_y = twos_comp(int.from_bytes(self.delta_y_mv, 'little'))
-
-        time.sleep_us(100)
-
         # Read motion in x direction
         self.sensor_x.read_burst(self.x_buffer_mv)
         self._delta_x = twos_comp(int.from_bytes(self.delta_x_mv, 'little'))
 
+        # Read motion in y direction
+        self.sensor_y.read_burst(self.y_buffer_mv)
+        self._delta_y = twos_comp(int.from_bytes(self.delta_y_mv, 'little'))
+        
         # Record accumulated motion
         self.delta_y += self._delta_y
         self.delta_x += self._delta_x
