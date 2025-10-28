@@ -14,7 +14,7 @@ initial_state = 'trial'  # keep same start as your original; change to 'intertri
 # -------------------------------------------------------------------------
 # Session / trial params
 # -------------------------------------------------------------------------
-v.session_duration       = 45 * minute
+v.session_duration       = 9.5 * minute
 
 v.intertrial_duration    = 3 * second           # minimum intertrial time
 v.motion_wait_time       = 1 * second           # must be this long without motion before starting a trial
@@ -30,7 +30,7 @@ v.target_present_duration= 1 * second           # hold goal frequency before rew
 v.goal_distance   = 10          # arbitrary distance units
 v.current_distance= 0
 v.start_freq_hz   = 2000
-v.goal_freq_hz    = 12000
+v.goal_freq_hz    = 10000
 v.num_steps       = 5
 v.current_step    = 0
 v.current_freq    = v.start_freq_hz

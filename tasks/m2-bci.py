@@ -41,7 +41,7 @@ v.intertrial_duration = 3 * second   # Minimum time between trials
 v.trial_timeout = 15 * second        # Max time to reach target frequency
 v.motion_wait_time = 1 * second      # Time without motion before trial can start
 v.reward_duration = 40 * ms
-v.reward_state_duration = 1 * second   # Time to remain in reward state before intertrial
+v.reward_state_duration = 3 * second   # Time to remain in reward state before intertrial
 
 # BCI Parameters
 v.hold_time = 0.12 * second          # Time freq must be >= target for reward
@@ -200,11 +200,15 @@ def reward(event):
     Deliver reward immediately on entry, then return to intertrial.
     """
     if event == 'entry':
+        timed_goto_state('intertrial', v.reward_state_duration)
+    elif event == "motion":
+        goto_state('intertrial')
+    elif event == 'lick':
         v.reward_number += 1
         hw.reward.release()
+        hw.speaker.off()
         print('{}, reward_number'.format(v.reward_number))
-        timed_goto_state('intertrial', v.reward_state_duration)
-
+        goto_state('intertrial')
     # No additional handling needed; transition scheduled by timed_goto_state
 
 # -------------------------------------------------------------------------
