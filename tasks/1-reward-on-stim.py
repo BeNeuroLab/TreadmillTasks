@@ -29,8 +29,8 @@ initial_state = 'trial'
 v.session_duration = 30 * minute
 v.reward_duration = 35 * ms
 
-v.sweep_bins = (.1 * second, .2 * second, .5 * second)
-v.cursor_match_dur = .5 * second
+v.sweep_bins = (.1 * second, .2 * second, .3 * second)
+v.cursor_match_dur = 3 * second
 
 v.reward_number = 0
 v.IT_duration = 5 * second
