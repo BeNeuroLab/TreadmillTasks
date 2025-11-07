@@ -25,7 +25,7 @@ v.reward_window          = 3 * second
 v.reward_duration        = 40 * ms
 v.target_present_duration= 1 * second
 
-v.no_motion_before_reward = 1.5 * second   # must stay still this long before reward
+v.no_motion_before_reward = 0.5 * second   # must stay still this long before reward
 
 # Distance/frequency mapping
 v.goal_distance   = 10
@@ -69,7 +69,7 @@ def update_frequency_from_distance():
     if v.current_distance >= v.goal_distance:
         hw.speaker.sine(v.goal_freq_hz)
         print('{}, target_reached'.format(v.goal_freq_hz))
-        timed_goto_state('reward', v.reward_window)
+        timed_goto_state('reward', v.target_present_duration)
 
 def reset_trial_vars():
     v.current_distance = 0
@@ -156,6 +156,7 @@ def trial(event):
     elif event == 'motion':
         v.current_distance += v.motion_threshold
         update_frequency_from_distance()
+        v.last_motion_time = get_current_time()
 
     elif event == 'exit':
         hw.speaker.off()
@@ -167,7 +168,6 @@ def reward(event):
     """
     if event == 'entry':
         print('Entered reward state, stillness required before reward.')
-        v.last_motion_time = get_current_time()
         # reward window timer runs automatically
         timed_goto_state('intertrial', v.reward_window)
 

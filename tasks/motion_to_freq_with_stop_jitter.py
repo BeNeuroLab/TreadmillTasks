@@ -8,7 +8,7 @@ import math, random
 # States / Events
 # -------------------------------------------------------------------------
 states = ['intertrial', 'trial', 'reward']
-events = ['lick', 'motion', 'session_timer', 'quiescence_timer']
+events = ['lick', 'motion', 'session_timer', 'quiescence_timer']#, 'target_timer']
 initial_state = 'trial'
 
 # -------------------------------------------------------------------------
@@ -25,9 +25,9 @@ v.reward_window          = 3 * second
 v.reward_duration        = 40 * ms
 v.target_present_duration= 1 * second
 
-v.no_motion_before_reward = 1.5 * second   # must stay still this long before reward
-v.goal_distance_base      = 10              # base distance units
-v.goal_distance_jitter    = 0.25            # ±25% randomisation per trial
+v.no_motion_before_reward = 0.5 * second   # must stay still this long before reward
+v.goal_distance_base      = 12.5              # base distance units
+v.goal_distance_jitter    = 0.5            # ±25% randomisation per trial
 
 # Distance/frequency mapping
 v.goal_distance   = v.goal_distance_base
@@ -71,7 +71,7 @@ def update_frequency_from_distance():
     if v.current_distance >= v.goal_distance:
         hw.speaker.sine(v.goal_freq_hz)
         print('{}, target_reached'.format(v.goal_freq_hz))
-        timed_goto_state('reward', v.reward_window)
+        timed_goto_state('reward', v.target_present_duration)
 
 def reset_trial_vars():
     """Reset distance/frequency and apply random jitter to goal distance."""
@@ -164,6 +164,7 @@ def trial(event):
     elif event == 'motion':
         v.current_distance += v.motion_threshold
         update_frequency_from_distance()
+        v.last_motion_time = get_current_time()
 
     elif event == 'exit':
         hw.speaker.off()
@@ -175,8 +176,9 @@ def reward(event):
     """
     if event == 'entry':
         print('Entered reward state, stillness required before reward.')
-        v.last_motion_time = get_current_time()
+        # v.last_motion_time = get_current_time()
         timed_goto_state('intertrial', v.reward_window)
+        # set_timer('target_timer', v.target_present_duration, True)
 
     elif event == 'motion':
         v.last_motion_time = get_current_time()
@@ -188,10 +190,15 @@ def reward(event):
             hw.reward.release()
             hw.speaker.off()
             print('{}, reward_number'.format(v.reward_number))
+            # disarm_timer('target_timer')
             goto_state('intertrial')
+
+    # elif event == 'target_timer':
+    #     hw.speaker.off()
 
     elif event == 'exit':
         hw.speaker.off()
+        # disarm_timer('target_timer')
 
 # -------------------------------------------------------------------------
 # Global handler
