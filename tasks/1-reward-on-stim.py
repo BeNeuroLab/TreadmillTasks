@@ -26,7 +26,7 @@ initial_state = 'trial'
 
 
 # -------------------------------------------------------------------------
-v.session_duration = 30 * minute
+v.session_duration = 45 * minute
 v.reward_duration = 35 * ms
 
 v.sweep_bins = (.1 * second, .2 * second, .3 * second)
