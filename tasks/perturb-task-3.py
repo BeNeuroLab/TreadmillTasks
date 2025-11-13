@@ -26,7 +26,7 @@ initial_state = 'free'
 
 
 # Variables
-v.min_motion = 7
+v.min_motion = 2
 v.session_duration = 79 * minute
 v.free_duration = 20 * minute
 v.earthquake_duration = 40 * minute

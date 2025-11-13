@@ -32,7 +32,7 @@ initial_state = "trial"
 # Variables
 v.sol_duration = 50 * ms
 v.sol_number = 0
-v.min_motion = 7
+v.min_motion = 2
 v.intertrial_duration = 1 * second
 v.trial_duration = 1 * second
 v.session_duration = 10 * minute
