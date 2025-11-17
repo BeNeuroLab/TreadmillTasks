@@ -8,7 +8,7 @@ import math, random
 # States / Events
 # -------------------------------------------------------------------------
 states = ["intertrial", "trial", "reward"]
-events = ["lick", "motion", "session_timer", "quiescence_timer"]  # , 'target_timer']
+events = ["lick", "motion", "session_timer", "quiescence_timer", "sol_on", "sol_off"]  # , 'target_timer']
 initial_state = "trial"
 
 # -------------------------------------------------------------------------
@@ -26,7 +26,7 @@ v.reward_duration = 40 * ms
 v.target_present_duration = 1 * second
 
 v.no_motion_before_reward = 0.5 * second  # must stay still this long before reward
-v.goal_distance_base = 12.5  # base distance units
+v.goal_distance_base = 22.5  # base distance units
 v.goal_distance_jitter = 0.5  # ±25% randomisation per trial
 
 # Distance/frequency mapping
@@ -52,7 +52,7 @@ v.first_trial = 1
 v.sol_onset_time = 2 * second  ## This probably needs to be shorter
 v.sol_off_time_list = [50, 100, 150, 200]  ## You can fix this during pilots
 v.first_motion_flag = None
-v.sol_thr = 0.5  ## Trigger on 50% of trials.
+v.sol_thr = 1  ## Trigger on 50% of trials.
 
 
 # -------------------------------------------------------------------------
@@ -132,6 +132,7 @@ def run_start():
     print("{}, base_goal_distance".format(v.goal_distance_base))
     print("{}, goal_jitter_fraction".format(v.goal_distance_jitter))
     print("{}, num_steps".format(v.num_steps))
+    hw.earthquake_stim.kill_switch.on()
     print("{}, before_camera_trigger".format(get_current_time()))
     hw.cameraTrigger.start()
 
@@ -145,6 +146,7 @@ def run_end():
     hw.motionSensor.off()
     hw.motionSensor.stop()
     hw.cameraTrigger.stop()
+    hw.earthquake_stim.kill_switch.off()
     hw.off()
     print("Session Ended")
 
@@ -199,6 +201,9 @@ def trial(event):
     elif event == "sol_on":
         hw.earthquake_stim.sol_on(v.sol_number)
         set_timer("sol_off", v.sol_off_time * ms, False)
+    
+    elif event =='sol_off':
+        hw.earthquake_stim.sol_off(v.sol_number)
 
     elif event == "exit":
         hw.speaker.off()
@@ -217,6 +222,9 @@ def reward(event):
 
     elif event == "motion":
         v.last_motion_time = get_current_time()
+    
+    elif event =='sol_off':
+        hw.earthquake_stim.sol_off(v.sol_number)
 
     elif event == "lick":
         time_since_motion = get_current_time() - v.last_motion_time
