@@ -30,7 +30,7 @@ initial_state = 'trial'
 # -------------------------------------------------------------------------
 v.session_duration = 90 * minute
 v.reward_duration = 35 * ms
-v.hold_duration = 200 * ms
+v.hold_duration = 300 * ms
 
 v.catch_chance = 0.05  # 10% chance of catch trial in cursor match
 v.max_ommitted_rewards = 15  # maximum number of rewards ommitted due to catch trials
