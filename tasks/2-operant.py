@@ -30,11 +30,11 @@ v.reward_duration = 35 * ms
 v.reward_number = 0
 
 v.trial_len = 3 * second      # Duration of intertrial interval (base)
-v.pre_stim_len = 1.0 * second # Delay before stimulus onset in trial
-v.response_window = 5 * second # Time to lick before miss
+v.pre_stim_len = 0 * second # Delay before stimulus onset in trial
+v.response_window = 3 * second # Time to lick before miss
 
 v.led_direction = 100         # Direction for LED cue (0-100)
-v.go_stim_freq = 12336        # Frequency for Go tone
+v.go_stim_freq = 10000       # Frequency for Go tone
 
 # -------------------------------------------------------------------------
 #  Framework hooks
@@ -87,13 +87,8 @@ def trial(event):
         # But for simplicity, I'll allow it or wait for stim?
         # "if lick is detected, the reward is released" usually implies AFTER stim.
         # I will check if timer 'response_timer' is active (meaning stim is on).
-        if timer_remaining('response_timer') > 0:
-            goto_state('reward')
-        else:
-            # Lick before stimulus? Ignore or punish?
-            # 2-go-nogo ignores licks in intertrial usually, or resets.
-            # Here we are in 'trial' but pre-stim.
-            pass
+        goto_state('reward')
+ 
 
     elif event == 'response_timer':
         # Miss
@@ -107,7 +102,7 @@ def reward(event):
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
-        goto_state('intertrial')
+        timed_goto_state('intertrial',0.5*second)
 
 def intertrial(event):
     "Intertrial interval."
