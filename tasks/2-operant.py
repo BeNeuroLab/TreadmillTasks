@@ -5,6 +5,7 @@ from pyControl.utility import *
 import hardware_definition as hw
 from devices import *
 import utime
+import random
 
 # -------------------------------------------------------------------------
 #  States and events
@@ -16,6 +17,7 @@ states = ['trial',
 events = ['lick',
           'session_timer',
           'stim_timer',
+          'response_timer',
           'motion']
 
 initial_state = 'trial'
@@ -27,9 +29,12 @@ v.session_duration = 30 * minute
 v.reward_duration = 35 * ms
 v.reward_number = 0
 
-v.trial_len = 3 * second      # Duration of intertrial interval
-v.pre_stim_len = 0.1 * second # Delay before stimulus onset in trial
+v.trial_len = 3 * second      # Duration of intertrial interval (base)
+v.pre_stim_len = 1.0 * second # Delay before stimulus onset in trial
+v.response_window = 5 * second # Time to lick before miss
+
 v.led_direction = 100         # Direction for LED cue (0-100)
+v.go_stim_freq = 12336        # Frequency for Go tone
 
 # -------------------------------------------------------------------------
 #  Framework hooks
@@ -40,6 +45,7 @@ def run_start():
     hw.motionSensor.record()
     hw.motionSensor.threshold = 10
     hw.light.start()
+    hw.speaker.set_volume(10) # Ensure speaker volume is set
     utime.sleep_ms(20)
     hw.light.all_red()
     set_timer('session_timer', v.session_duration, True)
@@ -51,6 +57,7 @@ def run_end():
     "Code here is executed when the framework stops running."
     hw.light.all_off()
     hw.light.off()
+    hw.speaker.off()
     hw.reward.stop()
     hw.motionSensor.off()
     hw.motionSensor.stop()
@@ -67,26 +74,36 @@ def trial(event):
         set_timer('stim_timer', v.pre_stim_len)
     
     elif event == 'stim_timer':
-        hw.light.cue(v.led_direction) # Turn on Target LED
-        print('{}, led_direction'.format(v.led_direction))
-        # Now waiting for lick...
+        # Turn on Sound and LED
+        hw.light.cue(v.led_direction) 
+        hw.speaker.sine(v.go_stim_freq)
+        print('{}, stimulus_on'.format(get_current_time()))
+        set_timer('response_timer', v.response_window)
 
     elif event == 'lick':
-        # Only reward if stimulus is on? 
-        # For now, assuming any lick in 'trial' after stim onset (or even before?) triggers reward?
-        # "Stimulus presentation first" implies we should wait for stimulus.
-        # But if they lick during pre_stim, what happens?
-        # I'll assume lick triggers reward to keep it simple and robust, 
-        # or I could check if timer passed. 
-        # Given "Stimulus first", I should probably wait for stim.
-        # But to be safe and responsive, I'll let lick trigger reward, 
-        # but maybe the user *wants* the cue to be visible first.
-        # With 0.1s delay, it's almost immediate.
-        goto_state('reward')
+        # Check if stimulus is on? 
+        # User said "after some time... if lick is detected".
+        # If they lick BEFORE stim, it might be premature.
+        # But for simplicity, I'll allow it or wait for stim?
+        # "if lick is detected, the reward is released" usually implies AFTER stim.
+        # I will check if timer 'response_timer' is active (meaning stim is on).
+        if timer_remaining('response_timer') > 0:
+            goto_state('reward')
+        else:
+            # Lick before stimulus? Ignore or punish?
+            # 2-go-nogo ignores licks in intertrial usually, or resets.
+            # Here we are in 'trial' but pre-stim.
+            pass
+
+    elif event == 'response_timer':
+        # Miss
+        print('{}, miss'.format(get_current_time()))
+        goto_state('intertrial')
 
 def reward(event):
     "Reward state."
     if event == 'entry':
+        hw.speaker.off() # Turn off sound
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
@@ -95,6 +112,7 @@ def reward(event):
 def intertrial(event):
     "Intertrial interval."
     if event == 'entry':
+        hw.speaker.off()
         hw.light.all_red() # Back to Red background
         timed_goto_state('trial', v.trial_len)
 
