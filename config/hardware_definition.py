@@ -18,7 +18,7 @@ motionSensor = MotionDetector(
 
 light = LedStrip()
 
-lickometer = Lickometer(lick_port=board.port_6, sol_port=board.port_4, rising_event_A='lick', debounce=5)
+lickometer = Lickometer(lick_port=board.port_6, sol_port=board.port_4, rising_event='lick', debounce=5)
 reward = Reward(sol=lickometer.SOL_1, sync=board.port_6.DIO_B, reward_duration=50)
 
 sound = AudioStim(board.port_11) # Audio player for sound stimul
