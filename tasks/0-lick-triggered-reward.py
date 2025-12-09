@@ -19,11 +19,11 @@ initial_state = 'trial'
 
 
 # -------------------------------------------------------------------------
-v.session_duration = 5 * minute
-v.reward_duration = 40 * ms
+v.session_duration = 15 * minute
+v.reward_duration = 30 * ms
 v.reward_number = 0
 
-v.trial_len = 3 * second
+v.trial_len = 0.3 * second
 
 
 # -------------------------------------------------------------------------
