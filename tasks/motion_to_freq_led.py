@@ -36,24 +36,24 @@ v.session_duration = 45 * minute
 # Trial parameters
 v.intertrial_duration = 4 * second
 v.trial_timeout = 15 * second       # Max time to reach target distance
-v.motion_wait_time = 1 * second     # Time without motion before trial can start
-v.reward_duration = 40 * ms
+v.motion_wait_time = 0.5 * second     # Time without motion before trial can start
+v.reward_duration = 35 * ms
 v.target_present_duration = 1 * second  # Duration to play goal frequency
 
 # Distance and frequency mapping
-v.goal_distance = 30       # Distance units to reach goal
+v.goal_distance = 2       # Distance units to reach goal
 v.current_distance = 0     # Accumulated distance traveled
 v.start_freq_hz = 2000     # Starting frequency (Hz)
-v.goal_freq_hz = 12000     # Goal frequency (Hz)
+v.goal_freq_hz = 10000     # Goal frequency (Hz)
 
 # Discrete frequency steps (speaker)
-v.num_steps = 3            # Number of discrete frequency steps (like semitones)
+v.num_steps = 1            # Number of discrete frequency steps (like semitones)
 v.current_step = 0         # Current frequency step
 v.current_freq = v.start_freq_hz
 
 # Motion sensor parameters
 v.cpi = 100                # Counts per inch (will be updated from sensor)
-v.motion_threshold = 10    # Motion event threshold
+v.motion_threshold = 2    # Motion event threshold
 
 # Trial tracking
 v.reward_number = 0
@@ -74,7 +74,7 @@ def calculate_frequency_for_step(step):
 def led_percent_from_progress(progress: float) -> int:
     """Map progress [0..1] to LED strip percent for bilateral (side -> center).
     With bilateral mode, 100 ≈ far side, 50 ≈ center. Clamp to [50..100]."""
-    p = int(100 - 50 * max(0.0, min(1.0, progress)))
+    p = int(100 + 50 * max(0.0, min(1.0, progress)))
     return max(50, min(100, p))
 
 def update_feedback_from_distance():
@@ -124,8 +124,9 @@ def run_start():
     # LED strip feedback (bilateral symmetric cue)
     try:
         hw.light.start()
+        hw.light.all_red()
         hw.light.cue_bilateral(True)
-        hw.light.cue(100)  # start at sides
+        #hw.light.cue(50)  # start at sides
     except Exception:
         pass
 
@@ -164,16 +165,12 @@ def run_end():
 def intertrial(event):
     if event == 'entry':
         hw.speaker.off()
+        hw.light.all_red()
         reset_trial()
         v.motion_detected = False
         v.intertrial_start_time = get_current_time()
         set_timer('motion_check_timer', v.intertrial_duration, True)
 
-        # Reset LED to sides at intertrial
-        try:
-            hw.light.cue(100)
-        except Exception:
-            pass
 
     elif event == 'motion':
         v.motion_detected = True
@@ -195,6 +192,7 @@ def intertrial(event):
 
 def trial(event):
     if event == 'entry':
+        hw.light.cue(50)
         hw.speaker.sine(v.start_freq_hz)
         set_timer('trial_timer', v.trial_timeout, True)
 

@@ -30,14 +30,14 @@ v.session_duration = 30 * minute
 v.reward_duration = 35 * ms
 v.reward_number = 0
 
-v.target_distance = 20       # Arbitrary distance units (e.g. clicks)
+v.target_distance = 6       # Arbitrary distance units (e.g. clicks)
 v.current_distance = 0
 v.motion_threshold = 2        # How much distance per motion event
 
 v.stop_duration = 0.5 * second      # Duration mouse must be still to trigger stim
 v.wait_to_stop_time = 5 * second    # Max time to wait for stop before aborting
 v.response_window = 2 * second      # Time to lick after stim onset
-v.intertrial_duration = 2 * second  # ITI
+v.intertrial_duration = 0.1 * second  # ITI
 
 v.led_direction = 100         # Direction for LED cue
 v.go_stim_freq = 10000        # Frequency for Go tone

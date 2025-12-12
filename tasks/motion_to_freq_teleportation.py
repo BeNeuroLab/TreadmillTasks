@@ -26,18 +26,17 @@ v.reward_duration        = 40 * ms
 v.target_present_duration= 1 * second
 
 v.no_motion_before_reward = 0.5 * second   # must stay still this long before reward
-v.goal_distance_base      = 12.5              # base distance units
-v.goal_distance_jitter    = 0.5            # ±25% randomisation per trial
+
 
 # Teleportation params
-v.teleport_prob = 0.1  # 10% of trials
+v.teleport_prob = 0.8  # 10% of trials
 v.is_teleport_trial = False
 v.teleport_trigger_index = 0
 v.update_calls_in_trial = 0
 v.trial_type_sequence = [] # List to manage block randomization
 
 # Distance/frequency mapping
-v.goal_distance   = v.goal_distance_base
+
 v.current_distance= 0
 v.start_freq_hz   = 2000
 v.goal_freq_hz    = 10000
@@ -47,7 +46,11 @@ v.current_freq    = v.start_freq_hz
 
 # Motion sensor
 v.cpi               = 100
-v.motion_threshold  = 2
+v.motion_threshold  = 3
+
+v.goal_distance_base      = v.motion_threshold *  v.num_steps             # base distance units
+v.goal_distance_jitter    = 0.20            # ±25% randomisation per trial
+v.goal_distance   = v.goal_distance_base
 
 # Tracking
 v.reward_number     = 0
@@ -66,7 +69,7 @@ def calculate_frequency_for_step(step):
 
 def update_frequency_from_distance():
     """Update frequency only on step changes; go to reward when goal reached."""
-    v.update_calls_in_trial += 1
+    
     
     # Teleportation check
     if v.is_teleport_trial and (v.update_calls_in_trial == v.teleport_trigger_index):
@@ -77,6 +80,7 @@ def update_frequency_from_distance():
     new_step = int(progress * v.num_steps)
     if new_step != v.current_step:
         v.current_step = new_step
+        v.update_calls_in_trial += 1
         v.current_freq = calculate_frequency_for_step(v.current_step)
         hw.speaker.sine(v.current_freq)
         print('{}, distance'.format(v.current_distance))
@@ -107,7 +111,9 @@ def reset_trial_vars():
         # Ensure at least one teleport if prob > 0 but < 1/block_size? 
         # For now, strictly follow the math: 0.1 * 10 = 1.
         new_block = [True] * num_teleports + [False] * (block_size - num_teleports)
-        random.shuffle(new_block)
+        for i in range(len(new_block) - 1, 0, -1):
+            j = random.randint(0, i)
+            new_block[i], new_block[j] = new_block[j], new_block[i]
         v.trial_type_sequence = new_block
         print('New trial block generated: {}'.format(v.trial_type_sequence))
 
@@ -115,7 +121,7 @@ def reset_trial_vars():
     v.update_calls_in_trial = 0
     
     if v.is_teleport_trial:
-        v.teleport_trigger_index = random.choice([1, 2, 3])
+        v.teleport_trigger_index = random.choice([1, 2])
         print('Teleport Trial! Trigger on update #{}'.format(v.teleport_trigger_index))
     else:
         print('Normal Trial')
