@@ -29,7 +29,7 @@ v.no_motion_before_reward = 0.5 * second   # must stay still this long before re
 
 
 # Teleportation params
-v.teleport_prob = 0.8  # 10% of trials
+v.teleport_prob = 0.2  # 10% of trials
 v.is_teleport_trial = False
 v.teleport_trigger_index = 0
 v.update_calls_in_trial = 0
