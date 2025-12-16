@@ -26,6 +26,10 @@ v.reward_window          = 3 * second
 v.reward_duration        = 40 * ms
 v.target_present_duration= 1 * second
 
+# Manual trigger for Setup -> Task
+v.start_task_now = False # User toggles this to True to start task
+
+
 v.no_motion_before_reward = 0.5 * second   # must stay still this long before reward
 
 
@@ -198,7 +202,13 @@ def spontaneous_pre(event):
 def setup(event):
     if event == 'entry':
         print('In Setup State. Waiting for manual transition.')
-        print('Human: Please switch to "intertrial" or "trial" state manually to begin task.')
+        print('To start task: Change v.start_task_now to True in Variables tab.')
+        set_timer('setup_check_timer', 1 * second, True)
+    elif event == 'setup_check_timer':
+        if v.start_task_now:
+            goto_state('intertrial')
+        else:
+            set_timer('setup_check_timer', 1 * second)
     elif event == 'exit':
         # This is where the actual task session starts counting
         set_timer('session_timer', v.session_duration)
