@@ -7,8 +7,8 @@ import math, random
 # -------------------------------------------------------------------------
 # States / Events
 # -------------------------------------------------------------------------
-states = ['spontaneous_pre', 'setup', 'intertrial', 'trial', 'reward', 'spontaneous_post']
-events = ['lick', 'motion', 'session_timer', 'quiescence_timer', 'spontaneous_timer']
+states = ['spontaneous_pre', 'setup', 'intertrial', 'trial', 'reward', 'setup_post', 'spontaneous_post']
+events = ['lick', 'motion', 'session_timer', 'quiescence_timer', 'spontaneous_timer', 'setup_check_timer']
 initial_state = 'spontaneous_pre'
 
 # -------------------------------------------------------------------------
@@ -28,6 +28,9 @@ v.target_present_duration= 1 * second
 
 # Manual trigger for Setup -> Task
 v.start_task_now = False # User toggles this to True to start task
+
+# Manual trigger for Task -> Spontaneous Post
+v.start_spontaneous_post_now = False
 
 
 v.no_motion_before_reward = 0.5 * second   # must stay still this long before reward
@@ -210,9 +213,25 @@ def setup(event):
         else:
             set_timer('setup_check_timer', 1 * second)
     elif event == 'exit':
+        v.start_task_now = False # Reset for safety
         # This is where the actual task session starts counting
         set_timer('session_timer', v.session_duration)
         print('Setup Complete. Session Timer Started for {}s'.format(v.session_duration/second))
+    elif event == 'motion':
+        v.last_motion_time = get_current_time()
+
+def setup_post(event):
+    if event == 'entry':
+        print('In Post-Task Setup State. Waiting for manual transition.')
+        print('To start spontaneous post-task: Change v.start_spontaneous_post_now to True.')
+        set_timer('setup_check_timer', 1 * second, True)
+    elif event == 'setup_check_timer':
+        if v.start_spontaneous_post_now:
+            goto_state('spontaneous_post')
+        else:
+            set_timer('setup_check_timer', 1 * second)
+    elif event == 'exit':
+        v.start_spontaneous_post_now = False
     elif event == 'motion':
         v.last_motion_time = get_current_time()
 
@@ -298,7 +317,7 @@ def reward(event):
 # -------------------------------------------------------------------------
 def all_states(event):
     if event == 'session_timer':
-        print('Session Timer Expired - Moving to Spontaneous Post')
+        print('Session Timer Expired - Moving to Post-Task Setup')
         print('{}, total_rewards'.format(v.reward_number))
-        # Move to post-spontaneous instead of stopping immediately
-        goto_state('spontaneous_post')
+        # Move to setup_post check instead of stopping immediately
+        goto_state('setup_post')
