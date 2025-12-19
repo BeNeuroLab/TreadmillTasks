@@ -39,6 +39,7 @@ v.trial_timeout = 15 * second       # Max time to reach target distance
 v.motion_wait_time = 0.5 * second     # Time without motion before trial can start
 v.reward_duration = 35 * ms
 v.target_present_duration = 1 * second  # Duration to play goal frequency
+v.no_motion_before_reward = 0.5 * second  # Time without motion before reward can be triggered
 
 # Distance and frequency mapping
 v.goal_distance = 6       # Distance units to reach goal
@@ -203,6 +204,7 @@ def trial(event):
         # Accumulate distance on motion event
         v.current_distance += v.motion_threshold
         update_feedback_from_distance()
+        v.last_motion_time = get_current_time()
 
     elif event == 'trial_timer':
         goto_state('intertrial')
@@ -221,12 +223,16 @@ def reward(event):
         disarm_timer('reward_timer')
 
     elif event == 'lick':
-        v.reward_number += 1
-        hw.reward.release()
-        hw.speaker.off()
-        print('{}, reward_number'.format(v.reward_number))
-        set_timer('trial_begin', v.intertrial_duration, True)
-        goto_state('intertrial')
+        if get_current_time() - v.last_motion_time > v.no_motion_before_reward:
+            v.reward_number += 1
+            hw.reward.release()
+            hw.speaker.off()
+            print('{}, reward_number'.format(v.reward_number))
+            set_timer('trial_begin', v.intertrial_duration, True)
+            goto_state('intertrial')
+            
+    elif event == 'motion':
+        v.last_motion_time = get_current_time()
 
     elif event == 'reward_timer':
         goto_state('intertrial')
