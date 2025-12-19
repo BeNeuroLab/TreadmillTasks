@@ -36,6 +36,10 @@ v.intertrial_duration = 2 * second  # ITI
 v.led_direction = 100         # Direction for LED cue
 v.go_stim_freq = 10000        # Frequency for Go tone
 
+v.post_reward_duration = 2 * second # Keep stimulus on for this duration after reward
+v.run_goal_distance = 500     # Minimum distance to run in intertrial
+v.current_distance = 0        # Track distance in intertrial
+
 v.last_motion_time = 0
 
 # -------------------------------------------------------------------------
@@ -74,10 +78,13 @@ def intertrial(event):
     if event == 'entry':
         hw.light.all_red()
         hw.speaker.off()
+        v.current_distance = 0
         print('{}, trial_start'.format(get_current_time()))
     
     elif event == 'motion':
-        goto_state('trial')
+        v.current_distance += v.motion_threshold
+        if v.current_distance >= v.run_goal_distance:
+            goto_state('trial')
 
 def trial(event):
     "Wait for mouse to stop for v.stop_duration."
@@ -116,12 +123,11 @@ def stim_on(event):
 def reward(event):
     "Reward state."
     if event == 'entry':
-        hw.speaker.off()
-        hw.light.all_red()
+        # Keep stimuli ON during reward
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_number'.format(v.reward_number))
-        timed_goto_state('intertrial', 0.5 * second) # Short delay before ITI
+        timed_goto_state('intertrial', v.post_reward_duration) # Delay before ITI (stim stays on)
 
 def all_states(event):
     """
