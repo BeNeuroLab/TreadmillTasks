@@ -42,19 +42,19 @@ v.target_present_duration = 1 * second  # Duration to play goal frequency
 v.no_motion_before_reward = 0.5 * second  # Time without motion before reward can be triggered
 
 # Distance and frequency mapping
-v.goal_distance = 6       # Distance units to reach goal
+v.goal_distance = 60       # Distance units to reach goal
 v.current_distance = 0     # Accumulated distance traveled
 v.start_freq_hz = 2000     # Starting frequency (Hz)
 v.goal_freq_hz = 10000     # Goal frequency (Hz)
 
 # Discrete frequency steps (speaker)
-v.num_steps = 3            # Number of discrete frequency steps (like semitones)
+v.num_steps = 10            # Number of discrete frequency steps (like semitones)
 v.current_step = 0         # Current frequency step
 v.current_freq = v.start_freq_hz
 
 # Motion sensor parameters
 v.cpi = 100                # Counts per inch (will be updated from sensor)
-v.motion_threshold = 2    # Motion event threshold
+v.motion_threshold = 3    # Motion event threshold
 
 # Trial tracking
 v.reward_number = 0
