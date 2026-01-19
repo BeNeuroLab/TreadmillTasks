@@ -50,7 +50,7 @@ v.priming_blink_period = 250 * ms       # LED blink period during priming
 v.stop_to_prime_timeout = 5.0 * second  # If staying in reward without stopping -> penalty
 
 # Penalty parameters
-v.penalty_duration = 2.0 * second
+v.penalty_duration = 1.0 * second
 v.penalty_noise_max_freq = 10000        # Upper freq for white noise
 
 # Distance and frequency mapping
@@ -401,6 +401,15 @@ def post_reward(event):
     Keep goal stimulus on for v.target_present_duration AFTER the reward.
     """
     if event == 'entry':
+        # Ensure steady goal sound and target LED (no blinking)
+        hw.speaker.sine(v.goal_freq_hz)
+        try:
+            if not hasattr(v, 'target_led_percent'):
+                v.target_led_percent = 100
+            hw.light.all_red()
+            hw.light.cue(v.target_led_percent)
+        except Exception:
+            pass
         set_timer('state_timer', v.target_present_duration)
 
     elif event == 'state_timer':
