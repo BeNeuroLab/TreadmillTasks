@@ -8,17 +8,13 @@ import random
 # States and Events
 # -------------------------------------------------------------------------
 states = [
-    'spontaneous_pre',
-    'setup',
     'intertrial',
     'trial',
     'reward',          # Goal reached; wait for stillness to enter priming
     'priming',         # LED blinks; lick here to obtain reward
     'penalty',         # White noise + lights off after miss
     'post_reward',     # Keep stimulus after reward
-    'stopped',
-    'setup_post',
-    'spontaneous_post'
+    'stopped'
 ]
 
 events = [
@@ -30,18 +26,15 @@ events = [
     'stop_button'
 ]
 
-initial_state = 'spontaneous_pre'
+initial_state = 'intertrial'
 
 # -------------------------------------------------------------------------
 # Variables
 # -------------------------------------------------------------------------
 # Session parameters
 v.session_duration = 45 * minute
-v.spontaneous_duration = 5 * minute
 
-# Manual triggers
-v.start_task_now = False
-v.start_spontaneous_post_now = False
+# Manual triggers (none)
 
 # Trial parameters
 v.intertrial_duration = 2 * second
@@ -228,6 +221,8 @@ def run_start():
     print('{}, teleport_prob'.format(v.teleport_prob))
     print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
+    # Start the session timer immediately since there is no setup state.
+    set_timer('session_timer', v.session_duration)
 
 def run_end():
     hw.speaker.off()
@@ -243,62 +238,8 @@ def run_end():
     print('Session Ended')
 
 # -------------------------------------------------------------------------
-# Spontaneous & Setup States
+# No setup/spontaneous states in this task
 # -------------------------------------------------------------------------
-def spontaneous_pre(event):
-    if event == 'entry':
-        print('Entering Spontaneous Pre-Task State ({}s)'.format(v.spontaneous_duration/second))
-        set_timer('state_timer', v.spontaneous_duration)
-    elif event == 'state_timer':
-        goto_state('setup')
-    elif event == 'motion':
-        v.last_motion_time = get_current_time()
-
-def setup(event):
-    if event == 'entry':
-        print('In Setup State. Waiting for manual transition.')
-        print('To start task: Change v.start_task_now to True in Variables tab.')
-        set_timer('state_timer', 1 * second, True)
-    elif event == 'state_timer':
-        if v.start_task_now:
-            set_timer('session_timer', v.session_duration)
-            print('Setup Complete. Session Timer Started for {}s'.format(v.session_duration/second))
-            goto_state('intertrial')
-        else:
-            set_timer('state_timer', 1 * second)
-    elif event == 'exit':
-        v.start_task_now = False
-    elif event == 'motion':
-        v.last_motion_time = get_current_time()
-
-def setup_post(event):
-    if event == 'entry':
-        print('In Post-Task Setup State. Waiting for manual transition.')
-        print('To start spontaneous post-task: Change v.start_spontaneous_post_now to True.')
-        set_timer('state_timer', 1 * second, True)
-    elif event == 'state_timer':
-        if v.start_spontaneous_post_now:
-            goto_state('spontaneous_post')
-        else:
-            set_timer('state_timer', 1 * second)
-    elif event == 'exit':
-        v.start_spontaneous_post_now = False
-    elif event == 'motion':
-        v.last_motion_time = get_current_time()
-
-def spontaneous_post(event):
-    if event == 'entry':
-        print('Entering Spontaneous Post-Task State ({}s)'.format(v.spontaneous_duration/second))
-        set_timer('state_timer', v.spontaneous_duration)
-        hw.speaker.off()
-        try:
-            hw.light.all_off()
-        except Exception:
-            pass
-    elif event == 'state_timer':
-        stop_framework()
-    elif event == 'motion':
-        v.last_motion_time = get_current_time()
 
 # -------------------------------------------------------------------------
 # State Machine
@@ -379,6 +320,9 @@ def reward(event):
             goto_state('priming')
         elif now - v.reward_entry_time >= v.stop_to_prime_timeout:
             goto_state('penalty')
+        else:
+            # Keep checking periodically until either condition is met
+            set_timer('state_timer', 50 * ms)
 
     elif event == 'stop_button':
         goto_state('stopped')
@@ -399,6 +343,8 @@ def priming(event):
 
     elif event == 'blink_timer':
         toggle_led()
+        # Reschedule next blink while in priming
+        set_timer('blink_timer', v.priming_blink_period)
 
     elif event == 'lick':
         # Reward available during priming
@@ -467,6 +413,6 @@ def stopped(event):
 # -------------------------------------------------------------------------
 def all_states(event):
     if event == 'session_timer':
-        print('Session Timer Expired - Moving to Post-Task Setup')
+        print('Session Timer Expired - Stopping Framework')
         print('{}, total_rewards'.format(v.reward_number))
-        goto_state('setup_post')
+        stop_framework()
