@@ -102,9 +102,9 @@ def led_percent_from_progress(progress: float) -> int:
 def set_led_blinking(enabled: bool):
     try:
         if enabled:
-            # Start in ON state; blink via blink_timer
+            # Background stays red; blink will toggle the target LED blue/red
             hw.light.all_red()
-            v._blink_on = True
+            v._blink_on = False
             set_timer('blink_timer', v.priming_blink_period, True)
         else:
             disarm_timer('blink_timer')
@@ -116,13 +116,15 @@ def set_led_blinking(enabled: bool):
         pass
 
 def toggle_led():
-    """Blink by alternating all_red and all_off without assuming toggle() exists."""
+    """Blink by alternating the target LED between blue (cue) and red background only."""
     try:
         if getattr(v, '_blink_on', False):
-            hw.light.all_off()
+            # Turn target back to red background only
+            hw.light.all_red()
             v._blink_on = False
         else:
-            hw.light.all_red()
+            # Show target LED in blue while others remain red
+            hw.light.cue(v.target_led_percent)
             v._blink_on = True
     except Exception:
         pass
@@ -203,6 +205,7 @@ def run_start():
     try:
         hw.light.start()
         hw.light.all_red()
+        hw.light.cue_bilateral(True)
     except Exception:
         pass
 
@@ -334,6 +337,8 @@ def priming(event):
     if event == 'entry':
         # Keep goal tone, start LED blinking and window timer
         hw.speaker.sine(v.goal_freq_hz)
+        # Target LED index (center when using bilateral mapping)
+        v.target_led_percent = 100
         set_led_blinking(True)
         set_timer('state_timer', v.priming_window)
 
