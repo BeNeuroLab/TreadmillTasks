@@ -276,9 +276,15 @@ def intertrial(event):
 
     elif event == 'stop_button':
         goto_state('stopped')
+    
+    elif event == 'exit':
+        # Ensure no intertrial timers bleed into next state
+        disarm_timer('state_timer')
 
 def trial(event):
     if event == 'entry':
+        # Defensive: clear any lingering state_timer from previous state
+        disarm_timer('state_timer')
         try:
             hw.light.cue(3)
         except:
@@ -346,6 +352,7 @@ def priming(event):
     elif event == 'exit':
         set_led_blinking(False)
         disarm_timer('blink_timer')
+        disarm_timer('state_timer')
 
     elif event == 'blink_timer':
         toggle_led()
@@ -384,6 +391,7 @@ def penalty(event):
 
     elif event == 'exit':
         hw.speaker.off()
+        disarm_timer('state_timer')
 
     elif event == 'stop_button':
         goto_state('stopped')
@@ -400,6 +408,9 @@ def post_reward(event):
 
     elif event == 'stop_button':
         goto_state('stopped')
+    
+    elif event == 'exit':
+        disarm_timer('state_timer')
 
 def stopped(event):
     if event == 'entry':
