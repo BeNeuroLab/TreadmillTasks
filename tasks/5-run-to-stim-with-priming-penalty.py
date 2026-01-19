@@ -295,7 +295,8 @@ def trial(event):
         v.last_motion_time = get_current_time()
 
     elif event == 'state_timer':
-        goto_state('intertrial')
+        # Trial timeout without reaching target -> penalty first
+        goto_state('penalty')
 
     elif event == 'stop_button':
         goto_state('stopped')
