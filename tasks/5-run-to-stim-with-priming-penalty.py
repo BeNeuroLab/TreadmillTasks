@@ -44,7 +44,7 @@ v.reward_duration = 35 * ms
 v.target_present_duration = 1 * second  # Duration to play goal frequency after reward
 
 # Stop/priming parameters
-v.priming_wait_time = 1.0 * second      # Required stillness before entering priming
+v.priming_wait_time = 0.5 * second      # Required stillness before entering priming
 v.priming_window = 3.0 * second         # Time in priming to obtain reward by lick
 v.priming_blink_period = 250 * ms       # LED blink period during priming
 v.stop_to_prime_timeout = 5.0 * second  # If staying in reward without stopping -> penalty
