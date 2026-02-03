@@ -188,7 +188,7 @@ def reset_trial():
 
     v.is_teleport_trial = v.trial_type_sequence.pop(0)
     if v.is_teleport_trial:
-        v.teleport_trigger_index = random.choice([1, 2])
+        v.teleport_trigger_index = random.choice([3,4,5])
         print('Teleport Trial! Trigger on update #{}'.format(v.teleport_trigger_index))
     else:
         print('Normal Trial')
