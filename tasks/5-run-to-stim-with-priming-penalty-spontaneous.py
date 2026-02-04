@@ -279,6 +279,14 @@ def setup(event):
 
 def setup_post(event):
     if event == 'entry':
+        try:
+            hw.speaker.off()
+        except Exception:
+            pass
+        try:
+            hw.light.all_off()
+        except Exception:
+            pass
         print('In Post-Task Setup State. Waiting for manual transition.')
         print('To start spontaneous post-task: Change v.start_spontaneous_post_now to True.')
         set_timer('state_timer', 1 * second, True)
@@ -294,9 +302,15 @@ def setup_post(event):
 
 def spontaneous_post(event):
     if event == 'entry':
-        print('Entering Spontaneous Post-Task State ({}s)'.format(v.spontaneous_duration/second))
+        try:
+            print('Entering Spontaneous Post-Task State ({}s)'.format(v.spontaneous_duration/second))
+        except Exception:
+            print('Entering Spontaneous Post-Task State')
         set_timer('state_timer', v.spontaneous_duration)
-        hw.speaker.off()
+        try:
+            hw.speaker.off()
+        except Exception:
+            pass
         try:
             hw.light.all_off()
         except Exception:
