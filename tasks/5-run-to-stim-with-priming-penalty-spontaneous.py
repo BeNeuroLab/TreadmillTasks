@@ -91,6 +91,10 @@ v.motion_detected = False       # Flag for motion during wait period
 v.intertrial_start_time = 0
 v.reward_entry_time = 0         # Track time of entering reward state
 
+# Priming reward during spontaneous_pre
+v.priming_reward_cooldown = 10 * second  # Min time between priming rewards
+v.last_priming_reward_time = 0           # Last time a priming reward was given
+
 # -------------------------------------------------------------------------
 # Helper Functions
 # -------------------------------------------------------------------------
@@ -263,12 +267,20 @@ def setup(event):
     if event == 'entry':
         print('In Setup State. Waiting for manual transition.')
         print('To start task: Change v.start_task_now to True in Variables tab.')
+        v.last_priming_reward_time = get_current_time()  # Initialize cooldown
         set_timer('state_timer', 1 * second, True)
     elif event == 'state_timer':
         if v.start_task_now:
             goto_state('intertrial')
         else:
             set_timer('state_timer', 1 * second)
+    elif event == 'lick':
+        # Deliver reward if cooldown has elapsed (no sound/LED)
+        now = get_current_time()
+        if now - v.last_priming_reward_time >= v.priming_reward_cooldown:
+            hw.reward.release()
+            v.last_priming_reward_time = now
+            print('{}, priming_reward_delivered'.format(now))
     elif event == 'exit':
         v.start_task_now = False  # Reset for safety
         # Start session timing when leaving setup
