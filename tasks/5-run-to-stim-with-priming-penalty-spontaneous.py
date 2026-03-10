@@ -35,9 +35,9 @@ initial_state = 'phase_router'
 # Variables
 # -------------------------------------------------------------------------
 # Session parameters
-v.session_duration = 45 * minute
+v.session_duration = 30 * minute
 v.spontaneous_duration = 5 * minute
-v.session_sequence = ['spontaneous', 'task', 'spontaneous', 'task']
+v.session_sequence = ['spontaneous', 'task', 'spontaneous', 'task','spontaneous']
 
 # Manual transition trigger
 v.start_next_phase_now = False
