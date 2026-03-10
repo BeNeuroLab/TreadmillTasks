@@ -8,7 +8,8 @@ import random
 # States and Events
 # -------------------------------------------------------------------------
 states = [
-    'spontaneous_pre',
+    'phase_router',
+    'spontaneous',
     'setup',
     'intertrial',
     'trial',
@@ -16,9 +17,7 @@ states = [
     'priming',         # LED blinks; lick here to obtain reward
     'penalty',         # White noise + lights off after miss
     'post_reward',     # Keep stimulus after reward
-    'stopped',
-    'setup_post',
-    'spontaneous_post'
+    'stopped'
 ]
 
 events = [
@@ -30,7 +29,7 @@ events = [
     'stop_button'
 ]
 
-initial_state = 'spontaneous_pre'
+initial_state = 'phase_router'
 
 # -------------------------------------------------------------------------
 # Variables
@@ -38,10 +37,10 @@ initial_state = 'spontaneous_pre'
 # Session parameters
 v.session_duration = 45 * minute
 v.spontaneous_duration = 5 * minute
+v.session_sequence = ['spontaneous', 'task', 'spontaneous', 'task']
 
-# Manual triggers
-v.start_task_now = False
-v.start_spontaneous_post_now = False
+# Manual transition trigger
+v.start_next_phase_now = False
 
 # Trial parameters
 v.intertrial_duration = 2 * second
@@ -90,8 +89,12 @@ v.last_motion_time = 0          # Track when last motion occurred
 v.motion_detected = False       # Flag for motion during wait period
 v.intertrial_start_time = 0
 v.reward_entry_time = 0         # Track time of entering reward state
+v.current_phase_index = 0
+v.current_phase = None
+v.completed_phase = None
+v.next_phase = None
 
-# Priming reward during spontaneous_pre
+# Priming reward during setup
 v.priming_reward_cooldown = 10 * second  # Min time between priming rewards
 v.last_priming_reward_time = 0           # Last time a priming reward was given
 
@@ -139,6 +142,69 @@ def toggle_led():
             v._blink_on = True
     except Exception:
         pass
+
+VALID_PHASES = ('spontaneous', 'task')
+
+def validate_session_sequence():
+    if not isinstance(v.session_sequence, (list, tuple)):
+        raise ValueError('v.session_sequence must be a list or tuple of phase names.')
+    if not v.session_sequence:
+        raise ValueError('v.session_sequence must contain at least one phase.')
+
+    normalized_sequence = []
+    invalid_phases = []
+    for phase in v.session_sequence:
+        if not isinstance(phase, str):
+            invalid_phases.append(repr(phase))
+            continue
+        normalized_phase = phase.lower()
+        if normalized_phase not in VALID_PHASES:
+            invalid_phases.append(repr(phase))
+            continue
+        normalized_sequence.append(normalized_phase)
+
+    if invalid_phases:
+        raise ValueError(
+            'Invalid phase names in v.session_sequence: {}'.format(', '.join(invalid_phases))
+        )
+
+    v.session_sequence = normalized_sequence
+
+def current_phase_name():
+    return v.session_sequence[v.current_phase_index]
+
+def start_current_phase():
+    phase = current_phase_name()
+    v.current_phase = phase
+    v.next_phase = None
+
+    if phase == 'task':
+        set_timer('session_timer', v.session_duration)
+        print(
+            'Starting Task Phase {}/{} ({}s)'.format(
+                v.current_phase_index + 1,
+                len(v.session_sequence),
+                v.session_duration / second
+            )
+        )
+        goto_state('intertrial')
+    else:
+        goto_state('spontaneous')
+
+def advance_phase():
+    v.completed_phase = current_phase_name()
+    v.current_phase_index += 1
+
+    if v.current_phase_index >= len(v.session_sequence):
+        print('Completed final {} phase. Stopping framework.'.format(v.completed_phase))
+        if v.completed_phase != 'task':
+            print('{}, total_rewards'.format(v.reward_number))
+        stop_framework()
+        return
+
+    v.next_phase = current_phase_name()
+    print('Completed {} phase. Next phase: {}.'.format(v.completed_phase, v.next_phase))
+    goto_state('setup')
 
 def update_feedback_from_distance():
     """Update speaker and LED feedback based on current distance."""
@@ -208,6 +274,13 @@ def reset_trial():
 # Run Start/End
 # -------------------------------------------------------------------------
 def run_start():
+    validate_session_sequence()
+    v.current_phase_index = 0
+    v.current_phase = None
+    v.completed_phase = None
+    v.next_phase = current_phase_name()
+    v.start_next_phase_now = False
+
     hw.speaker.set_volume(15)
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
@@ -233,9 +306,10 @@ def run_start():
     print('{}, goal_jitter_fraction'.format(v.goal_distance_jitter))
     print('{}, num_steps'.format(v.num_steps))
     print('{}, teleport_prob'.format(v.teleport_prob))
+    print('{}, session_sequence'.format(v.session_sequence))
     print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
-    # Session timer not started here; it starts after setup.
+    # Session timer starts when a task phase begins.
 
 def run_end():
     hw.speaker.off()
@@ -251,27 +325,61 @@ def run_end():
     print('Session Ended')
 
 # -------------------------------------------------------------------------
-# Spontaneous & Setup States
+# Phase Routing, Spontaneous & Setup States
 # -------------------------------------------------------------------------
-def spontaneous_pre(event):
+def phase_router(event):
     if event == 'entry':
-        print('Entering Spontaneous Pre-Task State ({}s)'.format(v.spontaneous_duration/second))
+        print('Starting configured phase sequence.')
+        set_timer('state_timer', 1 * ms)
+    elif event == 'state_timer':
+        start_current_phase()
+    elif event == 'exit':
+        disarm_timer('state_timer')
+
+def spontaneous(event):
+    if event == 'entry':
+        try:
+            hw.speaker.off()
+        except Exception:
+            pass
+        try:
+            hw.light.all_off()
+        except Exception:
+            pass
+        print(
+            'Entering Spontaneous Phase {}/{} ({}s)'.format(
+                v.current_phase_index + 1,
+                len(v.session_sequence),
+                v.spontaneous_duration / second
+            )
+        )
         set_timer('state_timer', v.spontaneous_duration)
     elif event == 'state_timer':
-        goto_state('setup')
+        advance_phase()
+    elif event == 'exit':
+        disarm_timer('state_timer')
     elif event == 'motion':
         # Log motion but do nothing else
         v.last_motion_time = get_current_time()
 
 def setup(event):
     if event == 'entry':
+        try:
+            hw.speaker.off()
+        except Exception:
+            pass
+        try:
+            hw.light.all_off()
+        except Exception:
+            pass
         print('In Setup State. Waiting for manual transition.')
-        print('To start task: Change v.start_task_now to True in Variables tab.')
-        v.last_priming_reward_time = get_current_time()  # Initialize cooldown
-        set_timer('state_timer', 1 * second, True)
+        print('Completed phase: {}. Next phase: {}.'.format(v.completed_phase, current_phase_name()))
+        print('To start next phase: Change v.start_next_phase_now to True in Variables tab.')
+        v.last_priming_reward_time = get_current_time()
+        set_timer('state_timer', 1 * second)
     elif event == 'state_timer':
-        if v.start_task_now:
-            goto_state('intertrial')
+        if v.start_next_phase_now:
+            start_current_phase()
         else:
             set_timer('state_timer', 1 * second)
     elif event == 'lick':
@@ -282,53 +390,8 @@ def setup(event):
             v.last_priming_reward_time = now
             print('{}, priming_reward_delivered'.format(now))
     elif event == 'exit':
-        v.start_task_now = False  # Reset for safety
-        # Start session timing when leaving setup
-        set_timer('session_timer', v.session_duration)
-        print('Setup Complete. Session Timer Started for {}s'.format(v.session_duration/second))
-    elif event == 'motion':
-        v.last_motion_time = get_current_time()
-
-def setup_post(event):
-    if event == 'entry':
-        try:
-            hw.speaker.off()
-        except Exception:
-            pass
-        try:
-            hw.light.all_off()
-        except Exception:
-            pass
-        print('In Post-Task Setup State. Waiting for manual transition.')
-        print('To start spontaneous post-task: Change v.start_spontaneous_post_now to True.')
-        set_timer('state_timer', 1 * second, True)
-    elif event == 'state_timer':
-        if v.start_spontaneous_post_now:
-            goto_state('spontaneous_post')
-        else:
-            set_timer('state_timer', 1 * second)
-    elif event == 'exit':
-        v.start_spontaneous_post_now = False
-    elif event == 'motion':
-        v.last_motion_time = get_current_time()
-
-def spontaneous_post(event):
-    if event == 'entry':
-        try:
-            print('Entering Spontaneous Post-Task State ({}s)'.format(v.spontaneous_duration/second))
-        except Exception:
-            print('Entering Spontaneous Post-Task State')
-        set_timer('state_timer', v.spontaneous_duration)
-        try:
-            hw.speaker.off()
-        except Exception:
-            pass
-        try:
-            hw.light.all_off()
-        except Exception:
-            pass
-    elif event == 'state_timer':
-        stop_framework()
+        v.start_next_phase_now = False
+        disarm_timer('state_timer')
     elif event == 'motion':
         v.last_motion_time = get_current_time()
 
@@ -527,6 +590,7 @@ def stopped(event):
 # -------------------------------------------------------------------------
 def all_states(event):
     if event == 'session_timer':
-        print('Session Timer Expired - Moving to Post-Task Setup')
+        print('Task Phase Timer Expired - Advancing Phase')
         print('{}, total_rewards'.format(v.reward_number))
-        goto_state('setup_post')
+        advance_phase()
+        return True
