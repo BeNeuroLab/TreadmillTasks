@@ -20,12 +20,14 @@ class PAA5100JE():
     C++ code reference can be found on: https://github.com/pimoroni/pimoroni-pico.git
     and on https://github.com/zic-95/PAA5100JE/blob/main/src/PAA5100JE.cpp
     """
-    def __init__(self, 
-                SPI_type: str, 
-                CS: str, 
-                MI: str = None, 
-                MO: str = None, 
-                SCK: str = None
+    def __init__(self,
+                SPI_type: str,
+                CS: str = None,
+                MI: str = None,
+                MO: str = None,
+                SCK: str = None,
+                select: Digital_output = None,
+                initialise: bool = True
                 ):
 
         # Initialize SPI
@@ -47,22 +49,11 @@ class PAA5100JE():
                                     )
 
         # Define Chip Select (CS) pin (active low)
-        self.select = Digital_output(pin=CS, inverted=True)
-
-        time.sleep_ms(1)
-        self.select.off() # Deselect the device by setting CS high
-        time.sleep_ms(1)
-        self.select.on() # Select the device by setting CS low
-        time.sleep_ms(50)
-        self.select.off()
-        time.sleep_ms(1)
-
-        self.power_up()  # Power up the sensor
-
-        # Check for successful initialization
-        prod_ID = self._read(0x00)
-        prod_rev  = self._read(0x01)
-        assert prod_ID == 0x49, "Bad init. Prod_ID={:#x}, Rev={:#x}, SPI={}".format(prod_ID, prod_rev, self.spi)
+        if select is None:
+            self.select = Digital_output(pin=CS, inverted=True)
+        else:
+            self.select = select
+        self.select.off()  # Deselect the device by setting CS high.
 
         # CPI from: https://github.com/zic-95/PAA5100JE/blob/1644a74095bf5f9345d43fffa26aea2661e1c56c/src/PAA5100JE.cpp#L75
         # distance from sensor fixed at 2cm=0.02m
@@ -72,6 +63,26 @@ class PAA5100JE():
         burst_address = PAA5100JE_firmware.REG_MOTION_BURST
         burst_address &= ~0x80  # Flip MSB to 1
         self.burst_address = burst_address.to_bytes(1, 'little')
+        self.initialised = False
+
+        if initialise:
+            self.initialise()
+
+    def initialise(self):
+        time.sleep_ms(1)
+        self.select.off()
+        time.sleep_ms(1)
+        self.select.on()
+        time.sleep_ms(50)
+        self.select.off()
+        time.sleep_ms(1)
+
+        self.power_up()
+
+        prod_ID = self._read(0x00)
+        prod_rev = self._read(0x01)
+        assert prod_ID == 0x49, "Bad init. Prod_ID={:#x}, Rev={:#x}, SPI={}".format(prod_ID, prod_rev, self.spi)
+        self.initialised = True
 
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
@@ -207,6 +218,7 @@ class PAA5100JE():
         time.sleep_ms(1)
         self.select.off()
         time.sleep_ms(1)
+        self.initialised = False
         if deinitSPI:
             self.spi.deinit()
 
@@ -221,16 +233,17 @@ class MotionDetector(Analog_input):
                 sampling_rate=100, event='motion'
                 ):
 
-        # Create SPI objects
-        self.sensor_x = PAA5100JE('SPI2', cs2)
-        self.sensor_y = PAA5100JE('SPI2', cs1)
-
-        # for consistency with PMW3360 sensors
-        self.sensor_x.set_orientation(invert_x=True)
-        self.sensor_y.set_orientation(invert_y=True)
-
+        self.reset = Digital_output(pin=reset, inverted=True)
+        self.cs_x = Digital_output(pin=cs2, inverted=True)
+        self.cs_y = Digital_output(pin=cs1, inverted=True)
+        self.spi_type = 'SPI2'
+        self.sensor_x = None
+        self.sensor_y = None
+        self._sensors_ready = False
         self.calib_coef = calib_coef
-        self.threshold = threshold
+        self._threshold_cm = threshold
+        self._deactivate_lines()
+        self._initialise_sensors()
         
         # Motion sensor variables
         self.x_buffer = bytearray(12)
@@ -242,7 +255,7 @@ class MotionDetector(Analog_input):
 
         self.delta_x, self.delta_y = 0, 0    # accumulated position
         self._delta_x, self._delta_y = 0, 0  # instantaneous position
-        self.x, self.y = 0, 0  # to be accessed from the task, unit=mm
+        self.x, self.y = 0, 0  # to be accessed from the task, units=sensor counts
 
         # Parent
         Analog_input.__init__(self, pin=None, name=name + '-X', sampling_rate=int(sampling_rate),
@@ -260,13 +273,64 @@ class MotionDetector(Analog_input):
 
     @property
     def threshold(self):
-        "return the value in mms"
-        return math.sqrt(self._threshold)
+        """Return the external threshold in cm."""
+        return self._threshold_cm
 
     @threshold.setter
     def threshold(self, new_threshold):
-        self._threshold = int((new_threshold / 2.54 * self.sensor_x.CPI)**2) * self.calib_coef
+        self._threshold_cm = new_threshold
+        self._update_threshold()
         self.reset_delta()
+
+    def _deactivate_lines(self):
+        self.cs_x.off()
+        self.cs_y.off()
+        self.reset.off()
+
+    def _pulse_reset(self):
+        self._deactivate_lines()
+        time.sleep_ms(1)
+        self.reset.on()
+        time.sleep_ms(5)
+        self.cs_x.off()
+        self.cs_y.off()
+        self.reset.off()
+        time.sleep_ms(50)
+
+    def _update_threshold(self):
+        if not self.sensor_x:
+            return
+        self._threshold = int((self._threshold_cm / 2.54 * self.sensor_x.CPI)**2) * self.calib_coef
+
+    def _make_sensor(self, select):
+        return PAA5100JE(self.spi_type, select=select, initialise=False)
+
+    def _initialise_sensor(self, axis_name, sensor):
+        try:
+            sensor.initialise()
+        except Exception as error:
+            raise AssertionError("{} sensor init failed: {}".format(axis_name, error))
+
+    def _initialise_sensors(self):
+        self._pulse_reset()
+        self.sensor_x = self._make_sensor(self.cs_x)
+        self.sensor_y = self._make_sensor(self.cs_y)
+        try:
+            self._initialise_sensor('X', self.sensor_x)
+            self._initialise_sensor('Y', self.sensor_y)
+            # Keep task axis semantics unchanged.
+            self.sensor_x.set_orientation(invert_x=True)
+            self.sensor_y.set_orientation(invert_y=True)
+            self._sensors_ready = True
+            self._update_threshold()
+            self.reset_delta()
+            self.x, self.y = 0, 0
+        except Exception:
+            self._sensors_ready = False
+            self._deactivate_lines()
+            self.sensor_x = None
+            self.sensor_y = None
+            raise
 
     def reset_delta(self):
         """reset the accumulated position data"""
@@ -304,13 +368,19 @@ class MotionDetector(Analog_input):
         self.timer.deinit()
         self.data_chx.stop()
         self.data_chy.stop()
-        self.sensor_x.shut_down(deinitSPI=False)      
-        self.sensor_y.shut_down()
+        if self._sensors_ready:
+            self.sensor_x.shut_down(deinitSPI=False)
+            self.sensor_y.shut_down()
+            self._sensors_ready = False
+            self._deactivate_lines()
         self.acquiring = False
         self.reset_delta()
+        self.x, self.y = 0, 0
 
     def _start_acquisition(self):
         """Start sampling analog input values"""
+        if not self._sensors_ready:
+            self._initialise_sensors()
         self.timer.init(freq=self.data_chx.sampling_rate)
         self.timer.callback(self._timer_ISR)
         self.acquiring = True
