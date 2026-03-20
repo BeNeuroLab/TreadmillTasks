@@ -248,8 +248,8 @@ class MotionDetector(Analog_input):
         self._sensors_ready = False
         self.calib_coef = calib_coef
         self._threshold_input = threshold
+        self._threshold = int(threshold)
         self._deactivate_lines()
-        self._initialise_sensors()
         
         # Motion sensor variables
         self.x_buffer = bytearray(12)
