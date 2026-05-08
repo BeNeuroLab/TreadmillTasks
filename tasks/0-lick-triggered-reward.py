@@ -25,8 +25,8 @@ v.session_duration = 30 * minute
 v.reward_duration = 35 * ms
 v.reward_number = 0
 
-v.trial_len = 3 * second
-v.led_len = 500 * ms
+v.trial_len = 1 * second
+v.led_len = 300 * ms
 
 v.leds___ = [100]
 
