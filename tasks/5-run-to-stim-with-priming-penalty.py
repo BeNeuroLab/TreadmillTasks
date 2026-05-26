@@ -68,6 +68,7 @@ v.current_freq = v.start_freq_hz
 
 # Teleportation (jump) parameters
 v.teleport_prob = 0.2           # 20% of trials are teleport trials
+v.teleport_idxs = [3, 5, 7]     # Step-change indices that can trigger teleport
 v.is_teleport_trial = False
 v.teleport_trigger_index = 0    # Which step triggers the teleport
 v.update_calls_in_trial = 0     # Count of step changes in current trial
@@ -188,7 +189,7 @@ def reset_trial():
 
     v.is_teleport_trial = v.trial_type_sequence.pop(0)
     if v.is_teleport_trial:
-        v.teleport_trigger_index = random.choice([3,4,5])
+        v.teleport_trigger_index = random.choice(v.teleport_idxs)
         print('Teleport Trial! Trigger on update #{}'.format(v.teleport_trigger_index))
     else:
         print('Normal Trial')
@@ -222,6 +223,7 @@ def run_start():
     print('{}, goal_jitter_fraction'.format(v.goal_distance_jitter))
     print('{}, num_steps'.format(v.num_steps))
     print('{}, teleport_prob'.format(v.teleport_prob))
+    print('{}, teleport_idxs'.format(v.teleport_idxs))
     print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
     # Start the session timer immediately since there is no setup state.
