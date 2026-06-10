@@ -171,16 +171,21 @@ def mode_router(event):
 
 def stationary_wait(event):
     if event == 'entry':
-        set_timer('state_timer', v.stationary_hold, True)
+        v.last_motion_time = get_current_time()
+        reset_timer('state_timer', v.stationary_hold, True)
         print('{}, waiting_for_stationary_hold'.format(get_current_time()))
 
     elif event == 'motion':
         v.last_motion_time = get_current_time()
-        set_timer('state_timer', v.stationary_hold, True)
+        reset_timer('state_timer', v.stationary_hold, True)
 
     elif event == 'state_timer':
-        send_stim_command('stationary_hold')
-        goto_state('refractory')
+        quiet_time = get_current_time() - v.last_motion_time
+        if quiet_time >= v.stationary_hold:
+            send_stim_command('stationary_hold')
+            goto_state('refractory')
+        else:
+            reset_timer('state_timer', v.stationary_hold - quiet_time, True)
 
     elif event == 'exit':
         disarm_timer('state_timer')
