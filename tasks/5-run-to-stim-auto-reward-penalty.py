@@ -21,6 +21,7 @@ states = [
 events = [
     'session_timer',
     'state_timer',     # General timer for state checks/windows
+    'post_reward_timer',
     'motion',          # Motion events from sensor
     'lick',
     'stop_button'
@@ -83,6 +84,7 @@ v.last_motion_time = 0          # Track when last motion occurred
 v.motion_detected = False       # Flag for motion during wait period
 v.intertrial_start_time = 0
 v.reward_entry_time = 0         # Track time of entering reward state
+v.post_reward_entry_time = 0    # Track time of entering post-reward cue hold
 
 # -------------------------------------------------------------------------
 # Helper Functions
@@ -106,6 +108,9 @@ def goto_penalty_or_intertrial():
     else:
         print('{}, penalty_skipped'.format(get_current_time()))
         goto_state('intertrial')
+
+def post_reward_timed_out():
+    return get_current_time() - v.post_reward_entry_time >= v.post_reward_timeout
 
 def update_feedback_from_distance():
     """Update speaker and LED feedback based on current distance."""
@@ -358,6 +363,7 @@ def post_reward(event):
     """
     if event == 'entry':
         # Ensure steady goal sound and target LED (no blinking)
+        v.post_reward_entry_time = get_current_time()
         hw.speaker.sine(v.goal_freq_hz)
         try:
             if not hasattr(v, 'target_led_percent'):
@@ -366,25 +372,33 @@ def post_reward(event):
             hw.light.cue(v.target_led_percent)
         except Exception:
             pass
-        set_timer('state_timer', v.post_reward_timeout)
+        reset_timer('post_reward_timer', v.post_reward_timeout)
 
-    elif event == 'state_timer':
+    elif event == 'post_reward_timer':
         print('{}, post_reward_timeout'.format(get_current_time()))
         goto_state('intertrial')
 
     elif event == 'lick':
+        print('{}, post_reward_lick'.format(get_current_time()))
         goto_state('intertrial')
+
+    elif event == 'motion':
+        # Motion can be frequent enough to delay timer processing; enforce timeout here too.
+        if post_reward_timed_out():
+            print('{}, post_reward_timeout'.format(get_current_time()))
+            goto_state('intertrial')
 
     elif event == 'stop_button':
         goto_state('stopped')
     
     elif event == 'exit':
-        disarm_timer('state_timer')
+        disarm_timer('post_reward_timer')
 
 def stopped(event):
     if event == 'entry':
         hw.speaker.off()
         disarm_timer('state_timer')
+        disarm_timer('post_reward_timer')
         try:
             hw.light.all_off()
         except Exception:
