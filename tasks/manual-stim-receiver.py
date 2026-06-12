@@ -38,6 +38,7 @@ v.code_stim_off = 102
 v.code_stim_pulse = 103
 v.code_session_start = 110
 v.code_session_end = 111
+v.code_session_marker_to_stim = 0
 
 # UARTlink emits cursor_update only when the received integer changes.
 # Repeated identical marker codes may not be logged unless the sender
@@ -105,6 +106,17 @@ def print_summary():
     )
 
 
+def send_session_marker_to_stim(phase):
+    hw.bci_link.send_int_to_bci(v.code_session_marker_to_stim)
+    print(
+        '{}, sent_session_marker_to_stim code={} phase={}'.format(
+            get_current_time(),
+            v.code_session_marker_to_stim,
+            phase,
+        )
+    )
+
+
 # -------------------------------------------------------------------------
 # Run Start/End
 # -------------------------------------------------------------------------
@@ -115,6 +127,7 @@ def run_start():
     if hasattr(hw, 'bci_link'):
         hw.bci_link.start()
         print('{}, bci_link_started'.format(get_current_time()))
+        send_session_marker_to_stim('start')
     else:
         print('{}, missing_bci_link'.format(get_current_time()))
 
@@ -135,6 +148,7 @@ def run_end():
         print('{}, camera_trigger_stopped'.format(get_current_time()))
 
     if hasattr(hw, 'bci_link'):
+        send_session_marker_to_stim('end')
         hw.bci_link.stop()
         print('{}, bci_link_stopped'.format(get_current_time()))
 
