@@ -4,8 +4,7 @@ and tracks electrical stimulation.
 Based on `5-run-to-stim-with-priming-penalty-spontaneous.py`. On top of that
 task it:
   * sends a stimulation command code to the cl_stim trigger server
-    (`run_stimulation.py`) at a defined trial moment (default: when the reward
-    is delivered, on entry to `post_reward`);
+    (`run_stimulation.py`) at a trial-randomized timing condition;
   * tracks stimulation by logging marker codes echoed back by the trigger
     server (run it with `--notify-pycontrol` so it sends stim_on/stim_off).
 
@@ -14,7 +13,7 @@ The stimulation *parameters and duration* live in cl_stim's `config.toml`
 to fire and when; the trigger server enforces the train duration.
 
 Command/marker codes must match cl_stim `config.toml`:
-  [experiments.<exp>.commands.<code>]  -> v.stim_command_code (what we SEND)
+  [experiments.<exp>.commands.<code>]  -> v.stim_command_codes (what we SEND)
   [pycontrol_events.codes]             -> v.code_stim_*       (what we RECEIVE)
 """
 
@@ -44,6 +43,7 @@ events = [
     'session_timer',
     'state_timer',     # General timer for state checks/windows
     'blink_timer',     # LED blink timer in priming
+    'stim_delay_timer', # STIM: delayed trigger after first motion
     'motion',          # Motion events from sensor
     'lick',
     'stop_button',
@@ -115,6 +115,7 @@ v.current_phase_index = 0
 v.current_phase = None
 v.completed_phase = None
 v.next_phase = None
+v.trial_number = 0
 
 # Priming reward during setup
 v.priming_reward_cooldown = 10 * second  # Min time between priming rewards
@@ -123,12 +124,23 @@ v.last_priming_reward_time = 0           # Last time a priming reward was given
 # -------------------------------------------------------------------------
 # STIM: electrical stimulation control + tracking
 # -------------------------------------------------------------------------
-# Command code SENT to the trigger server to fire stimulation. Must match a
-# [experiments.<exp>.commands.<code>] entry in cl_stim/config.toml. For the
-# m1_mapping_low experiment: 1=sham, 2=left_m1, 3=right_m1, 4=bilateral.
-v.stim_command_code = 4
+# Command codes SENT to the trigger server. Must match cl_stim
+# [experiments.m2_timing.commands]: 1=sham, 2=m2_stim.
+v.stim_enabled = True
+v.stim_command_codes = [1, 2]
+v.stim_timing_conditions = ['cue_start', 'first_motion_delay', 'cue_position']
+v.stim_repeats_per_condition = 4
+v.stim_motion_delay = 100 * ms
+v.stim_cue_step = 5
+v.stim_trial_queue = []
+v.stim_block_number = 0
+v.current_stim_timing = 'none'
+v.current_stim_code = 0
+v.current_stim_condition = 'none'
+v.stim_sent_this_trial = False
+v.first_motion_seen = False
 
-# Only fire stimulation during 'task' phases (set False to also stim in setup, etc).
+# Only fire stimulation during 'task' phases.
 v.stim_in_task_only = True
 
 # Marker codes RECEIVED back from the trigger server (run it with
@@ -138,6 +150,7 @@ v.code_stim_off = 102
 v.code_stim_pulse = 103
 v.code_session_start = 110
 v.code_session_end = 111
+v.code_session_marker_to_stim = 0
 
 # Tracking counters
 v.stim_trigger_count = 0        # Times we asked the server to stimulate
@@ -204,21 +217,132 @@ def send_to_stim(code):
     print('{}, missing_bci_link'.format(get_current_time()))
     return False
 
-def trigger_stim():
-    """Fire stimulation by sending the configured command code to the server.
+def stim_condition_name(code):
+    if code == 1:
+        return 'sham'
+    if code == 2:
+        return 'm2_stim'
+    return 'unknown'
 
-    Stimulation parameters and the train duration are defined in cl_stim's
-    config.toml; here we only request the command and log when we did so.
-    """
-    if v.stim_in_task_only and v.current_phase != 'task':
+def stim_delay_ms():
+    return int(v.stim_motion_delay / ms)
+
+def teleport_type_name():
+    if v.is_teleport_trial:
+        return 'teleport'
+    return 'normal'
+
+def build_stim_trial_block():
+    block = []
+    repeats = int(v.stim_repeats_per_condition)
+    if repeats < 1:
+        print('Warning: stim_repeats_per_condition < 1, using 1')
+        repeats = 1
+
+    if not v.stim_command_codes:
+        print('Warning: empty stim_command_codes; using sham command 1')
+        v.stim_command_codes = [1]
+
+    if not v.stim_timing_conditions:
+        print('Warning: empty stim_timing_conditions; using cue_start')
+        v.stim_timing_conditions = ['cue_start']
+
+    for _ in range(repeats):
+        for timing in v.stim_timing_conditions:
+            for code in v.stim_command_codes:
+                block.append([timing, code])
+
+    for i in range(len(block) - 1, 0, -1):
+        j = random.randint(0, i)
+        block[i], block[j] = block[j], block[i]
+    return block
+
+def choose_stim_trial_condition():
+    v.stim_sent_this_trial = False
+    v.first_motion_seen = False
+    disarm_timer('stim_delay_timer')
+
+    if not v.stim_enabled:
+        v.current_stim_timing = 'disabled'
+        v.current_stim_code = 0
+        v.current_stim_condition = 'disabled'
         return
-    if send_to_stim(v.stim_command_code):
-        v.stim_trigger_count += 1
+
+    if not v.stim_trial_queue:
+        v.stim_trial_queue = build_stim_trial_block()
+        v.stim_block_number += 1
         print(
-            '{}, stim_trigger_sent code={} count={}'.format(
-                get_current_time(), v.stim_command_code, v.stim_trigger_count
+            '{}, new_stim_block block={} order={}'.format(
+                get_current_time(), v.stim_block_number, v.stim_trial_queue
             )
         )
+
+    assignment = v.stim_trial_queue.pop(0)
+    v.current_stim_timing = assignment[0]
+    v.current_stim_code = assignment[1]
+    v.current_stim_condition = stim_condition_name(v.current_stim_code)
+    v.trial_number += 1
+    print(
+        '{}, stim_trial_assigned trial={} block={} timing={} code={} condition={} cue_step={} delay_ms={} teleport_type={}'.format(
+            get_current_time(),
+            v.trial_number,
+            v.stim_block_number,
+            v.current_stim_timing,
+            v.current_stim_code,
+            v.current_stim_condition,
+            v.stim_cue_step,
+            stim_delay_ms(),
+            teleport_type_name()
+        )
+    )
+
+def trigger_stim(reason):
+    """Send this trial's assigned stimulation command to the trigger server."""
+    if not v.stim_enabled:
+        return
+    if v.stim_in_task_only and v.current_phase != 'task':
+        return
+    if v.stim_sent_this_trial:
+        return
+
+    v.stim_sent_this_trial = True
+    disarm_timer('stim_delay_timer')
+
+    if send_to_stim(v.current_stim_code):
+        v.stim_trigger_count += 1
+        print(
+            '{}, stim_trial trial={} block={} timing={} code={} condition={} reason={} cue_step={} delay_ms={} teleport_type={} trigger_count={}'.format(
+                get_current_time(),
+                v.trial_number,
+                v.stim_block_number,
+                v.current_stim_timing,
+                v.current_stim_code,
+                v.current_stim_condition,
+                reason,
+                v.stim_cue_step,
+                stim_delay_ms(),
+                teleport_type_name(),
+                v.stim_trigger_count
+            )
+        )
+    else:
+        print(
+            '{}, stim_trial_send_failed trial={} timing={} code={} condition={} reason={} teleport_type={}'.format(
+                get_current_time(),
+                v.trial_number,
+                v.current_stim_timing,
+                v.current_stim_code,
+                v.current_stim_condition,
+                reason,
+                teleport_type_name()
+            )
+        )
+
+def maybe_trigger_cue_position_stim():
+    if v.current_stim_timing != 'cue_position':
+        return
+    if v.current_step >= v.stim_cue_step:
+        trigger_stim('cue_position')
 
 def marker_name(code):
     if code == v.code_stim_on:
@@ -355,6 +479,9 @@ def update_feedback_from_distance():
         except Exception:
             pass
 
+        # Fire cue-position stimulation only after the visible cue update.
+        maybe_trigger_cue_position_stim()
+
     # Check if we've reached the goal (complete distance)
     if v.current_distance >= v.goal_distance:
         print('{}, target_reached'.format(v.goal_freq_hz))
@@ -391,6 +518,8 @@ def reset_trial():
     else:
         print('Normal Trial')
 
+    choose_stim_trial_condition()
+
 # -------------------------------------------------------------------------
 # Run Start/End
 # -------------------------------------------------------------------------
@@ -421,7 +550,12 @@ def run_start():
     if hasattr(hw, 'bci_link'):
         hw.bci_link.start()
         print('{}, bci_link_started'.format(get_current_time()))
-        send_to_stim(v.code_session_start)
+        send_to_stim(v.code_session_marker_to_stim)
+        print(
+            '{}, sent_session_marker_to_stim code={} phase=start'.format(
+                get_current_time(), v.code_session_marker_to_stim
+            )
+        )
     else:
         print('{}, missing_bci_link'.format(get_current_time()))
 
@@ -437,7 +571,12 @@ def run_start():
     print('{}, teleport_prob'.format(v.teleport_prob))
     print('{}, teleport_idxs'.format(v.teleport_idxs))
     print('{}, session_sequence'.format(v.session_sequence))
-    print('{}, stim_command_code'.format(v.stim_command_code))
+    print('{}, stim_enabled={}'.format(get_current_time(), v.stim_enabled))
+    print('{}, stim_command_codes={}'.format(get_current_time(), v.stim_command_codes))
+    print('{}, stim_timing_conditions={}'.format(get_current_time(), v.stim_timing_conditions))
+    print('{}, stim_repeats_per_condition={}'.format(get_current_time(), v.stim_repeats_per_condition))
+    print('{}, stim_motion_delay_ms={}'.format(get_current_time(), stim_delay_ms()))
+    print('{}, stim_cue_step={}'.format(get_current_time(), v.stim_cue_step))
     print('{}, before_camera_trigger'.format(get_current_time()))
     hw.cameraTrigger.start()
     # Session timer starts when a task phase begins.
@@ -456,7 +595,12 @@ def run_end():
     # STIM: mark session end and close the link.
     print_stim_summary()
     if hasattr(hw, 'bci_link'):
-        send_to_stim(v.code_session_end)
+        send_to_stim(v.code_session_marker_to_stim)
+        print(
+            '{}, sent_session_marker_to_stim code={} phase=end'.format(
+                get_current_time(), v.code_session_marker_to_stim
+            )
+        )
         hw.bci_link.stop()
         print('{}, bci_link_stopped'.format(get_current_time()))
 
@@ -575,20 +719,50 @@ def trial(event):
     if event == 'entry':
         # Defensive: clear any lingering state_timer from previous state
         disarm_timer('state_timer')
+        disarm_timer('stim_delay_timer')
         try:
             hw.light.cue(3)
         except:
             pass
         hw.speaker.sine(v.start_freq_hz)
+        if v.current_stim_timing == 'cue_start':
+            trigger_stim('cue_start')
         set_timer('state_timer', v.trial_timeout, True)
 
     elif event == 'exit':
         disarm_timer('state_timer')
+        disarm_timer('stim_delay_timer')
+        if v.stim_enabled and not v.stim_sent_this_trial:
+            print(
+                '{}, stim_trial_not_delivered trial={} timing={} code={} condition={} teleport_type={}'.format(
+                    get_current_time(),
+                    v.trial_number,
+                    v.current_stim_timing,
+                    v.current_stim_code,
+                    v.current_stim_condition,
+                    teleport_type_name()
+                )
+            )
 
     elif event == 'motion':
+        if not v.first_motion_seen:
+            v.first_motion_seen = True
+            if v.current_stim_timing == 'first_motion_delay':
+                if v.stim_motion_delay <= 0:
+                    trigger_stim('first_motion_delay')
+                else:
+                    set_timer('stim_delay_timer', v.stim_motion_delay, True)
+                    print(
+                        '{}, stim_delay_started trial={} delay_ms={}'.format(
+                            get_current_time(), v.trial_number, stim_delay_ms()
+                        )
+                    )
         v.current_distance += v.motion_threshold
         update_feedback_from_distance()
         v.last_motion_time = get_current_time()
+
+    elif event == 'stim_delay_timer':
+        trigger_stim('first_motion_delay')
 
     elif event == 'state_timer':
         # Trial timeout without reaching target -> penalty first
@@ -689,14 +863,8 @@ def penalty(event):
 def post_reward(event):
     """
     Keep goal stimulus on for v.target_present_duration AFTER the reward.
-
-    STIM: this is the rewarded outcome, so fire electrical stimulation here
-    (paired with reward delivery). Change the trigger point if your protocol
-    needs stim at a different moment.
     """
     if event == 'entry':
-        # STIM: trigger stimulation paired with the reward.
-        trigger_stim()
         # Ensure steady goal sound and target LED (no blinking)
         hw.speaker.sine(v.goal_freq_hz)
         try:
@@ -722,6 +890,7 @@ def stopped(event):
         hw.speaker.off()
         disarm_timer('state_timer')
         disarm_timer('blink_timer')
+        disarm_timer('stim_delay_timer')
         try:
             hw.light.all_off()
         except Exception:
