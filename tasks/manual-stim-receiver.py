@@ -16,6 +16,7 @@ events = [
     'session_timer',
     'cursor_update',
     'state_timer',
+    'motion',
 ]
 
 initial_state = 'intertrial'
@@ -24,12 +25,16 @@ initial_state = 'intertrial'
 # Variables
 # -------------------------------------------------------------------------
 v.session_duration = 60 * minute
+v.motion_threshold = 3
 
 v.marker_count = 0
 v.stim_on_count = 0
 v.stim_off_count = 0
 v.stim_pulse_count = 0
 v.unknown_marker_count = 0
+v.motion_count = 0
+v.last_motion_time = 0
+v.cpi = 100
 v.stim_active = False
 
 # These codes must match cl_stim/config.toml [pycontrol_events.codes].
@@ -94,13 +99,14 @@ def log_marker(code):
 def print_summary():
     print(
         '{}, external_stim_summary total={} stim_on={} stim_off={} '
-        'stim_pulse={} unknown={} active={}'.format(
+        'stim_pulse={} unknown={} motion={} active={}'.format(
             get_current_time(),
             v.marker_count,
             v.stim_on_count,
             v.stim_off_count,
             v.stim_pulse_count,
             v.unknown_marker_count,
+            v.motion_count,
             v.stim_active,
         )
     )
@@ -137,6 +143,17 @@ def run_start():
     else:
         print('{}, missing_camera_trigger'.format(get_current_time()))
 
+    if hasattr(hw, 'motionSensor'):
+        hw.motionSensor.record()
+        hw.motionSensor.threshold = v.motion_threshold
+        if hasattr(hw.motionSensor, 'sensor_x') and hw.motionSensor.sensor_x:
+            v.cpi = hw.motionSensor.sensor_x.CPI
+        print('{}, CPI'.format(v.cpi))
+        print('{}, motion_threshold'.format(v.motion_threshold))
+        print('{}, motion_sensor_started'.format(get_current_time()))
+    else:
+        print('{}, missing_motion_sensor'.format(get_current_time()))
+
     set_timer('session_timer', v.session_duration, True)
 
 
@@ -146,6 +163,11 @@ def run_end():
     if hasattr(hw, 'cameraTrigger'):
         hw.cameraTrigger.stop()
         print('{}, camera_trigger_stopped'.format(get_current_time()))
+
+    if hasattr(hw, 'motionSensor'):
+        hw.motionSensor.off()
+        hw.motionSensor.stop()
+        print('{}, motion_sensor_stopped'.format(get_current_time()))
 
     if hasattr(hw, 'bci_link'):
         send_session_marker_to_stim('end')
@@ -180,3 +202,8 @@ def all_states(event):
         print('{}, session_timer_expired'.format(get_current_time()))
         print_summary()
         stop_framework()
+
+    elif event == 'motion':
+        v.motion_count += 1
+        v.last_motion_time = get_current_time()
+        return True
