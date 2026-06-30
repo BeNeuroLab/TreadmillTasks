@@ -39,7 +39,8 @@ v.session_duration = 45 * minute
 # Trial parameters
 v.intertrial_duration = 2 * second
 v.trial_timeout = 15 * second         # Max time to reach target distance
-v.motion_wait_time = 0.5 * second     # Time without motion before trial can start
+v.require_no_motion_to_start_trial = False
+v.motion_wait_time = 0.5 * second     # Only used when no-motion trial start is required
 v.reward_duration = 35 * ms
 v.post_reward_timeout = 10 * second   # Max time to keep target cues after reward
 v.post_lick_cue_hold = 1 * second      # Keep target cues on briefly after first lick
@@ -82,7 +83,7 @@ v.motion_threshold = 3          # Motion event threshold
 # Trial tracking
 v.reward_number = 0
 v.last_motion_time = 0          # Track when last motion occurred
-v.motion_detected = False       # Flag for motion during wait period
+v.motion_detected = False       # Flag for motion during intertrial wait period
 v.intertrial_start_time = 0
 v.reward_entry_time = 0         # Track time of entering reward state
 v.post_reward_entry_time = 0    # Track time of entering post-reward cue hold
@@ -204,6 +205,7 @@ def run_start():
 
     print('{}, CPI'.format(v.cpi))
     print('{}, motion_threshold'.format(v.motion_threshold))
+    print('{}, require_no_motion_to_start_trial'.format(v.require_no_motion_to_start_trial))
     print('{}, motion_wait_time'.format(v.motion_wait_time))
     print('{}, trial_timeout'.format(v.trial_timeout))
     print('{}, reward_wait_time'.format(v.reward_wait_time))
@@ -257,19 +259,23 @@ def intertrial(event):
         set_timer('state_timer', v.intertrial_duration, True)
 
     elif event == 'motion':
-        v.motion_detected = True
-        v.last_motion_time = get_current_time()
+        if v.require_no_motion_to_start_trial:
+            v.motion_detected = True
+            v.last_motion_time = get_current_time()
 
     elif event == 'state_timer':
-        time_in_intertrial = get_current_time() - v.intertrial_start_time
-        if time_in_intertrial >= v.intertrial_duration:
-            if not v.motion_detected:
-                goto_state('trial')
-            else:
-                v.motion_detected = False
-                set_timer('state_timer', v.motion_wait_time, True)
+        if not v.require_no_motion_to_start_trial:
+            goto_state('trial')
         else:
-            set_timer('state_timer', v.motion_wait_time, True)
+            time_in_intertrial = get_current_time() - v.intertrial_start_time
+            if time_in_intertrial >= v.intertrial_duration:
+                if not v.motion_detected:
+                    goto_state('trial')
+                else:
+                    v.motion_detected = False
+                    set_timer('state_timer', v.motion_wait_time, True)
+            else:
+                set_timer('state_timer', v.motion_wait_time, True)
 
     elif event == 'stop_button':
         goto_state('stopped')
