@@ -21,7 +21,6 @@ states = [
 events = [
     'session_timer',
     'state_timer',     # General timer for state checks/windows
-    'post_reward_timer',
     'motion',          # Motion events from sensor
     'lick',
     'stop_button'
@@ -43,6 +42,7 @@ v.trial_timeout = 15 * second         # Max time to reach target distance
 v.motion_wait_time = 0.5 * second     # Time without motion before trial can start
 v.reward_duration = 35 * ms
 v.post_reward_timeout = 10 * second   # Max time to keep target cues after reward
+v.post_lick_cue_hold = 1 * second      # Keep target cues on briefly after first lick
 
 # Stop/reward parameters
 v.reward_wait_time = 0.5 * second       # Required stillness before automatic reward
@@ -86,6 +86,8 @@ v.motion_detected = False       # Flag for motion during wait period
 v.intertrial_start_time = 0
 v.reward_entry_time = 0         # Track time of entering reward state
 v.post_reward_entry_time = 0    # Track time of entering post-reward cue hold
+v.post_lick_start_time = 0      # Track when lick-triggered cue hold begins
+v.post_lick_hold_active = False # True once lick starts the short cue hold
 
 # -------------------------------------------------------------------------
 # Helper Functions
@@ -112,6 +114,9 @@ def goto_penalty_or_intertrial():
 
 def post_reward_timed_out():
     return get_current_time() - v.post_reward_entry_time >= v.post_reward_timeout
+
+def post_lick_cue_hold_timed_out():
+    return get_current_time() - v.post_lick_start_time >= v.post_lick_cue_hold
 
 def update_feedback_from_distance():
     """Update LED feedback based on current distance; keep speaker silent until target."""
@@ -204,6 +209,7 @@ def run_start():
     print('{}, reward_wait_time'.format(v.reward_wait_time))
     print('{}, stop_to_reward_timeout'.format(v.stop_to_reward_timeout))
     print('{}, post_reward_timeout'.format(v.post_reward_timeout))
+    print('{}, post_lick_cue_hold'.format(v.post_lick_cue_hold))
     print('{}, penalty'.format(v.penalty))
     print('{}, start_frequency'.format(v.start_freq_hz))
     print('{}, goal_frequency'.format(v.goal_freq_hz))
@@ -370,6 +376,8 @@ def post_reward(event):
     if event == 'entry':
         # Ensure steady goal sound and target LED (no blinking)
         v.post_reward_entry_time = get_current_time()
+        v.post_lick_start_time = 0
+        v.post_lick_hold_active = False
         hw.speaker.sine(v.goal_freq_hz)
         try:
             if not hasattr(v, 'target_led_percent'):
@@ -378,19 +386,28 @@ def post_reward(event):
             hw.light.cue(v.target_led_percent)
         except Exception:
             pass
-        reset_timer('post_reward_timer', v.post_reward_timeout)
+        reset_timer('state_timer', v.post_reward_timeout)
 
-    elif event == 'post_reward_timer':
-        print('{}, post_reward_timeout'.format(get_current_time()))
+    elif event == 'state_timer':
+        if v.post_lick_hold_active:
+            print('{}, post_lick_cue_hold_end'.format(get_current_time()))
+        else:
+            print('{}, post_reward_timeout'.format(get_current_time()))
         goto_state('intertrial')
 
     elif event == 'lick':
-        print('{}, post_reward_lick'.format(get_current_time()))
-        goto_state('intertrial')
+        if not v.post_lick_hold_active:
+            v.post_lick_hold_active = True
+            v.post_lick_start_time = get_current_time()
+            print('{}, post_reward_lick'.format(get_current_time()))
+            reset_timer('state_timer', v.post_lick_cue_hold)
 
     elif event == 'motion':
         # Motion can be frequent enough to delay timer processing; enforce timeout here too.
-        if post_reward_timed_out():
+        if v.post_lick_hold_active and post_lick_cue_hold_timed_out():
+            print('{}, post_lick_cue_hold_end'.format(get_current_time()))
+            goto_state('intertrial')
+        elif not v.post_lick_hold_active and post_reward_timed_out():
             print('{}, post_reward_timeout'.format(get_current_time()))
             goto_state('intertrial')
 
@@ -398,13 +415,14 @@ def post_reward(event):
         goto_state('stopped')
     
     elif event == 'exit':
-        disarm_timer('post_reward_timer')
+        disarm_timer('state_timer')
+        v.post_lick_start_time = 0
+        v.post_lick_hold_active = False
 
 def stopped(event):
     if event == 'entry':
         hw.speaker.off()
         disarm_timer('state_timer')
-        disarm_timer('post_reward_timer')
         try:
             hw.light.all_off()
         except Exception:
