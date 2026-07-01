@@ -25,6 +25,7 @@ events = [
     'session_timer',
     'state_timer',
     'motion',
+    'lick',
     'stop_button',
 ]
 
@@ -79,6 +80,7 @@ v.print_motion_debug = False
 # Trial tracking
 v.reward_number = 0
 v.miss_number = 0
+v.lick_number = 0
 v.last_motion_time = 0
 v.intertrial_start_time = 0
 v.zone_entry_time = 0
@@ -244,6 +246,9 @@ def run_end():
     hw.motionSensor.stop()
     hw.cameraTrigger.stop()
     hw.off()
+    print('{}, total_rewards'.format(v.reward_number))
+    print('{}, total_misses'.format(v.miss_number))
+    print('{}, total_licks'.format(v.lick_number))
     print('Session Ended')
 
 
@@ -395,6 +400,7 @@ def stopped(event):
 def all_states(event):
     if event == 'session_timer':
         print('Session Timer Expired - Stopping Framework')
-        print('{}, total_rewards'.format(v.reward_number))
-        print('{}, total_misses'.format(v.miss_number))
         stop_framework()
+
+    elif event == 'lick':
+        v.lick_number += 1
