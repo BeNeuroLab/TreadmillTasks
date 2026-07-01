@@ -16,6 +16,20 @@ class LedStrip(_h.IO_object):
         assert 1 <= dir_percent <= 100, "Invalid direction"
         self.send_int(dir_percent)
 
+    def cue_wide(self, dir_percent:int, half_width_percent:int=6, step_percent:int=2):
+        """Turn on a wider cue by sending adjacent cue positions."""
+        assert 1 <= dir_percent <= 100, "Invalid direction"
+        assert half_width_percent >= 0, "Invalid cue width"
+        assert step_percent > 0, "Invalid cue step"
+
+        self.all_red()
+        start = max(1, dir_percent - half_width_percent)
+        end = min(100, dir_percent + half_width_percent)
+        for cue_percent in range(start, end + 1, step_percent):
+            self.send_int(cue_percent)
+        if end != dir_percent and ((dir_percent - start) % step_percent):
+            self.send_int(dir_percent)
+
     def start(self):
         "this method must be called in the `run_start` of any task file"
         self.uart_led = pyb.UART(4)  # uart4=port 10
