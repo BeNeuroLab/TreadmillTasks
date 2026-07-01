@@ -59,10 +59,9 @@ v.zone_start_distance = v.goal_distance_base - v.reward_zone_before
 v.zone_end_distance = v.goal_distance_base + v.reward_zone_after
 
 # LED-only landmark mapping: center -> side.
+# Cue width is controlled by LED strip firmware; this task sends position only.
 v.start_led_percent = 100
 v.target_led_percent = 3
-v.led_cue_half_width_percent = 6
-v.led_cue_step_percent = 2
 v.led_steps = 10
 v.current_led_step = -1
 
@@ -100,21 +99,6 @@ def led_percent_from_progress(progress):
     return max(v.target_led_percent, min(v.start_led_percent, percent))
 
 
-def cue_landmark(led_percent):
-    """Show a wide LED landmark if the LED driver supports it."""
-    try:
-        if hasattr(hw.light, 'cue_wide'):
-            hw.light.cue_wide(
-                led_percent,
-                v.led_cue_half_width_percent,
-                v.led_cue_step_percent,
-            )
-        else:
-            hw.light.cue(led_percent)
-    except Exception:
-        pass
-
-
 def update_landmark_from_distance(force=False):
     """Update LED landmark position from current distance."""
     progress = clipped_progress(v.current_distance / v.goal_distance)
@@ -123,8 +107,11 @@ def update_landmark_from_distance(force=False):
     if force or next_step != v.current_led_step:
         v.current_led_step = next_step
         led_p = led_percent_from_progress(progress)
-        cue_landmark(led_p)
-        print('{}, led_percent'.format(led_p))
+        try:
+            hw.light.cue(led_p)
+            print('{}, led_percent'.format(led_p))
+        except Exception:
+            pass
 
 
 def reset_trial():
@@ -208,8 +195,6 @@ def run_start():
     print('{}, goal_jitter_fraction'.format(v.goal_distance_jitter))
     print('{}, start_led_percent'.format(v.start_led_percent))
     print('{}, target_led_percent'.format(v.target_led_percent))
-    print('{}, led_cue_half_width_percent'.format(v.led_cue_half_width_percent))
-    print('{}, led_cue_step_percent'.format(v.led_cue_step_percent))
     print('{}, led_steps'.format(v.led_steps))
     print('{}, play_goal_tone'.format(v.play_goal_tone))
     print('{}, before_camera_trigger'.format(get_current_time()))
@@ -324,7 +309,10 @@ def reward(event):
         else:
             hw.speaker.off()
 
-        cue_landmark(v.target_led_percent)
+        try:
+            hw.light.cue(v.target_led_percent)
+        except Exception:
+            pass
 
         v.reward_number += 1
         hw.reward.release()
