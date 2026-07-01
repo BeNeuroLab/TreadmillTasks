@@ -45,10 +45,10 @@ v.miss_reset_duration = 0.5 * second
 v.reward_post_delay = 0.5 * second
 
 # Reward and stopping rule
-v.reward_duration = 35 * ms
+v.reward_duration = 30 * ms
 v.reward_wait_time = 0.5 * second
 v.stop_to_reward_timeout = 1.5 * second
-v.reward_zone_before = 5
+v.reward_zone_before = 10
 v.reward_zone_after = 10
 
 # Distance mapping
@@ -56,7 +56,7 @@ v.goal_distance_base = 60
 v.goal_distance_jitter = 0.20
 v.goal_distance = v.goal_distance_base
 v.current_distance = 0
-v.side_buffer_after_zone = 5
+v.side_buffer_after_zone = 10
 v.zone_start_distance = v.goal_distance_base - v.reward_zone_before
 v.zone_end_distance = v.goal_distance_base + v.reward_zone_after
 v.track_end_distance = v.zone_end_distance + v.side_buffer_after_zone
