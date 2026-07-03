@@ -1,4 +1,4 @@
-"""Run to target with flipped LED-only progress feedback, target tone, and auto reward."""
+"""Run to terminal LED zone, stop and hold, then receive automatic reward."""
 
 from pyControl.utility import *
 import hardware_definition as hw
@@ -6,27 +6,29 @@ from devices import *
 import math
 import random
 
+
 # -------------------------------------------------------------------------
 # States and Events
 # -------------------------------------------------------------------------
 states = [
     'intertrial',
     'trial',
-    'reward',          # Goal reached; wait for stillness to release reward
-    'penalty',         # White noise + lights off after miss
-    'post_reward',     # Keep stimulus after reward until lick or timeout
-    'stopped'
+    'zone_check',
+    'reward',
+    'miss',
+    'stopped',
 ]
 
 events = [
     'session_timer',
-    'state_timer',     # General timer for state checks/windows
-    'motion',          # Motion events from sensor
+    'state_timer',
+    'motion',
     'lick',
-    'stop_button'
+    'stop_button',
 ]
 
 initial_state = 'intertrial'
+
 
 # -------------------------------------------------------------------------
 # Variables
@@ -34,144 +36,180 @@ initial_state = 'intertrial'
 # Session parameters
 v.session_duration = 45 * minute
 
-# Manual triggers (none)
-
-# Trial parameters
+# Trial timing
 v.intertrial_duration = 2 * second
-v.trial_timeout = 15 * second         # Max time to reach target distance
-v.require_no_motion_to_start_trial = False
-v.motion_wait_time = 0.5 * second     # Only used when no-motion trial start is required
+v.trial_timeout = 15 * second
+v.reward_post_delay = 0.5 * second
+v.miss_reset_duration = 0.5 * second
+
+# Reward and stopping rule
 v.reward_duration = 35 * ms
-v.post_reward_timeout = 10 * second   # Max time to keep target cues after reward
-v.post_lick_cue_hold = 1 * second      # Keep target cues on briefly after first lick
+v.reward_wait_time = 0.5 * second
+v.stop_to_reward_timeout = 3.0 * second
 
-# Stop/reward parameters
-v.reward_wait_time = 0.5 * second       # Required stillness before automatic reward
-v.stop_to_reward_timeout = 5.0 * second # If staying in reward without stopping -> penalty
-
-# Penalty parameters
-v.penalty = True
-v.penalty_duration = 1.0 * second
-v.penalty_noise_max_freq = 10000        # Upper freq for white noise
-
-# Distance and frequency mapping
-v.goal_distance_base = 60       # Base distance units to reach goal
-v.goal_distance_jitter = 0.20   # ±20% randomization per trial
+# Terminal reward zone in step coordinates.
+v.goal_distance_base = 60
+v.goal_distance_jitter = 0.0
 v.goal_distance = v.goal_distance_base
-v.current_distance = 0          # Accumulated distance traveled
-v.start_freq_hz = 2000          # Starting frequency reference (Hz; not played)
-v.goal_freq_hz = 10000          # Goal frequency (Hz)
-v.play_progress_tones = False   # Keep start/intermediate progress silent
-v.side_led_percent = 3          # Side LED percent for flipped target position
+v.led_steps = 10
+v.reward_zone_start_step = 8
+v.nominal_target_step = 9
+v.reward_boundary_step = 10
+v.overshoot_margin_distance = 6
+v.reward_zone_start_distance = 0
+v.nominal_target_distance = 0
+v.reward_boundary_distance = 0
+v.reward_zone_end_distance = 0
 
-# Discrete feedback steps (LED; frequency is tracked but not played)
-v.num_steps = 10                # Number of discrete feedback steps
-v.current_step = 0              # Current frequency step
+# Distance and cue mapping.
+v.current_distance = 0
+v.start_freq_hz = 2000
+v.zone_tone_freq_hz = 10000
+v.start_led_percent = 100
+v.target_led_percent = 15
+v.current_step = 0
+v.current_led_percent = None
 v.current_freq = v.start_freq_hz
 
-# Teleportation (jump) parameters
-v.teleport_prob = 0.2           # 20% of trials are teleport trials
-v.teleport_idxs = [3, 5, 7]     # Step-change indices that can trigger teleport
+# Optional feedback and penalty features.
+v.enable_teleport = False
+v.play_progress_tones = False
+v.play_zone_tone = True
+v.use_white_noise_penalty = False
+v.penalty_duration = 1.0 * second
+v.penalty_noise_max_freq = 10000
+
+# Teleportation (jump) parameters, used only when v.enable_teleport is True.
+v.teleport_prob = 0.2
+v.teleport_idxs = [3, 5, 7]
 v.is_teleport_trial = False
-v.teleport_trigger_index = 0    # Which step triggers the teleport
-v.update_calls_in_trial = 0     # Count of step changes in current trial
-v.trial_type_sequence = []      # List to manage block randomization
+v.teleport_trigger_index = 0
+v.teleport_done = False
+v.update_calls_in_trial = 0
+v.trial_type_sequence = []
 
-# Motion sensor parameters
-v.cpi = 100                     # Counts per inch (will be updated from sensor)
-v.motion_threshold = 3          # Motion event threshold
+# Motion sensor parameters.
+v.cpi = None
+v.motion_threshold = 3
+v.forward_sign = 1
 
-# Trial tracking
+# Trial tracking.
 v.reward_number = 0
-v.last_motion_time = 0          # Track when last motion occurred
-v.motion_detected = False       # Flag for motion during intertrial wait period
+v.miss_number = 0
+v.last_motion_time = 0
 v.intertrial_start_time = 0
-v.reward_entry_time = 0         # Track time of entering reward state
-v.post_reward_entry_time = 0    # Track time of entering post-reward cue hold
-v.post_lick_start_time = 0      # Track when lick-triggered cue hold begins
-v.post_lick_hold_active = False # True once lick starts the short cue hold
+v.zone_entry_time = 0
+v.reward_entry_time = 0
+v.miss_reason = ''
+
 
 # -------------------------------------------------------------------------
 # Helper Functions
 # -------------------------------------------------------------------------
+def clipped_progress(progress):
+    return max(0.0, min(1.0, progress))
+
+
 def calculate_frequency_for_step(step):
-    """Calculate frequency for a given step using log scale (octaves)"""
-    octaves = math.log2(v.goal_freq_hz / v.start_freq_hz)
-    step_fraction = step / v.num_steps
+    """Calculate frequency for a given step using a log scale."""
+    octaves = math.log2(v.zone_tone_freq_hz / v.start_freq_hz)
+    step_fraction = step / v.led_steps
     freq_multiplier = 2 ** (octaves * step_fraction)
     return int(v.start_freq_hz * freq_multiplier)
 
-def led_percent_from_progress(progress: float) -> int:
-    """Map progress [0..1] to LED strip percent for bilateral (center -> side)."""
-    p = max(0.0, min(1.0, progress))
-    percent = int(100 - ((100 - v.side_led_percent) * p))
-    return max(v.side_led_percent, min(100, percent))
 
-def goto_penalty_or_intertrial():
-    """Enter penalty when enabled; otherwise skip directly to intertrial."""
-    if v.penalty:
-        goto_state('penalty')
-    else:
-        print('{}, penalty_skipped'.format(get_current_time()))
-        goto_state('intertrial')
+def led_step_from_distance(distance):
+    """Map x-derived virtual distance to a discrete LED step."""
+    progress = clipped_progress(distance / v.goal_distance)
+    return min(v.led_steps, int(progress * v.led_steps))
 
-def post_reward_timed_out():
-    return get_current_time() - v.post_reward_entry_time >= v.post_reward_timeout
 
-def post_lick_cue_hold_timed_out():
-    return get_current_time() - v.post_lick_start_time >= v.post_lick_cue_hold
+def led_percent_for_step(step):
+    """Map discrete LED step to center-to-side strip percent."""
+    step = max(0, min(v.led_steps, step))
+    step_fraction = step / v.led_steps
+    percent = int(
+        v.start_led_percent
+        - ((v.start_led_percent - v.target_led_percent) * step_fraction)
+    )
+    return max(v.target_led_percent, min(v.start_led_percent, percent))
 
-def update_feedback_from_distance():
-    """Update LED feedback based on current distance; keep speaker silent until target."""
-    # Teleportation check: jump to goal on specific step
-    if v.is_teleport_trial and (v.update_calls_in_trial == v.teleport_trigger_index):
-        v.current_distance = v.goal_distance
-        print('Teleporting to goal!')
 
-    # Progress in [0,1]
-    progress = min(v.current_distance / v.goal_distance, 1.0)
+def forward_delta_distance():
+    """Return forward x-axis motion since the last motion event in cm."""
+    if v.cpi is None:
+        raise Exception('Motion sensor CPI unavailable')
 
-    # LED: discrete progress steps. Frequency is still tracked for logging/reference.
-    new_step = int(progress * v.num_steps)
-    if new_step != v.current_step:
-        v.current_step = new_step
-        v.update_calls_in_trial += 1
-        v.current_freq = calculate_frequency_for_step(v.current_step)
-        if v.play_progress_tones:
-            hw.speaker.sine(v.current_freq)
-        print('{}, distance'.format(v.current_distance))
-        print('{}, silent_frequency'.format(v.current_freq))
+    forward_counts = v.forward_sign * hw.motionSensor.x
+    if forward_counts < 0:
+        forward_counts = 0
 
-        # LED strip: bilateral center -> side (update only on step change)
-        try:
-            led_p = led_percent_from_progress(progress)
-            hw.light.cue(led_p)
-            print('{}, led_percent'.format(led_p))
-        except Exception:
-            pass
+    return forward_counts / v.cpi * 2.54
 
-    # Check if we've reached the goal (complete distance)
-    if v.current_distance >= v.goal_distance:
-        print('{}, target_reached'.format(v.goal_freq_hz))
-        goto_state('reward')
 
-def reset_trial():
-    """Reset distance/frequency and apply random jitter to goal distance."""
-    v.current_distance = 0
-    v.current_step = 0
-    v.current_freq = v.start_freq_hz
-    v.motion_detected = False
-    v.update_calls_in_trial = 0
+def apply_feedback_step(step, play_tone=False):
+    v.current_step = step
+    v.current_freq = calculate_frequency_for_step(step)
+    v.current_led_percent = led_percent_for_step(step)
 
-    # Apply ±jitter% (uniform)
-    jitter_fraction = 1 + random.uniform(-v.goal_distance_jitter, v.goal_distance_jitter)
-    v.goal_distance = v.goal_distance_base * jitter_fraction
-    print('{}, new_goal_distance'.format(round(v.goal_distance, 2)))
+    if play_tone and v.play_progress_tones:
+        hw.speaker.sine(v.current_freq)
+        print('{}, progress_frequency'.format(v.current_freq))
 
-    # Determine trial type (Teleport vs Normal) using block randomization
+    try:
+        hw.light.cue(v.current_led_percent)
+    except Exception:
+        pass
+
+    print('{}, led_step'.format(v.current_step))
+    print('{}, led_percent'.format(v.current_led_percent))
+
+
+def maybe_apply_teleport():
+    if not v.enable_teleport:
+        return
+    if not v.is_teleport_trial:
+        return
+    if v.teleport_done:
+        return
+    if v.update_calls_in_trial != v.teleport_trigger_index:
+        return
+
+    v.current_distance = v.goal_distance
+    v.teleport_done = True
+    print('{}, teleport_to_goal_distance'.format(round(v.current_distance, 2)))
+
+
+def update_feedback_from_distance(force=False, play_tone=False, allow_teleport=True):
+    """Update discrete LED feedback from x-only virtual distance."""
+    if allow_teleport:
+        maybe_apply_teleport()
+
+    new_step = led_step_from_distance(v.current_distance)
+    changed = new_step != v.current_step
+
+    if force or changed:
+        if changed and not force:
+            v.update_calls_in_trial += 1
+        apply_feedback_step(new_step, play_tone)
+
+
+def configure_teleport_trial():
+    v.is_teleport_trial = False
+    v.teleport_trigger_index = 0
+
+    if not v.enable_teleport:
+        print('{}, teleport_trial'.format(v.is_teleport_trial))
+        return
+
     if not v.trial_type_sequence:
         block_size = 10
         num_teleports = int(block_size * v.teleport_prob)
+        if num_teleports < 0:
+            num_teleports = 0
+        if num_teleports > block_size:
+            num_teleports = block_size
+
         new_block = [True] * num_teleports + [False] * (block_size - num_teleports)
         for i in range(len(new_block) - 1, 0, -1):
             j = random.randint(0, i)
@@ -183,14 +221,107 @@ def reset_trial():
     if v.is_teleport_trial:
         v.teleport_trigger_index = random.choice(v.teleport_idxs)
         print('Teleport Trial! Trigger on update #{}'.format(v.teleport_trigger_index))
+
+    print('{}, teleport_trial'.format(v.is_teleport_trial))
+
+
+def reset_trial():
+    """Reset distance and compute this trial's terminal reward zone."""
+    v.current_distance = 0
+    v.current_step = 0
+    v.current_led_percent = None
+    v.current_freq = v.start_freq_hz
+    v.last_motion_time = 0
+    v.zone_entry_time = 0
+    v.reward_entry_time = 0
+    v.miss_reason = ''
+    v.teleport_done = False
+    v.update_calls_in_trial = 0
+
+    jitter_fraction = 1 + random.uniform(
+        -v.goal_distance_jitter,
+        v.goal_distance_jitter,
+    )
+    v.goal_distance = v.goal_distance_base * jitter_fraction
+
+    v.reward_zone_start_distance = (
+        v.goal_distance * v.reward_zone_start_step / v.led_steps
+    )
+    v.nominal_target_distance = (
+        v.goal_distance * v.nominal_target_step / v.led_steps
+    )
+    v.reward_boundary_distance = (
+        v.goal_distance * v.reward_boundary_step / v.led_steps
+    )
+    v.reward_zone_end_distance = (
+        v.reward_boundary_distance + v.overshoot_margin_distance
+    )
+
+    print('{}, new_goal_distance'.format(round(v.goal_distance, 2)))
+    print('{}, reward_zone_start_distance'.format(
+        round(v.reward_zone_start_distance, 2)
+    ))
+    print('{}, nominal_target_distance'.format(
+        round(v.nominal_target_distance, 2)
+    ))
+    print('{}, reward_boundary_distance'.format(
+        round(v.reward_boundary_distance, 2)
+    ))
+    print('{}, reward_zone_end_distance'.format(
+        round(v.reward_zone_end_distance, 2)
+    ))
+
+    configure_teleport_trial()
+
+
+def in_reward_zone():
+    return (
+        v.current_distance >= v.reward_zone_start_distance
+        and v.current_distance <= v.reward_zone_end_distance
+    )
+
+
+def beyond_reward_zone():
+    return v.current_distance > v.reward_zone_end_distance
+
+
+def hold_complete():
+    return get_current_time() - v.last_motion_time >= v.reward_wait_time
+
+
+def zone_check_timed_out():
+    return get_current_time() - v.zone_entry_time >= v.stop_to_reward_timeout
+
+
+def enter_miss(reason):
+    v.miss_number += 1
+    v.miss_reason = reason
+    print('{}, miss_number'.format(v.miss_number))
+    print('{}, miss_reason'.format(reason))
+    print('{}, miss_distance'.format(round(v.current_distance, 2)))
+    goto_state('miss')
+
+
+def set_reward_cues():
+    try:
+        hw.light.cue(led_percent_for_step(v.current_step))
+    except Exception:
+        pass
+
+    if v.play_zone_tone:
+        hw.speaker.sine(v.zone_tone_freq_hz)
+    elif v.play_progress_tones:
+        hw.speaker.sine(v.current_freq)
     else:
-        print('Normal Trial')
+        hw.speaker.off()
+
 
 # -------------------------------------------------------------------------
 # Run Start/End
 # -------------------------------------------------------------------------
 def run_start():
     hw.speaker.set_volume(15)
+    hw.speaker.off()
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
     hw.reward.reward_duration = v.reward_duration
@@ -202,32 +333,42 @@ def run_start():
     except Exception:
         pass
 
-    if hasattr(hw.motionSensor, 'sensor_x'):
-        v.cpi = hw.motionSensor.sensor_x.CPI
+    if hw.motionSensor.sensor_x is None:
+        raise Exception('Motion sensor CPI unavailable; sensor_x not initialized')
+    v.cpi = hw.motionSensor.sensor_x.CPI
 
     print('{}, CPI'.format(v.cpi))
     print('{}, motion_threshold'.format(v.motion_threshold))
-    print('{}, require_no_motion_to_start_trial'.format(v.require_no_motion_to_start_trial))
-    print('{}, motion_wait_time'.format(v.motion_wait_time))
+    print('{}, forward_sign'.format(v.forward_sign))
+    print('{}, session_duration'.format(v.session_duration))
+    print('{}, intertrial_duration'.format(v.intertrial_duration))
     print('{}, trial_timeout'.format(v.trial_timeout))
     print('{}, reward_wait_time'.format(v.reward_wait_time))
     print('{}, stop_to_reward_timeout'.format(v.stop_to_reward_timeout))
-    print('{}, post_reward_timeout'.format(v.post_reward_timeout))
-    print('{}, post_lick_cue_hold'.format(v.post_lick_cue_hold))
-    print('{}, penalty'.format(v.penalty))
-    print('{}, start_frequency'.format(v.start_freq_hz))
-    print('{}, goal_frequency'.format(v.goal_freq_hz))
-    print('{}, play_progress_tones'.format(v.play_progress_tones))
-    print('{}, side_led_percent'.format(v.side_led_percent))
+    print('{}, reward_post_delay'.format(v.reward_post_delay))
+    print('{}, miss_reset_duration'.format(v.miss_reset_duration))
     print('{}, base_goal_distance'.format(v.goal_distance_base))
     print('{}, goal_jitter_fraction'.format(v.goal_distance_jitter))
-    print('{}, num_steps'.format(v.num_steps))
+    print('{}, led_steps'.format(v.led_steps))
+    print('{}, reward_zone_start_step'.format(v.reward_zone_start_step))
+    print('{}, nominal_target_step'.format(v.nominal_target_step))
+    print('{}, reward_boundary_step'.format(v.reward_boundary_step))
+    print('{}, overshoot_margin_distance'.format(v.overshoot_margin_distance))
+    print('{}, start_led_percent'.format(v.start_led_percent))
+    print('{}, target_led_percent'.format(v.target_led_percent))
+    print('{}, start_frequency'.format(v.start_freq_hz))
+    print('{}, zone_tone_frequency'.format(v.zone_tone_freq_hz))
+    print('{}, enable_teleport'.format(v.enable_teleport))
+    print('{}, play_progress_tones'.format(v.play_progress_tones))
+    print('{}, play_zone_tone'.format(v.play_zone_tone))
+    print('{}, use_white_noise_penalty'.format(v.use_white_noise_penalty))
     print('{}, teleport_prob'.format(v.teleport_prob))
     print('{}, teleport_idxs'.format(v.teleport_idxs))
     print('{}, before_camera_trigger'.format(get_current_time()))
+
     hw.cameraTrigger.start()
-    # Start the session timer immediately since there is no setup state.
     set_timer('session_timer', v.session_duration)
+
 
 def run_end():
     hw.speaker.off()
@@ -240,11 +381,10 @@ def run_end():
     hw.motionSensor.stop()
     hw.cameraTrigger.stop()
     hw.off()
+    print('{}, total_rewards'.format(v.reward_number))
+    print('{}, total_misses'.format(v.miss_number))
     print('Session Ended')
 
-# -------------------------------------------------------------------------
-# No setup/spontaneous states in this task
-# -------------------------------------------------------------------------
 
 # -------------------------------------------------------------------------
 # State Machine
@@ -254,179 +394,141 @@ def intertrial(event):
         hw.speaker.off()
         try:
             hw.light.all_red()
-        except:
+        except Exception:
             pass
         reset_trial()
-        v.motion_detected = False
         v.intertrial_start_time = get_current_time()
-        set_timer('state_timer', v.intertrial_duration, True)
-
-    elif event == 'motion':
-        if v.require_no_motion_to_start_trial:
-            v.motion_detected = True
-            v.last_motion_time = get_current_time()
+        set_timer('state_timer', v.intertrial_duration)
 
     elif event == 'state_timer':
-        if not v.require_no_motion_to_start_trial:
-            goto_state('trial')
-        else:
-            time_in_intertrial = get_current_time() - v.intertrial_start_time
-            if time_in_intertrial >= v.intertrial_duration:
-                if not v.motion_detected:
-                    goto_state('trial')
-                else:
-                    v.motion_detected = False
-                    set_timer('state_timer', v.motion_wait_time, True)
-            else:
-                set_timer('state_timer', v.motion_wait_time, True)
+        goto_state('trial')
 
     elif event == 'stop_button':
         goto_state('stopped')
-    
+
     elif event == 'exit':
-        # Ensure no intertrial timers bleed into next state
         disarm_timer('state_timer')
+
 
 def trial(event):
     if event == 'entry':
-        # Defensive: clear any lingering state_timer from previous state
         disarm_timer('state_timer')
-        try:
-            hw.light.cue(led_percent_from_progress(0.0))
-        except:
-            pass
-        if v.play_progress_tones:
-            hw.speaker.sine(v.start_freq_hz)
-        else:
+        print('{}, trial_start'.format(get_current_time()))
+        update_feedback_from_distance(
+            force=True,
+            play_tone=True,
+            allow_teleport=False,
+        )
+        if not v.play_progress_tones:
             hw.speaker.off()
-        set_timer('state_timer', v.trial_timeout, True)
-
-    elif event == 'exit':
-        disarm_timer('state_timer')
+        set_timer('state_timer', v.trial_timeout)
 
     elif event == 'motion':
-        v.current_distance += v.motion_threshold
-        update_feedback_from_distance()
+        v.current_distance += forward_delta_distance()
         v.last_motion_time = get_current_time()
+        update_feedback_from_distance(play_tone=True)
+
+        if beyond_reward_zone():
+            enter_miss('overshot_terminal_zone')
+        elif v.current_distance >= v.reward_zone_start_distance:
+            goto_state('zone_check')
 
     elif event == 'state_timer':
-        # Trial timeout without reaching target -> penalty first
-        goto_penalty_or_intertrial()
+        enter_miss('trial_timeout')
 
     elif event == 'stop_button':
         goto_state('stopped')
 
-def reward(event):
-    """
-    Goal reached. Keep target cues on. Require sustained stillness to deliver reward.
-    If not still within stop_to_reward_timeout -> penalty or intertrial.
-    """
-    if event == 'entry':
-        hw.speaker.sine(v.goal_freq_hz)
-        v.target_led_percent = v.side_led_percent
-        try:
-            hw.light.all_red()
-            hw.light.cue(v.target_led_percent)
-        except Exception:
-            pass
-        v.reward_entry_time = get_current_time()
-        set_timer('state_timer', 50 * ms, True)  # periodic check
-
     elif event == 'exit':
         disarm_timer('state_timer')
 
-    elif event == 'motion':
+
+def zone_check(event):
+    if event == 'entry':
+        v.zone_entry_time = get_current_time()
         v.last_motion_time = get_current_time()
+        update_feedback_from_distance(force=True, allow_teleport=False)
+        if v.play_zone_tone:
+            hw.speaker.sine(v.zone_tone_freq_hz)
+        print('{}, zone_entry'.format(v.zone_entry_time))
+        print('{}, zone_entry_distance'.format(round(v.current_distance, 2)))
+        print('{}, zone_entry_step'.format(v.current_step))
+        print('{}, zone_tone_on'.format(v.play_zone_tone))
+        set_timer('state_timer', 50 * ms)
+
+    elif event == 'motion':
+        v.current_distance += forward_delta_distance()
+        v.last_motion_time = get_current_time()
+        update_feedback_from_distance(
+            play_tone=not v.play_zone_tone,
+            allow_teleport=False,
+        )
+
+        if beyond_reward_zone():
+            enter_miss('left_terminal_zone')
 
     elif event == 'state_timer':
-        now = get_current_time()
-        # Deliver reward automatically after sufficient stillness.
-        if now - v.last_motion_time >= v.reward_wait_time:
-            v.reward_number += 1
-            hw.reward.release()
-            print('{}, reward_number'.format(v.reward_number))
-            goto_state('post_reward')
-        elif now - v.reward_entry_time >= v.stop_to_reward_timeout:
-            goto_penalty_or_intertrial()
+        if not in_reward_zone():
+            enter_miss('outside_terminal_zone')
+        elif hold_complete():
+            goto_state('reward')
+        elif zone_check_timed_out():
+            enter_miss('stop_timeout')
         else:
-            # Keep checking periodically until either condition is met
             set_timer('state_timer', 50 * ms)
 
     elif event == 'stop_button':
         goto_state('stopped')
 
-def penalty(event):
-    """
-    Lights off and white noise for penalty_duration, then return to intertrial.
-    Triggered by: trial timeout or no stop before reward window.
-    """
+    elif event == 'exit':
+        disarm_timer('state_timer')
+
+
+def reward(event):
+    if event == 'entry':
+        v.reward_entry_time = get_current_time()
+        set_reward_cues()
+        v.reward_number += 1
+        hw.reward.release()
+        print('{}, reward_number'.format(v.reward_number))
+        print('{}, reward_distance'.format(round(v.current_distance, 2)))
+        set_timer('state_timer', v.reward_post_delay)
+
+    elif event == 'state_timer':
+        goto_state('intertrial')
+
+    elif event == 'stop_button':
+        goto_state('stopped')
+
+    elif event == 'exit':
+        disarm_timer('state_timer')
+        hw.speaker.off()
+
+
+def miss(event):
     if event == 'entry':
         try:
             hw.light.all_off()
         except Exception:
             pass
-        hw.speaker.noise(v.penalty_noise_max_freq)
-        set_timer('state_timer', v.penalty_duration)
+
+        if v.use_white_noise_penalty:
+            hw.speaker.noise(v.penalty_noise_max_freq)
+            set_timer('state_timer', v.penalty_duration)
+        else:
+            hw.speaker.off()
+            set_timer('state_timer', v.miss_reset_duration)
 
     elif event == 'state_timer':
         goto_state('intertrial')
+
+    elif event == 'stop_button':
+        goto_state('stopped')
 
     elif event == 'exit':
         hw.speaker.off()
         disarm_timer('state_timer')
 
-    elif event == 'stop_button':
-        goto_state('stopped')
-
-def post_reward(event):
-    """
-    Keep target cues on after reward until lick or v.post_reward_timeout.
-    """
-    if event == 'entry':
-        # Ensure steady goal sound and target LED (no blinking)
-        v.post_reward_entry_time = get_current_time()
-        v.post_lick_start_time = 0
-        v.post_lick_hold_active = False
-        hw.speaker.sine(v.goal_freq_hz)
-        try:
-            if not hasattr(v, 'target_led_percent'):
-                v.target_led_percent = v.side_led_percent
-            hw.light.all_red()
-            hw.light.cue(v.target_led_percent)
-        except Exception:
-            pass
-        reset_timer('state_timer', v.post_reward_timeout)
-
-    elif event == 'state_timer':
-        if v.post_lick_hold_active:
-            print('{}, post_lick_cue_hold_end'.format(get_current_time()))
-        else:
-            print('{}, post_reward_timeout'.format(get_current_time()))
-        goto_state('intertrial')
-
-    elif event == 'lick':
-        if not v.post_lick_hold_active:
-            v.post_lick_hold_active = True
-            v.post_lick_start_time = get_current_time()
-            print('{}, post_reward_lick'.format(get_current_time()))
-            reset_timer('state_timer', v.post_lick_cue_hold)
-
-    elif event == 'motion':
-        # Motion can be frequent enough to delay timer processing; enforce timeout here too.
-        if v.post_lick_hold_active and post_lick_cue_hold_timed_out():
-            print('{}, post_lick_cue_hold_end'.format(get_current_time()))
-            goto_state('intertrial')
-        elif not v.post_lick_hold_active and post_reward_timed_out():
-            print('{}, post_reward_timeout'.format(get_current_time()))
-            goto_state('intertrial')
-
-    elif event == 'stop_button':
-        goto_state('stopped')
-    
-    elif event == 'exit':
-        disarm_timer('state_timer')
-        v.post_lick_start_time = 0
-        v.post_lick_hold_active = False
 
 def stopped(event):
     if event == 'entry':
@@ -440,11 +542,11 @@ def stopped(event):
     elif event == 'stop_button':
         goto_state('intertrial')
 
+
 # -------------------------------------------------------------------------
 # Event handlers
 # -------------------------------------------------------------------------
 def all_states(event):
     if event == 'session_timer':
         print('Session Timer Expired - Stopping Framework')
-        print('{}, total_rewards'.format(v.reward_number))
         stop_framework()
