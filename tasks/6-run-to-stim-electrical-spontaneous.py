@@ -548,6 +548,7 @@ def run_start():
 
     # STIM: open the link to the cl_stim trigger server and mark session start.
     if hasattr(hw, 'bci_link'):
+        hw.bci_link.notify_on_change = False
         hw.bci_link.start()
         print('{}, bci_link_started'.format(get_current_time()))
         send_to_stim(v.code_session_marker_to_stim)

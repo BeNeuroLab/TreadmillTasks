@@ -45,9 +45,8 @@ v.code_session_start = 110
 v.code_session_end = 111
 v.code_session_marker_to_stim = 0
 
-# UARTlink emits cursor_update only when the received integer changes.
-# Repeated identical marker codes may not be logged unless the sender
-# alternates codes, e.g. stim_on then stim_off for train-mode pulses.
+# This task configures UARTlink to emit cursor_update for every complete
+# 2-byte marker received from the stimulation computer.
 
 # -------------------------------------------------------------------------
 # Helpers
@@ -82,9 +81,30 @@ def update_marker_counts(name):
         v.unknown_marker_count += 1
 
 
+def update_stim_sync_ttl(name):
+    if not hasattr(hw, 'stim_sync'):
+        return
+
+    if name == 'stim_on':
+        hw.stim_sync.on()
+        print('{}, stim_sync_ttl_on'.format(get_current_time()))
+    elif name == 'stim_off':
+        hw.stim_sync.off()
+        print('{}, stim_sync_ttl_off'.format(get_current_time()))
+
+
+def reset_stim_sync_ttl():
+    if hasattr(hw, 'stim_sync'):
+        hw.stim_sync.off()
+        print('{}, stim_sync_ttl_reset'.format(get_current_time()))
+    else:
+        print('{}, missing_stim_sync_ttl'.format(get_current_time()))
+
+
 def log_marker(code):
     name = marker_name(code)
     update_marker_counts(name)
+    update_stim_sync_ttl(name)
     print(
         '{}, external_stim_marker code={} name={} count={} active={}'.format(
             get_current_time(),
@@ -129,8 +149,10 @@ def send_session_marker_to_stim(phase):
 def run_start():
     print('{}, manual_stim_receiver_started'.format(get_current_time()))
     print('{}, session_duration'.format(v.session_duration))
+    reset_stim_sync_ttl()
 
     if hasattr(hw, 'bci_link'):
+        hw.bci_link.notify_on_change = False
         hw.bci_link.start()
         print('{}, bci_link_started'.format(get_current_time()))
         send_session_marker_to_stim('start')
@@ -159,6 +181,7 @@ def run_start():
 
 def run_end():
     print_summary()
+    reset_stim_sync_ttl()
 
     if hasattr(hw, 'cameraTrigger'):
         hw.cameraTrigger.stop()
@@ -190,14 +213,15 @@ def trial(event):
     if event == 'entry':
         print('{}, receiver_trial_entry'.format(get_current_time()))
 
-    elif event == 'cursor_update':
+
+def all_states(event):
+    if event == 'cursor_update':
         if hasattr(hw, 'bci_link'):
             log_marker(hw.bci_link.spk)
         else:
             print('{}, cursor_update_without_bci_link'.format(get_current_time()))
+        return True
 
-
-def all_states(event):
     if event == 'session_timer':
         print('{}, session_timer_expired'.format(get_current_time()))
         print_summary()
