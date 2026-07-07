@@ -49,6 +49,8 @@ v.stop_check_interval = 50 * ms
 v.target_distance = 30
 v.current_distance = 0
 v.motion_threshold = 2
+v.cpi = None
+v.forward_sign = 1
 v.target_led_percent = 100
 
 # Tone controls
@@ -91,6 +93,18 @@ def response_timed_out():
     return get_current_time() - v.target_reached_time >= v.response_window
 
 
+def forward_delta_distance():
+    """Return positive x-axis motion since the last motion event in cm."""
+    if v.cpi is None:
+        raise Exception('Motion sensor CPI unavailable')
+
+    forward_counts = v.forward_sign * hw.motionSensor.x
+    if forward_counts < 0:
+        forward_counts = 0
+
+    return forward_counts / v.cpi * 2.54
+
+
 def enter_miss(reason):
     v.miss_number += 1
     v.miss_reason = reason
@@ -118,9 +132,16 @@ def run_start():
     except Exception:
         pass
 
+    if hw.motionSensor.sensor_x is None:
+        raise Exception('Motion sensor CPI unavailable; sensor_x not initialized')
+    v.cpi = hw.motionSensor.sensor_x.CPI
+
     set_timer('session_timer', v.session_duration, True)
-    print('{}, CPI'.format(hw.motionSensor.sensor_x.CPI))
+    print('{}, CPI'.format(v.cpi))
     print('{}, motion_threshold'.format(v.motion_threshold))
+    print('{}, distance_axis'.format('x'))
+    print('{}, distance_units'.format('cm'))
+    print('{}, forward_sign'.format(v.forward_sign))
     print('{}, target_distance'.format(v.target_distance))
     print('{}, target_led_percent'.format(v.target_led_percent))
     print('{}, stop_hold_duration'.format(v.stop_hold_duration))
@@ -185,7 +206,7 @@ def trial(event):
         print('{}, trial_start'.format(get_current_time()))
 
     elif event == 'motion':
-        v.current_distance += v.motion_threshold
+        v.current_distance += forward_delta_distance()
 
         if v.current_distance >= v.target_distance:
             v.target_reached_time = get_current_time()
@@ -193,6 +214,7 @@ def trial(event):
             set_target_led()
             print('{}, target_reached'.format(v.target_reached_time))
             print('{}, target_distance'.format(v.target_distance))
+            print('{}, current_distance'.format(round(v.current_distance, 2)))
             goto_state('wait_for_stop')
 
     elif event == 'stop_button':
@@ -205,7 +227,7 @@ def wait_for_stop(event):
         set_timer('response_timer', v.response_window)
 
     elif event == 'motion':
-        v.current_distance += v.motion_threshold
+        v.current_distance += forward_delta_distance()
         v.last_motion_time = get_current_time()
 
     elif event == 'state_timer':
