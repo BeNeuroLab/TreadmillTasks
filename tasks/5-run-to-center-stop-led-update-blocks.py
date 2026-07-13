@@ -35,7 +35,7 @@ initial_state = 'intertrial'
 # -------------------------------------------------------------------------
 # Session timing.
 v.session_duration = 45 * minute
-v.intertrial_duration = 2 * second
+v.intertrial_duration = 1 * second
 v.trial_timeout = 15 * second
 v.failed_trial_timeout = 2 * second
 v.reward_cue_hold = 0.5 * second
@@ -95,10 +95,10 @@ v.current_tone_freq_hz = 0
 # Brief outcome cues.
 v.play_reward_tone = True
 v.reward_tone_freq_hz = 10000
-v.reward_tone_duration = 100 * ms
+v.reward_tone_duration = 400 * ms
 v.play_miss_tone = True
 v.miss_noise_max_freq = 10000
-v.miss_tone_duration = 100 * ms
+v.miss_tone_duration = 200 * ms
 
 # Motion sensor.
 v.cpi = None
@@ -609,7 +609,10 @@ def failed_trial(event):
     if event == 'entry':
         disarm_timer('tone_off_timer')
         hw.speaker.off()
-        set_led_baseline()
+        try:
+            hw.light.all_off()
+        except Exception:
+            pass
 
         if v.play_miss_tone:
             hw.speaker.noise(v.miss_noise_max_freq)
