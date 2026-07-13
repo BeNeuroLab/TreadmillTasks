@@ -1,4 +1,4 @@
-"""Compare 5- and 10-position LED feedback in alternating trial blocks."""
+"""Compare 5-, 7-, and 10-position LED feedback in trial blocks."""
 
 from pyControl.utility import *
 import hardware_definition as hw
@@ -65,8 +65,8 @@ v.gain_trial_queue = []
 v.gain_block_number = 0
 
 # LED-update blocks. Conditions alternate in CSV order after a fixed number of
-# completed trials (reward or failure). Reverse the CSV to start with 10 LEDs.
-v.led_update_counts_csv = '5,10'
+# completed trials (reward or failure). Reorder the CSV to change block order.
+v.led_update_counts_csv = '5,7,10'
 v.led_update_block_size = 20
 v.led_update_conditions = []
 v.led_update_condition_index = -1
@@ -76,11 +76,11 @@ v.current_led_update_count = 0
 
 # These reproduce the LED positions used in the 07/08 and 07/09 tasks.
 v.five_led_positions_csv = '35,50,65,80,100'
+v.seven_led_positions_csv = '35,46,57,68,78,89,100'
 v.ten_led_positions_csv = '35,42,49,56,63,70,77,84,92,100'
 
-# Keep the reward-zone boundary identical in both conditions.  8/9 is the
-# boundary used by the 10-LED task (the 92% LED, index 8 of 9 intervals).
-v.reward_zone_start_progress = 8 / 9
+# Reward availability follows the displayed LED, not continuous progress.
+v.reward_zone_start_led_percent = 89
 v.led_positions = []
 v.num_led_positions = 0
 v.current_led_index = -1
@@ -92,9 +92,13 @@ v.initial_tone_freq_hz = 2000
 v.initial_tone_duration = 100 * ms
 v.current_tone_freq_hz = 0
 
-# Optional penalty, off by default for recording.
-v.use_noise_penalty = False
-v.penalty_noise_max_freq = 10000
+# Brief outcome cues.
+v.play_reward_tone = True
+v.reward_tone_freq_hz = 10000
+v.reward_tone_duration = 100 * ms
+v.play_miss_tone = True
+v.miss_noise_max_freq = 10000
+v.miss_tone_duration = 100 * ms
 
 # Motion sensor.
 v.cpi = None
@@ -141,8 +145,10 @@ def configure_led_update_conditions():
             raise Exception('Each LED update count must be at least 2')
     if int(v.led_update_block_size) < 1:
         raise Exception('led_update_block_size must be at least 1')
-    if not 0 < v.reward_zone_start_progress <= 1:
-        raise Exception('reward_zone_start_progress must be in (0, 1]')
+    if not 1 <= int(v.reward_zone_start_led_percent) <= 100:
+        raise Exception(
+            'reward_zone_start_led_percent must be between 1 and 100'
+        )
 
 
 def evenly_spaced_led_positions(led_count):
@@ -156,6 +162,8 @@ def evenly_spaced_led_positions(led_count):
 def configure_led_positions(led_count):
     if led_count == 5:
         v.led_positions = parse_csv_ints(v.five_led_positions_csv)
+    elif led_count == 7:
+        v.led_positions = parse_csv_ints(v.seven_led_positions_csv)
     elif led_count == 10:
         v.led_positions = parse_csv_ints(v.ten_led_positions_csv)
     else:
@@ -338,7 +346,7 @@ def update_cues_from_progress(force=False):
 
 
 def in_reward_zone():
-    return visual_progress() >= v.reward_zone_start_progress
+    return v.current_led_percent >= v.reward_zone_start_led_percent
 
 
 def reset_trial_variables():
@@ -415,20 +423,26 @@ def run_start():
     print('{}, led_update_counts_csv'.format(v.led_update_counts_csv))
     print('{}, led_update_block_size'.format(v.led_update_block_size))
     print('{}, five_led_positions_csv'.format(v.five_led_positions_csv))
+    print('{}, seven_led_positions_csv'.format(v.seven_led_positions_csv))
     print('{}, ten_led_positions_csv'.format(v.ten_led_positions_csv))
-    print('{}, reward_zone_start_progress'.format(
-        v.reward_zone_start_progress,
+    print('{}, reward_zone_start_led_percent'.format(
+        v.reward_zone_start_led_percent,
     ))
     print('{}, audio_mode'.format(v.audio_mode))
     print('{}, initial_tone_freq_hz'.format(v.initial_tone_freq_hz))
     print('{}, initial_tone_duration'.format(v.initial_tone_duration))
+    print('{}, play_reward_tone'.format(v.play_reward_tone))
+    print('{}, reward_tone_freq_hz'.format(v.reward_tone_freq_hz))
+    print('{}, reward_tone_duration'.format(v.reward_tone_duration))
+    print('{}, play_miss_tone'.format(v.play_miss_tone))
+    print('{}, miss_noise_max_freq'.format(v.miss_noise_max_freq))
+    print('{}, miss_tone_duration'.format(v.miss_tone_duration))
     print('{}, normal_gain'.format(v.normal_gain))
     print('{}, low_gain'.format(v.low_gain))
     print('{}, high_gain'.format(v.high_gain))
     print('{}, normal_gain_count'.format(v.normal_gain_count))
     print('{}, low_gain_count'.format(v.low_gain_count))
     print('{}, high_gain_count'.format(v.high_gain_count))
-    print('{}, use_noise_penalty'.format(v.use_noise_penalty))
     print('{}, before_camera_trigger'.format(get_current_time()))
 
     hw.cameraTrigger.start()
@@ -562,6 +576,15 @@ def reward(event):
     if event == 'entry':
         disarm_timer('tone_off_timer')
         hw.speaker.off()
+        if v.play_reward_tone:
+            v.current_tone_freq_hz = v.reward_tone_freq_hz
+            hw.speaker.sine(v.current_tone_freq_hz)
+            set_timer('tone_off_timer', v.reward_tone_duration)
+            print('{}, reward_tone frequency={} duration={}'.format(
+                get_current_time(),
+                v.current_tone_freq_hz,
+                v.reward_tone_duration,
+            ))
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_delivered'.format(get_current_time()))
@@ -588,8 +611,15 @@ def failed_trial(event):
         hw.speaker.off()
         set_led_baseline()
 
-        if v.use_noise_penalty:
-            hw.speaker.noise(v.penalty_noise_max_freq)
+        if v.play_miss_tone:
+            hw.speaker.noise(v.miss_noise_max_freq)
+            set_timer('tone_off_timer', v.miss_tone_duration)
+            print('{}, miss_tone reason={} max_frequency={} duration={}'.format(
+                get_current_time(),
+                v.failure_reason,
+                v.miss_noise_max_freq,
+                v.miss_tone_duration,
+            ))
 
         set_timer('state_timer', v.failed_trial_timeout)
 
