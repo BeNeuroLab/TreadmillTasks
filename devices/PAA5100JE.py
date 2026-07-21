@@ -2,6 +2,7 @@ import time
 import gc
 import math
 import machine
+import pyb
 
 from pyControl.hardware import *
 import devices.PAA5100JE_firmware as PAA5100JE_firmware
@@ -263,6 +264,19 @@ class MotionDetector(Analog_input):
         self._delta_x, self._delta_y = 0, 0  # instantaneous position
         self.x, self.y = 0, 0  # to be accessed from the task, unit=mm
 
+        # Optional continuous X-motion interface.  This is kept separate from
+        # delta_x/delta_y because those values are reset whenever a thresholded
+        # motion event is generated.
+        self.continuous_motion_enabled = False
+        self.continuous_window_ms = 0
+        self.continuous_window_samples = 0
+        self.x_positive_total = 0
+        self.x_negative_total = 0
+        self.x_window_abs_total = 0
+        self.x_window_sample_count = 0
+        self._x_window = []
+        self._x_window_index = 0
+
         # Parent
         Analog_input.__init__(self, pin=None, name=name + '-X', sampling_rate=int(sampling_rate),
                             threshold=threshold, rising_event=event, falling_event=None,
@@ -343,6 +357,94 @@ class MotionDetector(Analog_input):
         """reset the accumulated position data"""
         self.delta_x, self.delta_y = 0, 0
 
+    def configure_continuous_motion(self, window_ms=100):
+        """Enable cumulative X motion and an absolute-motion rolling window.
+
+        This must be called before acquisition starts.  Positive and negative
+        totals contain magnitudes in sensor counts and are never reset by a
+        thresholded motion event.
+        """
+        assert not self.acquiring, (
+            'Continuous motion must be configured before acquisition starts'
+        )
+        assert window_ms > 0, 'Continuous motion window must be positive'
+
+        window_samples = int(round(
+            self.data_chx.sampling_rate * window_ms / 1000
+        ))
+        assert window_samples >= 1, (
+            'Continuous motion window is shorter than one sensor sample'
+        )
+
+        self.continuous_motion_enabled = True
+        self.continuous_window_samples = window_samples
+        self.continuous_window_ms = int(round(
+            1000 * window_samples / self.data_chx.sampling_rate
+        ))
+        self._x_window = [0] * window_samples
+        self._reset_continuous_motion()
+
+    def _reset_continuous_motion(self):
+        """Reset cumulative counters and the rolling absolute-X window."""
+        self.x_positive_total = 0
+        self.x_negative_total = 0
+        self.x_window_abs_total = 0
+        self.x_window_sample_count = 0
+        self._x_window_index = 0
+
+        for i in range(len(self._x_window)):
+            self._x_window[i] = 0
+
+    def get_x_motion_snapshot(self):
+        """Return an interrupt-safe snapshot of continuous X-motion counts.
+
+        Values are (positive_total, negative_total, rolling_absolute_total,
+        populated_window_samples).  Negative motion is returned as a positive
+        magnitude in negative_total.
+        """
+        assert self.continuous_motion_enabled, (
+            'Continuous motion has not been configured'
+        )
+
+        irq_state = pyb.disable_irq()
+        positive_total = self.x_positive_total
+        negative_total = self.x_negative_total
+        window_abs_total = self.x_window_abs_total
+        window_sample_count = self.x_window_sample_count
+        pyb.enable_irq(irq_state)
+
+        return (
+            positive_total,
+            negative_total,
+            window_abs_total,
+            window_sample_count,
+        )
+
+    def _update_continuous_motion(self):
+        """Update continuous counters from the latest sample in the ISR."""
+        if not self.continuous_motion_enabled:
+            return
+
+        if self._delta_x >= 0:
+            absolute_dx = self._delta_x
+            self.x_positive_total += self._delta_x
+        else:
+            absolute_dx = -self._delta_x
+            self.x_negative_total += absolute_dx
+
+        if self.x_window_sample_count < self.continuous_window_samples:
+            self.x_window_sample_count += 1
+        else:
+            self.x_window_abs_total -= self._x_window[
+                self._x_window_index
+            ]
+
+        self._x_window[self._x_window_index] = absolute_dx
+        self.x_window_abs_total += absolute_dx
+        self._x_window_index = (
+            self._x_window_index + 1
+        ) % self.continuous_window_samples
+
     def read_sample(self):
         """read motion in the interrupt routine"""
         # Read motion in y direction
@@ -362,10 +464,14 @@ class MotionDetector(Analog_input):
     def _timer_ISR(self, t):
         """Read a sample to the buffer, update write index."""
         self.read_sample()
+        self._update_continuous_motion()
         self.data_chx.put(self._delta_x)
         self.data_chy.put(self._delta_y)
 
-        if self.delta_x**2 + self.delta_y**2 >= self._threshold:
+        if (
+            self.rising_event_ID
+            and self.delta_x**2 + self.delta_y**2 >= self._threshold
+        ):
             self.x = self.delta_x
             self.y = self.delta_y
             self.reset_delta()
@@ -390,6 +496,8 @@ class MotionDetector(Analog_input):
         """Start sampling analog input values"""
         if not self._sensors_ready:
             self._initialise_sensors()
+        if self.continuous_motion_enabled:
+            self._reset_continuous_motion()
         self.timer.init(freq=self.data_chx.sampling_rate)
         self.timer.callback(self._timer_ISR)
         self.acquiring = True
