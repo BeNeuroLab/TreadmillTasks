@@ -402,6 +402,7 @@ def run_start():
         hw.light.start()
         hw.light.all_red()
         hw.light.cue_bilateral(True)
+        hw.light.send_int(212) # set BIG_LED=True
     except Exception:
         pass
 
@@ -609,10 +610,7 @@ def failed_trial(event):
     if event == 'entry':
         disarm_timer('tone_off_timer')
         hw.speaker.off()
-        try:
-            hw.light.all_off()
-        except Exception:
-            pass
+        set_led_baseline()
 
         if v.play_miss_tone:
             hw.speaker.noise(v.miss_noise_max_freq)

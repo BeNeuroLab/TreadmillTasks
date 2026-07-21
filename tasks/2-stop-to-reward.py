@@ -128,6 +128,7 @@ def run_start():
         hw.light.start()
         utime.sleep_ms(20)
         hw.light.cue_bilateral(True)
+        hw.light.send_int(212) # set BIG_LED=True
         hw.light.all_red()
     except Exception:
         pass
