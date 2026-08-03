@@ -42,13 +42,12 @@ v.reward_cue_hold = 0.5 * second
 
 # Reward and stopping rule.
 v.reward_duration = 30 * ms
-v.reward_wait_time = 0.5 * second
-v.stop_speed_threshold_cm_s = 2.0
+v.reward_wait_time = 250 * ms
+v.stop_speed_threshold_cm_s = 5.0
 
 # Continuous sensor polling and speed calculation.
 v.sensor_update_interval = 10 * ms
-v.speed_window_ms = 100
-v.speed_log_interval = 100 * ms
+v.speed_window_ms = 50
 
 # Distance and visual gain.
 v.goal_distance_base = 60
@@ -89,7 +88,6 @@ v.rolling_speed_cm_s = 0.0
 v.rolling_speed_valid = False
 v.below_speed_start_time = None
 v.last_above_speed_time = -1000000
-v.next_speed_log_time = 0
 
 # Trial tracking.
 v.reward_number = 0
@@ -139,10 +137,10 @@ def configure_gain_trial():
     if not v.gain_trial_queue:
         v.gain_trial_queue = build_gain_block()
         v.gain_block_number += 1
-        print('{}, new_gain_block block={} order={}'.format(
-            get_current_time(),
-            v.gain_block_number,
-            v.gain_trial_queue,
+        print('{}, new_gain_block'.format(get_current_time()))
+        print('{}, gain_block_number'.format(v.gain_block_number))
+        print('{}, gain_block_order'.format(
+            '|'.join(v.gain_trial_queue),
         ))
 
     v.trial_condition = v.gain_trial_queue.pop(0)
@@ -195,19 +193,6 @@ def update_stop_speed(now, window_abs_counts, window_sample_count):
         v.below_speed_start_time = None
 
 
-def log_stop_speed(now):
-    if now < v.next_speed_log_time:
-        return
-
-    if v.rolling_speed_valid:
-        speed_text = round(v.rolling_speed_cm_s, 3)
-    else:
-        speed_text = 'warming_up'
-
-    print('{}, rolling_speed_cm_s={}'.format(now, speed_text))
-    v.next_speed_log_time = now + v.speed_log_interval
-
-
 def poll_motion_sensor():
     """Update continuous displacement and speed; return forward distance."""
     positive_total, negative_total, window_abs_counts, window_samples = (
@@ -225,7 +210,6 @@ def poll_motion_sensor():
 
     now = get_current_time()
     update_stop_speed(now, window_abs_counts, window_samples)
-    log_stop_speed(now)
 
     return forward_counts / v.cpi * 2.54
 
@@ -281,11 +265,7 @@ def set_led_state(led_percent):
 def play_initial_tone():
     hw.speaker.sine(v.initial_tone_freq_hz)
     set_timer('tone_off_timer', v.initial_tone_duration)
-    print('{}, initial_tone frequency={} duration={}'.format(
-        get_current_time(),
-        v.initial_tone_freq_hz,
-        v.initial_tone_duration,
-    ))
+    print('{}, initial_tone'.format(get_current_time()))
 
 
 def update_cues_from_progress(force=False):
@@ -315,10 +295,12 @@ def reset_trial_variables():
 
 def record_failure(reason):
     v.failure_number += 1
-    print('{}, trial_failure reason={} distance={} visual_progress={}'.format(
-        get_current_time(),
-        reason,
+    print('{}, trial_failure'.format(get_current_time()))
+    print('{}, trial_failure_reason'.format(reason))
+    print('{}, trial_failure_distance_cm'.format(
         round(v.current_distance, 2),
+    ))
+    print('{}, trial_failure_visual_progress'.format(
         round(visual_progress(), 3),
     ))
     goto_state('intertrial')
@@ -389,6 +371,19 @@ def run_start():
     sync_motion_snapshot()
 
     print('{}, CPI'.format(v.cpi))
+    print('{}, speed_window_ms'.format(v.speed_window_ms))
+    print('{}, stop_speed_threshold_cm_s'.format(
+        v.stop_speed_threshold_cm_s,
+    ))
+    print('{}, reward_wait_time_ms'.format(v.reward_wait_time))
+    print('{}, motion_sampling_rate_hz'.format(
+        hw.motionSensor.data_chx.sampling_rate,
+    ))
+    print('{}, forward_sign'.format(v.forward_sign))
+    print('{}, initial_tone_freq_hz'.format(v.initial_tone_freq_hz))
+    print('{}, initial_tone_duration_ms'.format(v.initial_tone_duration))
+    print('{}, reward_tone_freq_hz'.format(v.reward_tone_freq_hz))
+    print('{}, reward_tone_duration_ms'.format(v.reward_tone_duration))
     print('{}, before_camera_trigger'.format(get_current_time()))
 
     hw.cameraTrigger.start()
@@ -424,7 +419,6 @@ def intertrial(event):
         reset_trial_variables()
         v.iti_motion_distance = 0
         v.intertrial_start_time = get_current_time()
-        v.next_speed_log_time = v.intertrial_start_time
         sync_motion_snapshot()
         print('{}, iti_start'.format(v.intertrial_start_time))
         set_timer('state_timer', v.intertrial_duration)
@@ -436,8 +430,8 @@ def intertrial(event):
 
     elif event == 'state_timer':
         v.iti_motion_distance += poll_motion_sensor()
-        print('{}, iti_end motion_distance={}'.format(
-            get_current_time(),
+        print('{}, iti_end'.format(get_current_time()))
+        print('{}, iti_motion_distance_cm'.format(
             round(v.iti_motion_distance, 2),
         ))
         goto_state('trial')
@@ -482,9 +476,11 @@ def trial(event):
         ):
             v.trial_phase = 'performance'
             v.initiation_time = get_current_time()
-            print('{}, trial_initiated distance={} latency={}'.format(
-                v.initiation_time,
+            print('{}, trial_initiated'.format(v.initiation_time))
+            print('{}, trial_initiation_distance_cm'.format(
                 round(v.current_distance, 2),
+            ))
+            print('{}, trial_initiation_latency_ms'.format(
                 v.initiation_time - v.trial_start_time,
             ))
             reset_timer('state_timer', v.performance_timeout)
@@ -539,10 +535,9 @@ def target_wait(event):
             update_cues_from_progress()
 
             if stop_detected():
-                print('{}, stop_detected speed_cm_s={} below_since={}'.format(
-                    get_current_time(),
+                print('{}, stop_detected'.format(get_current_time()))
+                print('{}, stop_detected_speed_cm_s'.format(
                     round(v.rolling_speed_cm_s, 3),
-                    v.below_speed_start_time,
                 ))
                 goto_state('reward')
             else:
@@ -561,11 +556,7 @@ def reward(event):
         hw.speaker.off()
         hw.speaker.sine(v.reward_tone_freq_hz)
         set_timer('tone_off_timer', v.reward_tone_duration)
-        print('{}, reward_tone frequency={} duration={}'.format(
-            get_current_time(),
-            v.reward_tone_freq_hz,
-            v.reward_tone_duration,
-        ))
+        print('{}, reward_tone'.format(get_current_time()))
         hw.reward.release()
         v.reward_number += 1
         print('{}, reward_delivered'.format(get_current_time()))
