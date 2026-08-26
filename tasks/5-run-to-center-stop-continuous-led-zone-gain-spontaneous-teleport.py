@@ -72,7 +72,7 @@ v.task_phase_number = 0
 # Trial timing.
 v.intertrial_duration = 1 * second
 v.initiation_timeout = 5 * second
-v.performance_timeout = 5 * second
+v.performance_timeout = 10 * second
 v.initiation_distance_cm = 3
 v.reward_cue_hold = 0.5 * second
 
