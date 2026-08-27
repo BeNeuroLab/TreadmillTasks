@@ -398,9 +398,7 @@ def start_task_light_flash():
     v.light_flash_context = 'task'
     v.light_flash_delivered = True
     v.light_flash_frozen_progress = v.current_visual_progress
-    v.light_flash_frozen_led_percent = led_percent_from_progress(
-        v.light_flash_frozen_progress,
-    )
+    v.light_flash_frozen_led_percent = v.current_led_percent
     v.task_light_flash_count += 1
     flash_time = get_current_time()
     v.light_flash_start_time = flash_time
@@ -416,6 +414,9 @@ def start_task_light_flash():
     print('{}, task_light_flash_frozen_progress'.format(
         round(v.light_flash_frozen_progress, 4),
     ))
+    print('{}, task_light_flash_frozen_led_percent'.format(
+        v.light_flash_frozen_led_percent,
+    ))
     print('{}, task_light_flash_physical_distance_cm'.format(
         round(v.current_distance, 3),
     ))
@@ -428,6 +429,7 @@ def finish_task_light_flash():
     flash_time = get_current_time()
     v.light_flash_active = False
     v.light_flash_context = None
+    set_led_baseline()
     set_led_state(v.light_flash_frozen_led_percent)
     print('{}, task_light_flash_off'.format(flash_time))
     print('{}, task_light_flash_actual_duration_ms'.format(
@@ -435,6 +437,9 @@ def finish_task_light_flash():
     ))
     print('{}, task_light_flash_restored_progress'.format(
         round(v.current_visual_progress, 4),
+    ))
+    print('{}, task_light_flash_restored_led_percent'.format(
+        v.light_flash_frozen_led_percent,
     ))
     print('{}, task_light_flash_end_physical_distance_cm'.format(
         round(v.current_distance, 3),
@@ -490,6 +495,7 @@ def cancel_light_flash(reason, restore_mode):
     ))
 
     if restore_mode == 'task':
+        set_led_baseline()
         set_led_state(v.light_flash_frozen_led_percent)
     elif restore_mode == 'baseline':
         set_led_baseline()
