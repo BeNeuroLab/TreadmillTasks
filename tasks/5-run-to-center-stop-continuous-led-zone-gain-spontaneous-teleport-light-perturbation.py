@@ -23,8 +23,6 @@ events = [
     'session_timer',
     'state_timer',
     'tone_off_timer',
-    'light_flash_timer',
-    'spontaneous_flash_timer',
     'sensor_update',
     'lick',
     'stop_button',
@@ -122,6 +120,7 @@ v.light_flash_duration = 200 * ms
 v.light_flash_active = False
 v.light_flash_context = None
 v.light_flash_start_time = 0
+v.light_flash_end_time = 0
 v.light_flash_delivered = False
 v.light_flash_trigger_progress = -1.0
 v.light_flash_frozen_progress = -1.0
@@ -138,6 +137,8 @@ v.spontaneous_flash_interval_max = 120 * second
 v.spontaneous_flash_cap = 10
 v.spontaneous_flash_count = 0
 v.next_spontaneous_flash_interval = 0
+v.next_spontaneous_flash_time = 0
+v.spontaneous_phase_end_time = 0
 
 # Continuous LED position and reward availability.
 v.start_led_percent = 0
@@ -402,9 +403,9 @@ def start_task_light_flash():
     v.task_light_flash_count += 1
     flash_time = get_current_time()
     v.light_flash_start_time = flash_time
+    v.light_flash_end_time = flash_time + v.light_flash_duration
 
     command_sent = show_full_strip()
-    set_timer('light_flash_timer', v.light_flash_duration)
     print('{}, task_light_flash_on'.format(flash_time))
     print('{}, task_light_flash_count'.format(v.task_light_flash_count))
     print('{}, task_light_flash_command_sent'.format(command_sent))
@@ -449,12 +450,12 @@ def finish_task_light_flash():
 def start_spontaneous_light_flash():
     flash_time = get_current_time()
     v.light_flash_start_time = flash_time
+    v.light_flash_end_time = flash_time + v.light_flash_duration
     v.light_flash_active = True
     v.light_flash_context = 'spontaneous'
     v.spontaneous_flash_count += 1
 
     command_sent = show_full_strip()
-    set_timer('light_flash_timer', v.light_flash_duration)
     print('{}, spontaneous_light_flash_on'.format(flash_time))
     print('{}, spontaneous_light_flash_count'.format(
         v.spontaneous_flash_count,
@@ -480,7 +481,6 @@ def finish_spontaneous_light_flash():
 
 
 def cancel_light_flash(reason, restore_mode):
-    disarm_timer('light_flash_timer')
     if not v.light_flash_active:
         return
 
@@ -650,6 +650,7 @@ def schedule_sensor_update():
 
 
 def schedule_next_spontaneous_flash():
+    v.next_spontaneous_flash_time = 0
     if not v.enable_spontaneous_light_perturbation:
         return
     if v.spontaneous_phase_number <= v.spontaneous_light_warmup_phases:
@@ -661,9 +662,8 @@ def schedule_next_spontaneous_flash():
         int(v.spontaneous_flash_interval_min),
         int(v.spontaneous_flash_interval_max),
     )
-    set_timer(
-        'spontaneous_flash_timer',
-        v.next_spontaneous_flash_interval,
+    v.next_spontaneous_flash_time = (
+        get_current_time() + v.next_spontaneous_flash_interval
     )
     print('{}, spontaneous_light_flash_scheduled'.format(
         get_current_time(),
@@ -671,6 +671,21 @@ def schedule_next_spontaneous_flash():
     print('{}, spontaneous_light_flash_interval_ms'.format(
         v.next_spontaneous_flash_interval,
     ))
+
+
+def schedule_spontaneous_state_timer():
+    now = get_current_time()
+    next_deadline = v.spontaneous_phase_end_time
+
+    if v.light_flash_active and v.light_flash_context == 'spontaneous':
+        next_deadline = min(next_deadline, v.light_flash_end_time)
+    elif v.next_spontaneous_flash_time > 0:
+        next_deadline = min(
+            next_deadline,
+            v.next_spontaneous_flash_time,
+        )
+
+    set_timer('state_timer', max(1, next_deadline - now))
 
 
 VALID_PHASES = ('spontaneous', 'task')
@@ -777,9 +792,12 @@ def run_start():
     v.task_light_flash_count = 0
     v.spontaneous_flash_count = 0
     v.next_spontaneous_flash_interval = 0
+    v.next_spontaneous_flash_time = 0
+    v.spontaneous_phase_end_time = 0
     v.light_flash_active = False
     v.light_flash_context = None
     v.light_flash_start_time = 0
+    v.light_flash_end_time = 0
 
     if v.sensor_update_interval <= 0:
         raise Exception('sensor_update_interval must be positive')
@@ -980,32 +998,42 @@ def spontaneous(event):
         except Exception:
             pass
         print('{}, spontaneous_phase_start'.format(get_current_time()))
-        set_timer('state_timer', current_phase_duration())
+        v.spontaneous_phase_end_time = (
+            get_current_time() + current_phase_duration()
+        )
+        v.next_spontaneous_flash_time = 0
         if (
             v.enable_spontaneous_light_perturbation
             and v.spontaneous_phase_number
             > v.spontaneous_light_warmup_phases
         ):
             schedule_next_spontaneous_flash()
-
-    elif event == 'spontaneous_flash_timer':
-        if (
-            v.enable_spontaneous_light_perturbation
-            and v.spontaneous_flash_count < v.spontaneous_flash_cap
-        ):
-            start_spontaneous_light_flash()
-
-    elif event == 'light_flash_timer':
-        if v.light_flash_context == 'spontaneous':
-            finish_spontaneous_light_flash()
-            schedule_next_spontaneous_flash()
+        schedule_spontaneous_state_timer()
 
     elif event == 'state_timer':
-        advance_phase()
+        now = get_current_time()
+        if now >= v.spontaneous_phase_end_time:
+            advance_phase()
+        elif (
+            v.light_flash_active
+            and v.light_flash_context == 'spontaneous'
+            and now >= v.light_flash_end_time
+        ):
+            finish_spontaneous_light_flash()
+            schedule_next_spontaneous_flash()
+            schedule_spontaneous_state_timer()
+        elif (
+            v.next_spontaneous_flash_time > 0
+            and now >= v.next_spontaneous_flash_time
+        ):
+            v.next_spontaneous_flash_time = 0
+            start_spontaneous_light_flash()
+            schedule_spontaneous_state_timer()
+        else:
+            schedule_spontaneous_state_timer()
 
     elif event == 'exit':
         disarm_timer('state_timer')
-        disarm_timer('spontaneous_flash_timer')
         cancel_light_flash('spontaneous_phase_exit', 'off')
 
 
@@ -1095,6 +1123,12 @@ def trial(event):
         distance_increment = poll_motion_sensor()
         v.current_distance += distance_increment
         advance_visual_progress(distance_increment)
+        if (
+            v.light_flash_active
+            and v.light_flash_context == 'task'
+            and get_current_time() >= v.light_flash_end_time
+        ):
+            finish_task_light_flash()
 
         if (
             v.trial_phase == 'initiation'
@@ -1138,10 +1172,6 @@ def trial(event):
             record_failure('initiation_timeout')
         else:
             record_failure('performance_timeout')
-
-    elif event == 'light_flash_timer':
-        if v.light_flash_context == 'task':
-            finish_task_light_flash()
 
     elif event == 'stop_button':
         goto_state('stopped')
