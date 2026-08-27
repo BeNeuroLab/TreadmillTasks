@@ -24,6 +24,7 @@ events = [
     'state_timer',
     'tone_off_timer',
     'light_flash_timer',
+    'spontaneous_flash_timer',
     'sensor_update',
     'lick',
     'stop_button',
@@ -127,20 +128,16 @@ v.light_flash_frozen_progress = -1.0
 v.light_flash_frozen_led_percent = 0
 v.task_light_flash_count = 0
 
-# Spontaneous flashes begin with the second spontaneous phase. Each running
-# bout receives one probability draw once the minimum inter-flash interval is
-# satisfied. The cap applies only to spontaneous flashes.
+# Spontaneous flashes begin with the second spontaneous phase. Each flash is
+# scheduled after a uniformly random 60-120 second interval. The cap applies
+# only to spontaneous flashes.
 v.enable_spontaneous_light_perturbation = True
 v.spontaneous_light_warmup_phases = 1
-v.spontaneous_run_speed_threshold_cm_s = 5.0
-v.spontaneous_flash_probability = 0.20
-v.spontaneous_min_interflash_interval = 60 * second
+v.spontaneous_flash_interval_min = 60 * second
+v.spontaneous_flash_interval_max = 120 * second
 v.spontaneous_flash_cap = 10
 v.spontaneous_flash_count = 0
-v.last_spontaneous_flash_time = None
-v.spontaneous_running_bout_active = False
-v.spontaneous_running_bout_tested = False
-v.spontaneous_running_bout_number = 0
+v.next_spontaneous_flash_interval = 0
 
 # Continuous LED position and reward availability.
 v.start_led_percent = 0
@@ -388,9 +385,12 @@ def deliver_teleport():
 
 def show_full_strip():
     try:
-        hw.light.all_on()
-    except Exception:
-        pass
+        hw.light.send_int(202)
+        return True
+    except Exception as error:
+        print('{}, light_flash_command_failed'.format(get_current_time()))
+        print('{}, light_flash_command_error'.format(repr(error)))
+        return False
 
 
 def start_task_light_flash():
@@ -405,10 +405,11 @@ def start_task_light_flash():
     flash_time = get_current_time()
     v.light_flash_start_time = flash_time
 
-    show_full_strip()
+    command_sent = show_full_strip()
     set_timer('light_flash_timer', v.light_flash_duration)
     print('{}, task_light_flash_on'.format(flash_time))
     print('{}, task_light_flash_count'.format(v.task_light_flash_count))
+    print('{}, task_light_flash_command_sent'.format(command_sent))
     print('{}, task_light_flash_trigger_progress'.format(
         round(v.light_flash_trigger_progress, 4),
     ))
@@ -446,22 +447,16 @@ def start_spontaneous_light_flash():
     v.light_flash_active = True
     v.light_flash_context = 'spontaneous'
     v.spontaneous_flash_count += 1
-    v.last_spontaneous_flash_time = flash_time
 
-    show_full_strip()
+    command_sent = show_full_strip()
     set_timer('light_flash_timer', v.light_flash_duration)
     print('{}, spontaneous_light_flash_on'.format(flash_time))
     print('{}, spontaneous_light_flash_count'.format(
         v.spontaneous_flash_count,
     ))
+    print('{}, spontaneous_light_flash_command_sent'.format(command_sent))
     print('{}, spontaneous_light_flash_phase_number'.format(
         v.spontaneous_phase_number,
-    ))
-    print('{}, spontaneous_light_flash_bout_number'.format(
-        v.spontaneous_running_bout_number,
-    ))
-    print('{}, speed_at_spontaneous_light_flash_cm_s'.format(
-        round(v.rolling_speed_cm_s, 3),
     ))
 
 
@@ -648,69 +643,28 @@ def schedule_sensor_update():
     set_timer('sensor_update', v.sensor_update_interval)
 
 
-def spontaneous_flash_is_eligible(now):
+def schedule_next_spontaneous_flash():
     if not v.enable_spontaneous_light_perturbation:
-        return False
+        return
     if v.spontaneous_phase_number <= v.spontaneous_light_warmup_phases:
-        return False
+        return
     if v.spontaneous_flash_count >= v.spontaneous_flash_cap:
-        return False
-    if v.light_flash_active:
-        return False
-    if v.last_spontaneous_flash_time is None:
-        return True
-    return (
-        now - v.last_spontaneous_flash_time
-        >= v.spontaneous_min_interflash_interval
+        return
+
+    v.next_spontaneous_flash_interval = random.randint(
+        int(v.spontaneous_flash_interval_min),
+        int(v.spontaneous_flash_interval_max),
     )
-
-
-def update_spontaneous_running_bout():
-    now = get_current_time()
-    running = (
-        v.rolling_speed_valid
-        and v.rolling_speed_cm_s
-        >= v.spontaneous_run_speed_threshold_cm_s
+    set_timer(
+        'spontaneous_flash_timer',
+        v.next_spontaneous_flash_interval,
     )
-
-    if running and not v.spontaneous_running_bout_active:
-        v.spontaneous_running_bout_active = True
-        v.spontaneous_running_bout_tested = False
-        v.spontaneous_running_bout_number += 1
-        print('{}, spontaneous_running_bout_start'.format(now))
-        print('{}, spontaneous_running_bout_number'.format(
-            v.spontaneous_running_bout_number,
-        ))
-        print('{}, spontaneous_running_bout_start_speed_cm_s'.format(
-            round(v.rolling_speed_cm_s, 3),
-        ))
-
-    elif not running and v.spontaneous_running_bout_active:
-        v.spontaneous_running_bout_active = False
-        v.spontaneous_running_bout_tested = False
-        print('{}, spontaneous_running_bout_end'.format(now))
-        print('{}, spontaneous_running_bout_end_speed_cm_s'.format(
-            round(v.rolling_speed_cm_s, 3),
-        ))
-
-    if (
-        v.spontaneous_running_bout_active
-        and not v.spontaneous_running_bout_tested
-        and spontaneous_flash_is_eligible(now)
-    ):
-        v.spontaneous_running_bout_tested = True
-        draw_value = random.random()
-        delivered = draw_value < v.spontaneous_flash_probability
-        print('{}, spontaneous_light_flash_eligible'.format(now))
-        print('{}, spontaneous_light_flash_probability'.format(
-            v.spontaneous_flash_probability,
-        ))
-        print('{}, spontaneous_light_flash_draw'.format(
-            round(draw_value, 6),
-        ))
-        print('{}, spontaneous_light_flash_draw_success'.format(delivered))
-        if delivered:
-            start_spontaneous_light_flash()
+    print('{}, spontaneous_light_flash_scheduled'.format(
+        get_current_time(),
+    ))
+    print('{}, spontaneous_light_flash_interval_ms'.format(
+        v.next_spontaneous_flash_interval,
+    ))
 
 
 VALID_PHASES = ('spontaneous', 'task')
@@ -816,10 +770,7 @@ def run_start():
     v.perturbation_block_number = 0
     v.task_light_flash_count = 0
     v.spontaneous_flash_count = 0
-    v.last_spontaneous_flash_time = None
-    v.spontaneous_running_bout_active = False
-    v.spontaneous_running_bout_tested = False
-    v.spontaneous_running_bout_number = 0
+    v.next_spontaneous_flash_interval = 0
     v.light_flash_active = False
     v.light_flash_context = None
     v.light_flash_start_time = 0
@@ -866,17 +817,16 @@ def run_start():
         raise Exception('light_flash_duration must be positive')
     if v.spontaneous_light_warmup_phases < 0:
         raise Exception('spontaneous_light_warmup_phases cannot be negative')
-    if v.spontaneous_run_speed_threshold_cm_s <= 0:
+    if v.spontaneous_flash_interval_min <= 0:
         raise Exception(
-            'spontaneous_run_speed_threshold_cm_s must be positive'
+            'spontaneous_flash_interval_min must be positive'
         )
-    if not 0 <= v.spontaneous_flash_probability <= 1:
+    if (
+        v.spontaneous_flash_interval_max
+        < v.spontaneous_flash_interval_min
+    ):
         raise Exception(
-            'spontaneous_flash_probability must be between 0 and 1'
-        )
-    if v.spontaneous_min_interflash_interval < 0:
-        raise Exception(
-            'spontaneous_min_interflash_interval cannot be negative'
+            'spontaneous flash maximum interval must be at least minimum'
         )
     if v.spontaneous_flash_cap < 0:
         raise Exception('spontaneous_flash_cap cannot be negative')
@@ -964,14 +914,11 @@ def run_start():
     print('{}, spontaneous_light_warmup_phases'.format(
         v.spontaneous_light_warmup_phases,
     ))
-    print('{}, spontaneous_run_speed_threshold_cm_s'.format(
-        v.spontaneous_run_speed_threshold_cm_s,
+    print('{}, spontaneous_flash_interval_min_ms'.format(
+        v.spontaneous_flash_interval_min,
     ))
-    print('{}, spontaneous_flash_probability'.format(
-        v.spontaneous_flash_probability,
-    ))
-    print('{}, spontaneous_min_interflash_interval_ms'.format(
-        v.spontaneous_min_interflash_interval,
+    print('{}, spontaneous_flash_interval_max_ms'.format(
+        v.spontaneous_flash_interval_max,
     ))
     print('{}, spontaneous_flash_cap'.format(v.spontaneous_flash_cap))
     print('{}, before_camera_trigger'.format(get_current_time()))
@@ -1022,35 +969,38 @@ def spontaneous(event):
     if event == 'entry':
         hw.speaker.off()
         disarm_timer('tone_off_timer')
-        v.spontaneous_running_bout_active = False
-        v.spontaneous_running_bout_tested = False
         try:
             hw.light.all_off()
         except Exception:
             pass
-        sync_motion_snapshot()
         print('{}, spontaneous_phase_start'.format(get_current_time()))
         set_timer('state_timer', current_phase_duration())
-        schedule_sensor_update()
+        if (
+            v.enable_spontaneous_light_perturbation
+            and v.spontaneous_phase_number
+            > v.spontaneous_light_warmup_phases
+        ):
+            schedule_next_spontaneous_flash()
 
-    elif event == 'sensor_update':
-        poll_motion_sensor()
-        update_spontaneous_running_bout()
-        schedule_sensor_update()
+    elif event == 'spontaneous_flash_timer':
+        if (
+            v.enable_spontaneous_light_perturbation
+            and v.spontaneous_flash_count < v.spontaneous_flash_cap
+        ):
+            start_spontaneous_light_flash()
 
     elif event == 'light_flash_timer':
         if v.light_flash_context == 'spontaneous':
             finish_spontaneous_light_flash()
+            schedule_next_spontaneous_flash()
 
     elif event == 'state_timer':
         advance_phase()
 
     elif event == 'exit':
         disarm_timer('state_timer')
-        disarm_timer('sensor_update')
+        disarm_timer('spontaneous_flash_timer')
         cancel_light_flash('spontaneous_phase_exit', 'off')
-        v.spontaneous_running_bout_active = False
-        v.spontaneous_running_bout_tested = False
 
 
 # -------------------------------------------------------------------------
