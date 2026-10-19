@@ -35,6 +35,7 @@ v.hold_duration = 200 * ms
 v.catch_chance = 0.05  # 10% chance of catch trial in cursor match
 v.max_ommitted_rewards = 15  # maximum number of rewards ommitted due to catch trials
 v.n_ommitted_reward = 0  # number of ommitted rewards due to catch trials
+v.give_reward = 1  # change to '0' to stop reward release
 
 v.led_len = 500 * ms
 v.reward_number = 0
@@ -73,7 +74,7 @@ def trial(event):
     if event == 'cursor_update':
         spk_dir = hw.bci_link.spk
         if spk_dir == 100:
-            if random() < v.catch_chance and v.n_ommitted_reward < v.max_ommitted_rewards:
+            if random() < v.catch_chance and v.n_ommitted_reward < v.max_ommitted_rewards and v.give_reward != 0:
                 goto_state('catch_cursor_match')
             else:
                 hw.bci_link.light.cue(spk_dir)
@@ -98,9 +99,12 @@ def reward(event):
     "reward state, turn the target off after `v.led_len`"
     if event == 'entry':
         set_timer('target_on_timer', v.led_len, False)
-        hw.reward.release()
-        v.reward_number += 1
-        print('{}, reward_number'.format(v.reward_number))
+        if v.give_reward != 0:
+            hw.reward.release()
+            v.reward_number += 1
+            print('{}, reward_number'.format(v.reward_number))
+        else:
+            print('0, skipped_reward')
         timed_goto_state('trial', v.IT_duration)
     elif event == "target_on_timer":
         hw.bci_link.light.all_red()
