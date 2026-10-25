@@ -36,11 +36,11 @@ initial_state = 'intertrial'
 v.session_duration = 45 * minute
 v.intertrial_duration = 1 * second
 v.initiation_timeout = 5 * second
-v.performance_timeout = 5 * second
+v.performance_timeout = 15 * second
 v.initiation_distance_cm = 3
 v.reward_cue_hold = 0.5 * second
 
-# Reward and stopping rule.
+# Reward and stopping rule.  The speed threshold applies to each axis.
 v.reward_duration = 30 * ms
 v.reward_wait_time = 250 * ms
 v.stop_speed_threshold_cm_s = 5.0
@@ -81,10 +81,14 @@ v.reward_tone_duration = 400 * ms
 
 # Motion sensor.
 v.cpi = None
+v.cpi_y = None
 v.forward_sign = 1
 v.moving_at_cue_window = 250 * ms
 v.previous_forward_total = 0
+# Maximum of the two axis speeds, used for the shared stopping threshold.
 v.rolling_speed_cm_s = 0.0
+v.rolling_speed_x_cm_s = 0.0
+v.rolling_speed_y_cm_s = 0.0
 v.rolling_speed_valid = False
 v.below_speed_start_time = None
 v.last_above_speed_time = -1000000
@@ -170,7 +174,9 @@ def sync_motion_snapshot():
     )
 
 
-def update_stop_speed(now, window_abs_counts, window_sample_count):
+def update_stop_speed(
+    now, window_x_abs_counts, window_y_abs_counts, window_sample_count
+):
     required_samples = hw.motionSensor.continuous_window_samples
     v.rolling_speed_valid = window_sample_count >= required_samples
 
@@ -178,26 +184,41 @@ def update_stop_speed(now, window_abs_counts, window_sample_count):
         window_seconds = (
             window_sample_count / hw.motionSensor.data_chx.sampling_rate
         )
-        v.rolling_speed_cm_s = (
-            window_abs_counts / v.cpi * 2.54 / window_seconds
+        v.rolling_speed_x_cm_s = (
+            window_x_abs_counts / v.cpi * 2.54 / window_seconds
         )
+        v.rolling_speed_y_cm_s = (
+            window_y_abs_counts / v.cpi_y * 2.54 / window_seconds
+        )
+        v.rolling_speed_cm_s = max(
+            v.rolling_speed_x_cm_s, v.rolling_speed_y_cm_s
+        )
+
+        # Preserve X-only movement tracking for the cue-on flag.
+        if v.rolling_speed_x_cm_s >= v.stop_speed_threshold_cm_s:
+            v.last_above_speed_time = now
 
         if v.rolling_speed_cm_s < v.stop_speed_threshold_cm_s:
             if v.below_speed_start_time is None:
                 v.below_speed_start_time = now
         else:
             v.below_speed_start_time = None
-            v.last_above_speed_time = now
     else:
         v.rolling_speed_cm_s = 0.0
+        v.rolling_speed_x_cm_s = 0.0
+        v.rolling_speed_y_cm_s = 0.0
         v.below_speed_start_time = None
 
 
 def poll_motion_sensor():
     """Update continuous displacement and speed; return forward distance."""
-    positive_total, negative_total, window_abs_counts, window_samples = (
-        hw.motionSensor.get_x_motion_snapshot()
-    )
+    (
+        positive_total,
+        negative_total,
+        window_x_abs_counts,
+        window_y_abs_counts,
+        window_samples,
+    ) = hw.motionSensor.get_xy_motion_snapshot()
     current_forward_total = forward_total(
         positive_total,
         negative_total,
@@ -209,7 +230,9 @@ def poll_motion_sensor():
         forward_counts = 0
 
     now = get_current_time()
-    update_stop_speed(now, window_abs_counts, window_samples)
+    update_stop_speed(
+        now, window_x_abs_counts, window_y_abs_counts, window_samples
+    )
 
     return forward_counts / v.cpi * 2.54
 
@@ -367,10 +390,17 @@ def run_start():
 
     if hw.motionSensor.sensor_x is None:
         raise Exception('Motion sensor CPI unavailable; sensor_x not initialized')
+    if hw.motionSensor.sensor_y is None:
+        raise Exception('Motion sensor CPI unavailable; sensor_y not initialized')
     v.cpi = hw.motionSensor.sensor_x.CPI
+    v.cpi_y = hw.motionSensor.sensor_y.CPI
+    if v.cpi <= 0 or v.cpi_y <= 0:
+        raise Exception('Motion sensor CPI must be positive for both axes')
     sync_motion_snapshot()
 
     print('{}, CPI'.format(v.cpi))
+    print('{}, CPI_y'.format(v.cpi_y))
+    print('{}, stop_speed_metric'.format('max_absolute_axis_speed'))
     print('{}, speed_window_ms'.format(v.speed_window_ms))
     print('{}, stop_speed_threshold_cm_s'.format(
         v.stop_speed_threshold_cm_s,
@@ -538,6 +568,12 @@ def target_wait(event):
                 print('{}, stop_detected'.format(get_current_time()))
                 print('{}, stop_detected_speed_cm_s'.format(
                     round(v.rolling_speed_cm_s, 3),
+                ))
+                print('{}, stop_detected_speed_x_cm_s'.format(
+                    round(v.rolling_speed_x_cm_s, 3),
+                ))
+                print('{}, stop_detected_speed_y_cm_s'.format(
+                    round(v.rolling_speed_y_cm_s, 3),
                 ))
                 goto_state('reward')
             else:
