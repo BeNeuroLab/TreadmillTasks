@@ -264,7 +264,7 @@ class MotionDetector(Analog_input):
         self._delta_x, self._delta_y = 0, 0  # instantaneous position
         self.x, self.y = 0, 0  # to be accessed from the task, unit=mm
 
-        # Optional continuous motion interface.  This is kept separate from
+        # Optional continuous X-motion interface.  This is kept separate from
         # delta_x/delta_y because those values are reset whenever a thresholded
         # motion event is generated.
         self.continuous_motion_enabled = False
@@ -273,10 +273,8 @@ class MotionDetector(Analog_input):
         self.x_positive_total = 0
         self.x_negative_total = 0
         self.x_window_abs_total = 0
-        self.y_window_abs_total = 0
         self.x_window_sample_count = 0
         self._x_window = []
-        self._y_window = []
         self._x_window_index = 0
 
         # Parent
@@ -360,7 +358,7 @@ class MotionDetector(Analog_input):
         self.delta_x, self.delta_y = 0, 0
 
     def configure_continuous_motion(self, window_ms=100):
-        """Enable cumulative X motion and absolute-motion windows for both axes.
+        """Enable cumulative X motion and an absolute-motion rolling window.
 
         This must be called before acquisition starts.  Positive and negative
         totals contain magnitudes in sensor counts and are never reset by a
@@ -384,21 +382,18 @@ class MotionDetector(Analog_input):
             1000 * window_samples / self.data_chx.sampling_rate
         ))
         self._x_window = [0] * window_samples
-        self._y_window = [0] * window_samples
         self._reset_continuous_motion()
 
     def _reset_continuous_motion(self):
-        """Reset cumulative counters and both rolling absolute-motion windows."""
+        """Reset cumulative counters and the rolling absolute-X window."""
         self.x_positive_total = 0
         self.x_negative_total = 0
         self.x_window_abs_total = 0
-        self.y_window_abs_total = 0
         self.x_window_sample_count = 0
         self._x_window_index = 0
 
         for i in range(len(self._x_window)):
             self._x_window[i] = 0
-            self._y_window[i] = 0
 
     def get_x_motion_snapshot(self):
         """Return an interrupt-safe snapshot of continuous X-motion counts.
@@ -425,34 +420,6 @@ class MotionDetector(Analog_input):
             window_sample_count,
         )
 
-    def get_xy_motion_snapshot(self):
-        """Return an interrupt-safe snapshot of continuous X/Y-motion counts.
-
-        Values are (x_positive_total, x_negative_total, x_rolling_absolute_total,
-        y_rolling_absolute_total, populated_window_samples).  Both windows use
-        the same samples.  Absolute motion is accumulated before summing, so
-        direction reversals cannot cancel within either window.
-        """
-        assert self.continuous_motion_enabled, (
-            'Continuous motion has not been configured'
-        )
-
-        irq_state = pyb.disable_irq()
-        positive_total = self.x_positive_total
-        negative_total = self.x_negative_total
-        x_window_abs_total = self.x_window_abs_total
-        y_window_abs_total = self.y_window_abs_total
-        window_sample_count = self.x_window_sample_count
-        pyb.enable_irq(irq_state)
-
-        return (
-            positive_total,
-            negative_total,
-            x_window_abs_total,
-            y_window_abs_total,
-            window_sample_count,
-        )
-
     def _update_continuous_motion(self):
         """Update continuous counters from the latest sample in the ISR."""
         if not self.continuous_motion_enabled:
@@ -465,25 +432,15 @@ class MotionDetector(Analog_input):
             absolute_dx = -self._delta_x
             self.x_negative_total += absolute_dx
 
-        if self._delta_y >= 0:
-            absolute_dy = self._delta_y
-        else:
-            absolute_dy = -self._delta_y
-
         if self.x_window_sample_count < self.continuous_window_samples:
             self.x_window_sample_count += 1
         else:
             self.x_window_abs_total -= self._x_window[
                 self._x_window_index
             ]
-            self.y_window_abs_total -= self._y_window[
-                self._x_window_index
-            ]
 
         self._x_window[self._x_window_index] = absolute_dx
-        self._y_window[self._x_window_index] = absolute_dy
         self.x_window_abs_total += absolute_dx
-        self.y_window_abs_total += absolute_dy
         self._x_window_index = (
             self._x_window_index + 1
         ) % self.continuous_window_samples
