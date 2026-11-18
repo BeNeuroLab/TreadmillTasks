@@ -173,6 +173,24 @@ class GUI_main(QtGui.QMainWindow):
             self.setups_tab.disconnect()
         self.current_tab_ind = new_tab_ind
 
+    def closeEvent(self, event):
+        # Let the regular polling timers finish all recordings before Qt exits.
+        task_tab = self.run_task_tab
+        boxes = self.run_experiment_tab.subjectboxes
+        active = [box for box in boxes if box.state in ('running', 'stopping')]
+        if task_tab.running or active:
+            event.ignore()
+            if task_tab.running:
+                task_tab.stop_task()
+            for box in active:
+                box.stop_task()
+            QtCore.QTimer.singleShot(100, self.close)
+            return
+        for box in boxes:
+            if box.board and box.board.data_logger:
+                box.board.data_logger.close_files()
+        event.accept()
+
     # Exception handling.
 
     def excepthook(self, ex_type, ex_value, ex_traceback):

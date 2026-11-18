@@ -1,5 +1,6 @@
 import os
 import json
+import struct
 from datetime import datetime
 from shutil import copyfile
 
@@ -56,10 +57,10 @@ class Data_logger():
             self.data_file.close()
             self.data_file = None
             self.file_path = None
-        for analog_file in self.analog_files.values():
+        for channel, analog_file in self.analog_files.items():
             if analog_file:
                 analog_file.close()
-                analog_file = None
+                self.analog_files[channel] = None
 
     def process_data(self, new_data):
         '''If data _file is open new data is written to file.  If print_func is specified
@@ -67,7 +68,9 @@ class Data_logger():
         if self.data_file:
             self.write_to_file(new_data)
         if self.print_func:
-            self.print_func(self.data_to_string(new_data, verbose=True), end='')
+            message = self.data_to_string(new_data, verbose=True)
+            if message:
+                self.print_func(message, end='')
         if self.data_consumers:
             for data_consumer in self.data_consumers:
                 data_consumer.process_data(new_data)
@@ -108,8 +111,9 @@ class Data_logger():
                             self.ID2name_hw[ID] + '.pca'
             self.analog_files[ID] = open(file_name, 'wb')
         ms_per_sample = 1000 / sampling_rate
+        chunk = bytearray(8 * len(data_array))
         for i, x in enumerate(data_array):
             t = int(timestamp + i*ms_per_sample)
-            self.analog_files[ID].write(t.to_bytes(4,'little', signed=True))
-            self.analog_files[ID].write(x.to_bytes(4,'little', signed=True))
+            struct.pack_into('<iI', chunk, 8 * i, t, x & 0xffffffff)
+        self.analog_files[ID].write(chunk)
         self.analog_files[ID].flush()

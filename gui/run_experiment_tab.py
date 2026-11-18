@@ -213,8 +213,6 @@ class Run_experiment_tab(QtGui.QWidget):
                 for i, board in enumerate(self.boards):
                     try:
                         board.stop_framework()
-                        time.sleep(0.05)
-                        board.process_data()
                     except PyboardError as e:
                         self.setup_failed[i] = True
                         board.print('\n' + str(e))
@@ -272,9 +270,6 @@ class Run_experiment_tab(QtGui.QWidget):
     def stop_experiment(self):
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
-        for i, board in enumerate(self.boards):
-            time.sleep(0.05)
-            board.process_data()
         # Summary and persistent variables.
         summary_variables = [v for v in self.experiment['variables'] if v['summary']]
         sv_dict = OrderedDict()
@@ -285,6 +280,8 @@ class Run_experiment_tab(QtGui.QWidget):
             persistent_variables = {}
         for i, board in enumerate(self.boards):
             #  Store persistent variables.
+            if board.needs_reset:
+                continue  # No REPL prompt to read variables from.
             subject_pvs = [v for v in board.subject_variables if v['persistent']]
             if subject_pvs:
                 board.print('\nStoring persistent variables.')
@@ -300,7 +297,7 @@ class Run_experiment_tab(QtGui.QWidget):
         if persistent_variables:
             with open(self.pv_path, 'w') as pv_file:
                 pv_file.write(json.dumps(persistent_variables, sort_keys=True, indent=4))
-        if summary_variables:
+        if sv_dict:
             Summary_variables_dialog(self, sv_dict).show()
         self.startstopclose_all_button.setEnabled(True)
 
@@ -311,10 +308,10 @@ class Run_experiment_tab(QtGui.QWidget):
         for i, board in enumerate(self.boards):
             # Stop running boards.
             if board and board.framework_running:
-                board.stop_framework()
-                time.sleep(0.05)
-                board.process_data()
-                self.subjectboxes[i].stop_task()
+                try:
+                    board.stop_framework()
+                except PyboardError as error:
+                    board.print(str(error))
         msg = QtGui.QMessageBox()
         msg.setWindowTitle('Error')
         msg.setText('An error occured while setting up experiment')
@@ -431,7 +428,8 @@ class Subjectbox(QtGui.QGroupBox):
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
         self.log_textbox.insertPlainText(print_string+end)
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
-        self.GUI_main.app.processEvents()
+        if self.state == 'pre_run':
+            self.GUI_main.app.processEvents()
 
     def start_delayed_print(self):
         '''Store print output to display later to avoid error 
@@ -490,15 +488,21 @@ class Subjectbox(QtGui.QGroupBox):
 
     def stop_task(self):
         '''Called to stop task or if task stops automatically.'''
+        if self.state not in ('running', 'stopping'):
+            return
+        self.start_stop_button.setEnabled(False)
+        self.variables_button.setEnabled(False)
         if self.board.framework_running:
-            self.board.stop_framework()
+            self.state = 'stopping'
+            self.status_text.setText('Finishing')
+            self.board.request_stop()
+            return
+        self.state = 'stopped'
         self.task_info.state_text.setText('Stopped')
         self.task_info.state_text.setStyleSheet('color: grey;') 
         self.status_text.setText('Stopped')
-        self.start_stop_button.setEnabled(False)
         self.run_exp_tab.experiment_plot.active_plots.remove(self.setup_number)
         self.run_exp_tab.setups_finished += 1
-        self.variables_button.setEnabled(False)
         self.run_exp_tab.update_startstopclose_button()
 
     def update(self):

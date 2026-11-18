@@ -17,25 +17,97 @@ varbl_typ = const(7) # Variable change  : (time, varbl_typ, (v_name, v_str))
 
 # Event_queue -----------------------------------------------------------------
 
-class Event_queue():  
-    # First-in first-out event queue.
+class Event_queue():
+    def __init__(self, max_length=None, max_bytes=None):
+        self.max_length = max_length
+        self.max_bytes = max_bytes
+        self.reset()
+
+    def reset(self):
+        self.Q = []
+        self.available = False
+        self.queued_bytes = 0
+        self.dropped = 0
+        self.reported_dropped = 0
+
+    def _cost(self, event):
+        # Conservative accounting for Python strings and queue entries.
+        if event[1] == print_typ:
+            return 64 + 4 * len(event[2])
+        if event[1] == varbl_typ:
+            return 64 + 4 * (len(event[2][0]) + len(event[2][1]))
+        return 64
+
+    def put(self, event_tuple):
+        cost = self._cost(event_tuple) if self.max_bytes else 0
+        # Permit one oversized message in an empty queue, retaining compatibility
+        # with task variable dumps. No second entry can accumulate behind it.
+        if ((self.max_length is not None and len(self.Q) >= self.max_length) or
+                (self.max_bytes is not None and self.Q and
+                 self.queued_bytes + cost > self.max_bytes)):
+            if self.dropped < 0x3fffffff:
+                self.dropped += 1
+            return False
+        self.Q.append(event_tuple)
+        self.queued_bytes += cost
+        self.available = True
+        return True
+
+    def get(self):
+        event = self.Q.pop(0)
+        self.available = bool(self.Q)
+        if self.max_bytes:
+            self.queued_bytes -= self._cost(event)
+        return event
+
+
+class USB_transmitter():
+    """One pending immutable frame; all protocol writers share this owner."""
     def __init__(self):
         self.reset()
 
     def reset(self):
-        # Empty queue.
-        self.Q = []
-        self.available = False
+        self.pending = None
+        self.chunk = None
+        self.offset = 0
+        self.channel = None
+        self.slot = None
+        self.failed = False
 
-    def put(self, event_tuple):
-        # Put event in queue.  
-        self.Q.append(event_tuple)
-        self.available = True
+    def start(self, packet, channel=None, slot=None):
+        assert self.pending is None, 'Cannot interleave outgoing frames.'
+        self.pending = memoryview(packet)
+        self.chunk = self.pending[:64]
+        self.offset = 0
+        self.channel = channel
+        self.slot = slot
 
-    def get(self):
-        # Get event tuple from queue
-        self.available = len(self.Q) > 1
-        return(self.Q.pop(0))
+    def service(self):
+        if self.pending is None:
+            return
+        if self.failed:
+            raise pyControlError('recording_incomplete: USB frame failed; reset the connection.')
+        # At most 64 bytes and one non-waiting USB call per scheduler iteration.
+        # Reuse the view when stalled; repeated zero writes must not make garbage.
+        try:
+            sent = usb_serial.send(self.chunk, timeout=0)
+        except BaseException:
+            # Accepted byte count is unknown; retrying could duplicate a prefix.
+            self.failed = True
+            raise
+        if sent is None:
+            sent = 0
+        if sent < 0 or sent > len(self.chunk):
+            self.failed = True
+            raise pyControlError('Invalid USB send byte count.')
+        self.offset += sent
+        if self.offset == len(self.pending):
+            if self.channel is not None:
+                self.channel._release_buffer(self.slot)
+            self.reset()
+        elif sent:
+            self.chunk = self.pending[self.offset:self.offset + 64]
+
 
 # Timer -----------------------------------------------------------------------
 
@@ -110,7 +182,14 @@ timer = Timer()  # Instantiate timer_array object.
 
 event_queue = Event_queue() # Instantiate event que object.
 
-data_output_queue = Event_queue() # Queue used for outputing events to serial line.
+data_output_queue = Event_queue(max_length=256, max_bytes=16384)
+transmitter = USB_transmitter()
+stream_channel_index = 0
+prefer_analog = True
+next_diagnostic_time = 0
+diagnostic_channel_index = 0
+output_incomplete = False
+DRAIN_TIMEOUT_MS = 5000
 
 data_output = True  # Whether to output data to the serial line.
 
@@ -175,23 +254,109 @@ def get_variables():
     print({k: repr(v) for k, v in state_machine.variables.__dict__.items()})
 
 def output_data(event):
-    # Output data to computer.
-    if event[1] in  (event_typ, state_typ): # send event or state change.
-        timestamp = event[0].to_bytes(4, 'little') 
-        ID        = event[2].to_bytes(2, 'little')
-        checksum  = sum(timestamp + ID).to_bytes(2, 'little') 
-        usb_serial.send(b'\x07D' + timestamp + ID + checksum)
-    elif event[1] in (print_typ, varbl_typ): # send user generated output string.
-        if event[1] == print_typ: # send user generated output string.
+    # Serialize once in the main loop; retain the whole frame across short sends.
+    if event[1] in (event_typ, state_typ):
+        timestamp = event[0].to_bytes(4, 'little')
+        ID = event[2].to_bytes(2, 'little')
+        checksum = (sum(timestamp + ID) & 0xffff).to_bytes(2, 'little')
+        packet = b'\x07D' + timestamp + ID + checksum
+    elif event[1] in (print_typ, varbl_typ):
+        if event[1] == print_typ:
             start_byte = b'\x07P'
             data_bytes = event[2].encode()
-        elif event[1] == varbl_typ: # Variable changed.
+        else:
             start_byte = b'\x07V'
             data_bytes = event[2][0].encode() + b' ' + event[2][1].encode()
-        data_len = len(data_bytes).to_bytes(2, 'little')  
+        data_len = len(data_bytes).to_bytes(2, 'little')
         timestamp = event[0].to_bytes(4, 'little')
-        checksum  = (sum(data_len + timestamp) + sum(data_bytes)).to_bytes(2, 'little')
-        usb_serial.send(start_byte + data_len + timestamp + checksum + data_bytes)
+        checksum = ((sum(data_len + timestamp) + sum(data_bytes)) & 0xffff).to_bytes(2, 'little')
+        packet = start_byte + data_len + timestamp + checksum + data_bytes
+    else:
+        raise pyControlError('Unsupported outgoing event type.')
+    transmitter.start(packet)
+
+
+def _start_analog_frame():
+    global stream_channel_index
+    count = len(hw.data_channels)
+    for _ in range(count):
+        channel = hw.data_channels[stream_channel_index]
+        stream_channel_index = (stream_channel_index + 1) % count
+        if channel._process_streaming():
+            return True
+    return False
+
+
+def _report_overruns(force=False):
+    global next_diagnostic_time, diagnostic_channel_index
+    if not force and current_time < next_diagnostic_time:
+        return False
+    next_diagnostic_time = current_time + 1000
+    count = len(hw.data_channels)
+    # Include the event queue in the rotation so neither axis can monopolize
+    # the once-per-second diagnostic allowance during sustained overload.
+    for _ in range(count + 1):
+        index = diagnostic_channel_index
+        diagnostic_channel_index = (diagnostic_channel_index + 1) % (count + 1)
+        if index == count:
+            if data_output_queue.dropped != data_output_queue.reported_dropped:
+                data_output_queue.reported_dropped = data_output_queue.dropped
+                output_data((current_time, print_typ,
+                    'recording_overrun dropped_output_events={}'.format(data_output_queue.dropped)))
+                return True
+            continue
+        channel = hw.data_channels[index]
+        if channel.dropped_samples != channel.reported_dropped_samples:
+            irq_state = pyb.disable_irq()
+            samples = channel.dropped_samples
+            blocks = channel.dropped_blocks
+            pyb.enable_irq(irq_state)
+            channel.reported_dropped_samples = samples
+            output_data((current_time, print_typ,
+                'recording_overrun channel={} dropped_blocks={} dropped_samples={}'.format(
+                    channel.name, blocks, samples)))
+            return True
+    return False
+
+
+def service_output(draining=False):
+    global prefer_analog
+    if transmitter.pending is None:
+        if not _report_overruns(force=draining):
+            started = False
+            if prefer_analog:
+                started = _start_analog_frame()
+            if not started and data_output_queue.available:
+                output_data(data_output_queue.get())
+                started = True
+            if not started and not prefer_analog:
+                _start_analog_frame()
+            prefer_analog = not prefer_analog
+    transmitter.service()
+
+
+def _output_pending():
+    return (transmitter.pending is not None or data_output_queue.available or
+        data_output_queue.dropped != data_output_queue.reported_dropped or
+        any(channel.ready_count or (not channel.recording and channel.write_index) or
+            channel.dropped_samples != channel.reported_dropped_samples
+            for channel in hw.data_channels))
+
+
+def drain_output(timeout_ms=DRAIN_TIMEOUT_MS):
+    global output_incomplete
+    started = pyb.millis()
+    try:
+        while _output_pending():
+            if pyb.elapsed_millis(started) >= timeout_ms:
+                raise pyControlError('recording_incomplete: USB drain timed out; reset the connection before another run.')
+            service_output(draining=True)
+            if transmitter.pending is not None:
+                pyb.delay(1)
+    except BaseException:
+        output_incomplete = True
+        raise
+
 
 def recieve_data():
     # Read and process data from computer.
@@ -215,63 +380,90 @@ def recieve_data():
             data_output_queue.put((current_time, varbl_typ, (v_name, v_str)))
 
 def run(duration=None):
-    # Run framework for specified number of seconds.
-    # Pre run
-    global current_time, start_time, running
+    # Always quiesce hardware, including failed starts and task exceptions.
+    global current_time, start_time, running, check_timers
+    global stream_channel_index, prefer_analog, next_diagnostic_time, diagnostic_channel_index
+    if output_incomplete or transmitter.pending is not None:
+        raise pyControlError('recording_incomplete: previous drain unfinished; reset the connection.')
     timer.reset()
     event_queue.reset()
     data_output_queue.reset()
-    if not hw.initialised: hw.initialise()
+    stream_channel_index = 0
+    prefer_analog = True
+    next_diagnostic_time = 0
+    diagnostic_channel_index = 0
     current_time = 0
-    hw.run_start()
-    start_time = pyb.millis()
-    clock.init(freq=1000)
-    clock.callback(_clock_tick)
-    usb_serial.setinterrupt(-1) # Disable 'ctrl+c' on serial raising KeyboardInterrupt.
-    running = True
-    state_machine._start()
-    if duration: # Set timer to stop framework.
-        timer.set(duration*1000, (stopf_typ, None))
-    # Run
-    while running:
-        # Priority 1: Process hardware interrupts.
-        if hw.interrupt_queue.available: 
-            hw.IO_dict[hw.interrupt_queue.get()]._process_interrupt()
-        # Priority 2: Process event from queue.
-        elif event_queue.available: 
-            event = event_queue.get()
-            data_output_queue.put(event)
-            state_machine._process_event(ID2name[event[2]])
-        # Priority 3: Check for elapsed timers.
-        elif check_timers:
-            timer.check()
-        # Priority 4: Process timer event.
-        elif timer.available: 
-            event = timer.get()
-            if  event[1] == timer_typ:
-                state_machine._process_event(ID2name[event[2]])
-            elif event[1] == event_typ:
+    check_timers = False
+    error = None
+    task_started = False
+    try:
+        if not hw.initialised:
+            hw.initialise()
+        hw.run_start()
+        start_time = pyb.millis()
+        clock.init(freq=1000)
+        clock.callback(_clock_tick)
+        usb_serial.setinterrupt(-1)
+        running = True
+        task_started = True
+        state_machine._start()
+        if duration:
+            timer.set(duration * 1000, stopf_typ, None)
+        while running:
+            hw.check_faults()
+            # Poll stop/variable commands independently of output backpressure.
+            if usb_serial.any():
+                recieve_data()
+            if not running:
+                break
+            if hw.interrupt_queue.available:
+                hw.IO_dict[hw.interrupt_queue.get()]._process_interrupt()
+            elif event_queue.available:
+                event = event_queue.get()
                 data_output_queue.put(event)
                 state_machine._process_event(ID2name[event[2]])
-            elif event[1] == hardw_typ:
-                hw.IO_dict[event[2]]._timer_callback()
-            elif event[1] == state_typ:
-                state_machine.goto_state(ID2name[event[2]])
-            elif event[1] == stopf_typ:
-                running = False
-        # Priority 5: Check for serial input from computer.
-        elif usb_serial.any(): 
-            recieve_data()
-        # Priority 6: Stream analog data.
-        elif hw.stream_data_queue.available: 
-            hw.IO_dict[hw.stream_data_queue.get()]._process_streaming()
-        # Priority 7: Output framework data.
-        elif data_output_queue.available: 
-            output_data(data_output_queue.get())
-    # Post run
-    usb_serial.setinterrupt(3) # Enable 'ctrl+c' on serial raising KeyboardInterrupt.
-    clock.deinit()
-    hw.run_stop()
-    state_machine._stop()
-    while data_output_queue.available:
-        output_data(data_output_queue.get())
+            elif check_timers:
+                timer.check()
+            elif timer.available:
+                event = timer.get()
+                if event[1] == timer_typ:
+                    state_machine._process_event(ID2name[event[2]])
+                elif event[1] == event_typ:
+                    data_output_queue.put(event)
+                    state_machine._process_event(ID2name[event[2]])
+                elif event[1] == hardw_typ:
+                    hw.IO_dict[event[2]]._timer_callback()
+                elif event[1] == state_typ:
+                    state_machine.goto_state(ID2name[event[2]])
+                elif event[1] == stopf_typ:
+                    running = False
+            service_output()
+    except BaseException as exception:
+        error = exception
+    finally:
+        running = False
+        try:
+            clock.deinit()
+        except BaseException as exception:
+            if error is None:
+                error = exception
+        try:
+            hw.run_stop()
+        except BaseException as exception:
+            if error is None:
+                error = exception
+        if task_started:
+            try:
+                state_machine._stop()
+            except BaseException as exception:
+                if error is None:
+                    error = exception
+        try:
+            drain_output()
+        except BaseException as exception:
+            # The host must mark timeout/unfinished framing as incomplete.
+            if error is None:
+                error = exception
+        usb_serial.setinterrupt(3)
+    if error is not None:
+        raise error

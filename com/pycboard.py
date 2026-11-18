@@ -2,8 +2,9 @@ import os
 import sys
 import time
 import inspect
-from serial import SerialException
 from array import array
+from serial import SerialException
+import struct
 from .pyboard import Pyboard, PyboardError
 from config.paths import dirs
 
@@ -97,6 +98,9 @@ class Pycboard(Pyboard):
         self.exec(inspect.getsource(_fs_free_space)) # define file system free space function.
         self.exec('import os; import gc; import sys; import pyb')
         self.framework_running = False
+        self.needs_reset = False
+        self._rx = bytearray()
+        self._stop_deadline = None
         error_message = None
         self.status['usb_mode'] = self.eval('pyb.usb_mode()').decode()
         try:
@@ -332,84 +336,136 @@ class Pycboard(Pyboard):
 
     def start_framework(self, dur=None, data_output=True):
         '''Start pyControl framwork running on pyboard.'''
+        if self.needs_reset:
+            raise PyboardError('Reset the board before starting another run.')
         self.gc_collect()
         self.exec('fw.data_output = ' + repr(data_output))
         self.serial.reset_input_buffer()
+        self._rx.clear()
+        self._stop_deadline = None
         self.exec_raw_no_follow('fw.run({})'.format(dur))
         self.framework_running = True
 
+    def request_stop(self):
+        """Request a stop once. Keep polling until the board returns to the REPL."""
+        if self.framework_running and self._stop_deadline is None:
+            self._stop_deadline = time.monotonic() + 10
+            try:
+                self.serial.write(b'\x03')
+            except SerialException:
+                self._stop_deadline = time.monotonic()  # Report loss in the regular poll.
+
     def stop_framework(self):
-        '''Stop framework running on pyboard by sending stop command.'''
-        self.serial.write(b'\x03') # Stop signal
-        self.framework_running = False
+        """Stop and drain synchronously when there is no GUI timer polling the board."""
+        self.request_stop()
+        while self.framework_running:
+            self.process_data()
+            if self.framework_running:
+                time.sleep(0.005)
+
+    def _decode_packet(self, packet):
+        kind = chr(packet[1])
+        if kind == 'A':
+            code, channel, rate, length, timestamp, checksum = struct.unpack_from('<cHHHIH', packet, 2)
+            if code not in (b'b', b'B', b'h', b'H', b'l', b'L'):
+                return ('!', 'bad typecode A')
+            # The board's long is 32 bits even on hosts with 64-bit native longs.
+            wire_type = code.decode()
+            width = struct.calcsize('<' + wire_type)
+            if rate == 0 or length == 0 or length % width:
+                return ('!', 'invalid analog header for channel {}'.format(channel))
+            native_type = wire_type
+            if wire_type in 'lL' and array(wire_type).itemsize != width:
+                native_type = 'i' if wire_type == 'l' else 'I'
+            samples = array(native_type)
+            samples.frombytes(packet[15:])
+            if sys.byteorder == 'big':
+                samples.byteswap()
+            if checksum != (sum(packet[2:13]) + sum(samples)) & 0xffff:
+                return ('!', 'bad checksum A (channel {}, time {} ms)'.format(channel, timestamp))
+            return ('A', channel, rate, timestamp, samples)
+        if kind == 'D':
+            timestamp, event, checksum = struct.unpack_from('<IHH', packet, 2)
+            if checksum != sum(packet[2:8]):
+                return ('!', 'bad checksum D')
+            return ('D', timestamp, event)
+        timestamp, checksum = struct.unpack_from('<IH', packet, 4)
+        if checksum != (sum(packet[2:8]) + sum(packet[10:])) & 0xffff:
+            return ('!', 'bad checksum ' + kind)
+        message = packet[10:].decode()
+        if kind == 'V':
+            name, value = message.split(' ', 1)
+            self.sm_info['variables'][name] = eval(value)
+        return (kind, timestamp, message)
 
     def process_data(self):
-        '''Read data from serial line, generate list new_data of data tuples, 
-        pass new_data to data_logger and print_func if specified, return new_data.'''
-        new_data = []
-        error_message = None
-        unexpected_input = []
-        while self.serial.in_waiting > 0:
-            new_byte = self.serial.read(1)
-            if new_byte == b'\x07':   # Start of pyControl message.  
-                if unexpected_input: # Output any unexpected characters recived prior to message start.
-                    new_data.append(('!','Unexpected input recieved from board: ' +
-                                         ''.join(unexpected_input)))
-                    unexpected_input = []
-                type_byte = self.serial.read(1) # Message type identifier.
-                if type_byte == b'A': # Analog data, 13 byte header + variable size content.
-                    data_header = self.serial.read(13)
-                    typecode      = data_header[0:1].decode() 
-                    if typecode not in ('b','B','h','H','l','L'):
-                        new_data.append(('!','bad typecode A'))
-                        continue   
-                    ID            = int.from_bytes(data_header[1:3], 'little')
-                    sampling_rate = int.from_bytes(data_header[3:5], 'little')
-                    data_len      = int.from_bytes(data_header[5:7], 'little')
-                    timestamp     = int.from_bytes(data_header[7:11], 'little')
-                    checksum      = int.from_bytes(data_header[11:13], 'little')
-                    data_array    = array(typecode, self.serial.read(data_len))
-                    if checksum == (sum(data_header[:-2]) + sum(data_array)) & 0xffff: # Checksum OK.
-                        new_data.append(('A',ID, sampling_rate, timestamp, data_array))
-                    else:
-                        new_data.append(('!','bad checksum A'))
-                elif type_byte == b'D': # Event or state entry, 8 byte data header only.
-                    data_header = self.serial.read(8)
-                    timestamp = int.from_bytes(data_header[ :4], 'little')
-                    ID        = int.from_bytes(data_header[4:6], 'little')
-                    checksum  = int.from_bytes(data_header[6:8], 'little')
-                    if checksum == sum(data_header[:-2]): # Checksum OK.
-                        new_data.append(('D',timestamp, ID))
-                    else:
-                        new_data.append(('!','bad checksum D'))
-                elif type_byte in (b'P', b'V'): # User print statement or set variable, 8 byte data header + variable size content.
-                    data_header = self.serial.read(8)
-                    data_len  = int.from_bytes(data_header[ :2], 'little')
-                    timestamp = int.from_bytes(data_header[2:6], 'little')
-                    checksum  = int.from_bytes(data_header[6:8], 'little')
-                    data_bytes = self.serial.read(data_len)
-                    if not checksum == (sum(data_header[:-2]) + sum(data_bytes)) & 0xffff: # Bad checksum.
-                        new_data.append(('!','bad checksum ' + type_byte.decode()))
-                        continue
-                    new_data.append((type_byte.decode(),timestamp, data_bytes.decode()))
-                    if type_byte == b'V': # Store new variable value in sm_info
-                        v_name, v_str = data_bytes.decode().split(' ', 1)
-                        self.sm_info['variables'][v_name] = eval(v_str)
-                else:
-                    unexpected_input.append(type_byte.decode())
-            elif new_byte == b'\x04': # End of framework run.
+        """Consume complete packets from available bytes without blocking the GUI."""
+        rx = self._rx
+        offset = 0
+        records = []
+        error = None
+        try:
+            waiting = self.serial.in_waiting
+            if waiting:
+                rx.extend(self.serial.read(waiting))
+        except SerialException as exc:
+            error = 'Recording incomplete: lost the serial connection ({})'.format(exc)
+            self.framework_running = False
+            self.needs_reset = True
+            self._stop_deadline = None
+        while offset < len(rx):
+            if rx[offset] == 4:  # Raw REPL: stdout EOF, stderr, stderr EOF, prompt.
+                end = rx.find(b'\x04>', offset + 1)
+                if end == -1:
+                    if self._stop_deadline is None:
+                        self._stop_deadline = time.monotonic() + 10
+                    break
+                error = rx[offset + 1:end].decode(errors='replace').strip() or error
+                if error and 'recording_incomplete' in error:
+                    self.needs_reset = True
+                offset = end + 2
                 self.framework_running = False
-                data_err = self.read_until(2, b'\x04>', timeout=10) 
-                if len(data_err) > 2:
-                    error_message = data_err[:-3].decode()
-                    new_data.append(('!', error_message))                
+                self._stop_deadline = None
                 break
-            else:
-                unexpected_input.append(new_byte.decode())
-        if new_data and self.data_logger:
-            self.data_logger.process_data(new_data)
-        if error_message:
-            raise PyboardError(error_message)
+            if rx[offset] != 7:
+                end = offset + 1
+                while end < len(rx) and rx[end] not in (4, 7):
+                    end += 1
+                records.append(('!', 'Unexpected input from board: ' +
+                                rx[offset:end].decode(errors='replace')))
+                offset = end
+                continue
+            if len(rx) - offset < 2:
+                break
+            kind = rx[offset + 1]
+            if kind not in b'ADPV':
+                records.append(('!', 'Unknown board message type 0x{:02x}'.format(kind)))
+                offset += 1
+                continue
+            header_size = 15 if kind == ord('A') else 10
+            if len(rx) - offset < header_size:
+                break
+            size = header_size
+            if kind != ord('D'):
+                length_offset = offset + (7 if kind == ord('A') else 2)
+                size += struct.unpack_from('<H', rx, length_offset)[0]
+            if len(rx) - offset < size:
+                break
+            records.append(self._decode_packet(rx[offset:offset + size]))
+            offset += size
+        del rx[:offset]
+        if self._stop_deadline is not None and time.monotonic() >= self._stop_deadline:
+            self.framework_running = False
+            self.needs_reset = True
+            self._stop_deadline = None
+            error = 'Recording incomplete: timed out waiting for board completion. Reset the board before restarting.'
+        if error:
+            records.append(('!', error))
+        if records and self.data_logger:
+            self.data_logger.process_data(records)
+        if error:
+            raise PyboardError(error)
+        return records
 
     # ------------------------------------------------------------------------------------
     # Getting and setting variables.

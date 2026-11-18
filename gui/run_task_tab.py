@@ -196,7 +196,8 @@ class Run_task_tab(QtGui.QWidget):
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
         self.log_textbox.insertPlainText(print_string+end)
         self.log_textbox.moveCursor(QtGui.QTextCursor.End)
-        self.GUI_main.app.processEvents() # To update gui during long operations that print progress.
+        if not self.running:
+            self.GUI_main.app.processEvents() # Show progress during setup.
 
     def test_data_path(self):
         # Checks whether data dir and subject ID are valid.
@@ -372,22 +373,24 @@ class Run_task_tab(QtGui.QWidget):
         self.GUI_main.tab_widget.setTabEnabled(2, False) # Disable setups tab.
 
     def stop_task(self, error=False, stopped_by_task=False):
+        if not (error or stopped_by_task):
+            self.stop_button.setEnabled(False)
+            self.status_text.setText('Finishing recording')
+            self.board.request_stop()
+            return
         self.running = False
         self.update_timer.stop()
         self.GUI_main.refresh_timer.start(self.GUI_main.refresh_interval)
-        if not (error or stopped_by_task): 
-            self.board.stop_framework()
-            time.sleep(0.05)
-            self.board.process_data()
         self.data_logger.close_files()
         self.task_plot.run_stop()
         self.board_groupbox.setEnabled(True)
         self.file_groupbox.setEnabled(True)
-        self.start_button.setEnabled(True)
+        self.start_button.setEnabled(not self.board.needs_reset)
         self.task_select.setEnabled(True)
         self.upload_button.setEnabled(True)
         self.stop_button.setEnabled(False)
-        self.status_text.setText('Uploaded : ' + self.task)
+        self.variables_button.setEnabled(not self.board.needs_reset)
+        self.status_text.setText('Run ended with an error' if error else 'Uploaded : ' + self.task)
         self.GUI_main.tab_widget.setTabEnabled(1, True) # Enable setups tab.
         self.GUI_main.tab_widget.setTabEnabled(2, True) # Enable setups tab.
 
@@ -409,8 +412,12 @@ class Run_task_tab(QtGui.QWidget):
     def closeEvent(self, event):
         # Called when GUI window is closed.
         if self.board:
-            self.board.stop_framework()
-            self.board.close()
+            self.update_timer.stop()
+            try:
+                self.board.stop_framework()
+            finally:
+                self.data_logger.close_files()
+                self.board.close()
         event.accept()
 
     # Exception handling.
