@@ -3,7 +3,6 @@ import gc
 import math
 import machine
 import pyb
-from array import array
 
 from pyControl.hardware import *
 import devices.PAA5100JE_firmware as PAA5100JE_firmware
@@ -66,33 +65,30 @@ class PAA5100JE():
         burst_address &= ~0x80  # Flip MSB to 1
         self.burst_address = burst_address.to_bytes(1, 'little')
         self.initialised = False
-        self.product_id = None
-        self.revision = None
 
         if initialise:
             self.initialise()
 
     def initialise(self):
-        self.initialised = False
-        try:
-            time.sleep_ms(1)
-            self.select.off()
-            time.sleep_ms(1)
-            self.select.on()
-            time.sleep_ms(50)
-            self.select.off()
-            time.sleep_ms(1)
+        time.sleep_ms(1)
+        self.select.off()
+        time.sleep_ms(1)
+        self.select.on()
+        time.sleep_ms(50)
+        self.select.off()
+        time.sleep_ms(1)
+
+        self.power_up()
+
+        prod_ID = self._read(0x00)
+        prod_rev = self._read(0x01)
+        if prod_ID != 0x49:
             self.power_up()
-            self.product_id = self._read(0x00)
-            self.revision = self._read(0x01)
-            # Both revisions are accepted by the Pimoroni PAA5100 driver.
-            # This check establishes communication, not optical tracking health.
-            if self.product_id != 0x49 or self.revision not in (0x00, 0x01):
-                raise RuntimeError("Bad sensor identity: ID={:#x}, revision={:#x}".format(
-                    self.product_id, self.revision))
-            self.initialised = True
-        finally:
-            self.select.off()
+            prod_ID = self._read(0x00)
+            prod_rev = self._read(0x01)
+            assert prod_ID == 0x49, "Bad init. Prod_ID={:#x}, Rev={:#x}, SPI={}".format(prod_ID, prod_rev, self.spi)
+
+        self.initialised = True
 
     def set_rotation(self, degrees:int =0):
         """Set orientation of PAA5100 in increments of 90 degrees."""
@@ -117,10 +113,6 @@ class PAA5100JE():
         if invert_x:
             value |= 0b00100000
         self._write(PAA5100JE_firmware.REG_ORIENTATION, value)
-        actual = self._read(PAA5100JE_firmware.REG_ORIENTATION) & 0xE0
-        if actual != value:
-            raise RuntimeError("Orientation readback failed: expected {:#x}, got {:#x}".format(
-                value, actual))
     
     def _write(self, address: int, value: int):
         """Write value into register"""
@@ -129,14 +121,12 @@ class PAA5100JE():
         value = value.to_bytes(1, 'little')    # Convert the value from integer to a single byte
         
         self.select.on()
-        try:
-            time.sleep_us(1)
-            self.spi.write(address)
-            self.spi.write(value)
-            time.sleep_us(10)     # tSCLK-NCS
-        finally:
-            self.select.off()
-            time.sleep_us(120)    # tSWW/tSWR guard before next access
+        time.sleep_us(1)
+        self.spi.write(address)   # find specific address of the device
+        self.spi.write(value)     # write value into the above address of the device
+        time.sleep_us(10)         # small guard before CS high (tSCLK-NCS)
+        self.select.off()
+        time.sleep_us(120)        # tSWW/tSWR guard before next access
 
     def _read(self, address: int):
         """Read register"""
@@ -145,16 +135,17 @@ class PAA5100JE():
         address = address.to_bytes(1, 'little')  # Convert the integer to a single byte
         
         self.select.on()
-        try:
-            time.sleep_us(1)
-            self.spi.write(address)
-            time.sleep_us(20)  # tSRAD guard time before data valid
-            data = self.spi.read(1)
-            time.sleep_us(2)
-            return int.from_bytes(data, 'little')
-        finally:
-            self.select.off()
-            time.sleep_us(20)  # tSRW/tSRR guard before next access
+        time.sleep_us(1)
+        self.spi.write(address)
+        time.sleep_us(20)  # tSRAD guard time before data valid
+
+        data = self.spi.read(1)
+
+        val = int.from_bytes(data, 'little')  # converts received data back to integer for further calculations
+        time.sleep_us(2)  # small guard before CS high
+        self.select.off()
+        time.sleep_us(20)  # tSRW/tSRR guard before next access
+        return val
 
     def _bulk_write(self, data: list[int]):
         """Write a list of commands into registers"""
@@ -165,24 +156,20 @@ class PAA5100JE():
     def read_burst(self, buf: bytearray | memoryview):
         """Read an array of data from the registers, used for reading motion burst"""       
         self.select.on()
-        try:
-            time.sleep_us(5)
-            self.spi.write(self.burst_address)
-            time.sleep_us(20)  # allow data to be prepared
-            self.spi.readinto(buf)
-            time.sleep_us(10)
-        finally:
-            self.select.off()
-            time.sleep_us(50)
+        time.sleep_us(5)
+        self.spi.write(self.burst_address)
+        time.sleep_us(20)  # allow data to be prepared
+        # Read 12 bytes of data from the motion burst register
+        self.spi.readinto(buf)
+        time.sleep_us(10)
+        self.select.off()
+        time.sleep_us(50)
 
     def power_up(self):
         """
         Perform the power up sequenceL `_secret_sauce`
         """
-        # A previous interrupted configuration may have left another bank
-        # selected, including when NRESET is not wired on the breakout.
-        self._write(0x7F, 0x00)
-        # Reset the sensor from the base register bank.
+        # Reset the sensor
         self._write(PAA5100JE_firmware.REG_POWER_UP_RESET, 0x5A)
         time.sleep_ms(60)
 
@@ -230,18 +217,17 @@ class PAA5100JE():
 
     def shut_down(self, deinitSPI:bool =True):
         """Shutdown the sensor"""
-        try:
-            self.select.off()
-            time.sleep_ms(1)
-            self.select.on()
-            time.sleep_ms(60)
-            self._write(PAA5100JE_firmware.REG_SHUTDOWN, 0xB6)
-            time.sleep_ms(1)
-        finally:
-            self.select.off()
-            self.initialised = False
-            if deinitSPI:
-                self.spi.deinit()
+        self.select.off()
+        time.sleep_ms(1)
+        self.select.on()
+        time.sleep_ms(60)
+        self._write(PAA5100JE_firmware.REG_SHUTDOWN, 0xB6)
+        time.sleep_ms(1)
+        self.select.off()
+        time.sleep_ms(1)
+        self.initialised = False
+        if deinitSPI:
+            self.spi.deinit()
 
 
 class MotionDetector(Analog_input):
@@ -261,13 +247,6 @@ class MotionDetector(Analog_input):
         self.sensor_x = None
         self.sensor_y = None
         self._sensors_ready = False
-        self.init_attempts = 0
-        self.acquisition_fault = 0
-        self.fault_axis = 0
-        self._reading_axis = 0
-        self.diagnostic_capacity = 0
-        self.diagnostic_count = 0
-        self._diagnostic_active = False
         self.calib_coef = calib_coef
         self._threshold_input = threshold
         self._threshold = int(threshold)
@@ -297,9 +276,6 @@ class MotionDetector(Analog_input):
         self.x_window_sample_count = 0
         self._x_window = []
         self._x_window_index = 0
-        self.continuous_y_enabled = False
-        self.y_window_abs_total = 0
-        self._y_window = []
 
         # Parent
         Analog_input.__init__(self, pin=None, name=name + '-X', sampling_rate=int(sampling_rate),
@@ -357,63 +333,36 @@ class MotionDetector(Analog_input):
             raise AssertionError("{} sensor init failed: {}".format(axis_name, error))
 
     def _initialise_sensors(self):
-        """Prepare the complete pair; a failed attempt never leaves one active."""
-        assert not self.acquiring, 'Cannot initialise while acquiring'
-        self.timer.deinit()
-        self._sensors_ready = False
-        for attempt in range(1, 4):
-            self.init_attempts = attempt
-            try:
-                self._pulse_reset()
-                self.sensor_x = self._make_sensor(self.cs_x)
-                self.sensor_y = self._make_sensor(self.cs_y)
-                self._initialise_sensor('X', self.sensor_x)
-                time.sleep_ms(5)
-                self._initialise_sensor('Y', self.sensor_y)
-                self.sensor_x.set_orientation(invert_x=True)
-                self.sensor_y.set_orientation(invert_y=True)
-                self._update_threshold()
-                self.reset_delta()
-                self.x, self.y = 0, 0
-                self._sensors_ready = True
-                return
-            except Exception:
-                self._deactivate_lines()
-                sensor = self.sensor_y or self.sensor_x
-                if sensor:
-                    try:
-                        sensor.spi.deinit()
-                    except Exception:
-                        pass
-                self.sensor_x = None
-                self.sensor_y = None
-                if attempt == 3:
-                    raise
-
-    def _run_start(self):
-        # Hardware run_start precedes the framework clock and task run_start.
-        # Prepare tasks without a motion event too, but leave their timer off
-        # so they can configure continuous windows before calling record().
-        self.acquisition_fault = 0
-        self.fault_axis = 0
-        self._initialise_sensors()
-        if self.threshold_active:
-            self._start_acquisition()
-
-    def _run_stop(self):
-        self._stop_acquisition()
+        self._pulse_reset()
+        self.sensor_x = self._make_sensor(self.cs_x)
+        self.sensor_y = self._make_sensor(self.cs_y)
+        try:
+            self._initialise_sensor('X', self.sensor_x)
+            time.sleep_ms(5)
+            self._initialise_sensor('Y', self.sensor_y)
+            self.sensor_x.set_orientation(invert_x=True)
+            self.sensor_y.set_orientation(invert_y=True)
+            self._sensors_ready = True
+            self._update_threshold()
+            self.reset_delta()
+            self.x, self.y = 0, 0
+        except Exception:
+            self._sensors_ready = False
+            self._deactivate_lines()
+            self.sensor_x = None
+            self.sensor_y = None
+            raise
 
     def reset_delta(self):
         """reset the accumulated position data"""
         self.delta_x, self.delta_y = 0, 0
 
-    def configure_continuous_motion(self, window_ms=100, include_y=False):
+    def configure_continuous_motion(self, window_ms=100):
         """Enable cumulative X motion and an absolute-motion rolling window.
 
         This must be called before acquisition starts.  Positive and negative
         totals contain magnitudes in sensor counts and are never reset by a
-        thresholded motion event. include_y adds an independent Y window for
-        tasks that explicitly request it; the default remains X-only.
+        thresholded motion event.
         """
         assert not self.acquiring, (
             'Continuous motion must be configured before acquisition starts'
@@ -433,8 +382,6 @@ class MotionDetector(Analog_input):
             1000 * window_samples / self.data_chx.sampling_rate
         ))
         self._x_window = [0] * window_samples
-        self.continuous_y_enabled = bool(include_y)
-        self._y_window = [0] * window_samples if include_y else []
         self._reset_continuous_motion()
 
     def _reset_continuous_motion(self):
@@ -442,14 +389,11 @@ class MotionDetector(Analog_input):
         self.x_positive_total = 0
         self.x_negative_total = 0
         self.x_window_abs_total = 0
-        self.y_window_abs_total = 0
         self.x_window_sample_count = 0
         self._x_window_index = 0
 
         for i in range(len(self._x_window)):
             self._x_window[i] = 0
-        for i in range(len(self._y_window)):
-            self._y_window[i] = 0
 
     def get_x_motion_snapshot(self):
         """Return an interrupt-safe snapshot of continuous X-motion counts.
@@ -476,20 +420,6 @@ class MotionDetector(Analog_input):
             window_sample_count,
         )
 
-    def get_xy_motion_snapshot(self):
-        """Read optional X/Y windows independently of transport buffers."""
-        assert self.continuous_motion_enabled and self.continuous_y_enabled, (
-            'Configure continuous motion with include_y=True first'
-        )
-        irq_state = pyb.disable_irq()
-        positive_total = self.x_positive_total
-        negative_total = self.x_negative_total
-        x_total = self.x_window_abs_total
-        y_total = self.y_window_abs_total
-        count = self.x_window_sample_count
-        pyb.enable_irq(irq_state)
-        return positive_total, negative_total, x_total, y_total, count
-
     def _update_continuous_motion(self):
         """Update continuous counters from the latest sample in the ISR."""
         if not self.continuous_motion_enabled:
@@ -508,99 +438,24 @@ class MotionDetector(Analog_input):
             self.x_window_abs_total -= self._x_window[
                 self._x_window_index
             ]
-            if self.continuous_y_enabled:
-                self.y_window_abs_total -= self._y_window[self._x_window_index]
 
         self._x_window[self._x_window_index] = absolute_dx
         self.x_window_abs_total += absolute_dx
-        if self.continuous_y_enabled:
-            absolute_dy = abs(self._delta_y)
-            self._y_window[self._x_window_index] = absolute_dy
-            self.y_window_abs_total += absolute_dy
         self._x_window_index = (
             self._x_window_index + 1
         ) % self.continuous_window_samples
 
-    def configure_diagnostics(self, sample_count=500):
-        """Capture up to 1000 full bursts in RAM; no logging in the ISR.
-
-        Configure before acquisition. Capture stops when full. The normal task
-        path retains only one inactive-flag check and allocates no capture RAM.
-        """
-        assert not self.acquiring, 'Configure diagnostics before acquisition'
-        assert isinstance(sample_count, int) and 1 <= sample_count <= 1000
-        self._diagnostic_active = False
-        self._diagnostic_ms = array('I', [0] * sample_count)
-        self._diagnostic_ticks = array('I', [0] * sample_count)
-        self._diagnostic_read_us = array('I', [0] * sample_count)
-        self._diagnostic_x = bytearray(12 * sample_count)
-        self._diagnostic_y = bytearray(12 * sample_count)
-        self.diagnostic_capacity = sample_count
-        self.diagnostic_count = 0
-        self._diagnostic_active = True
-
-    def _capture_diagnostics(self, timestamp, ticks_us, read_us):
-        index = self.diagnostic_count
-        self._diagnostic_ms[index] = timestamp
-        self._diagnostic_ticks[index] = ticks_us
-        self._diagnostic_read_us[index] = read_us
-        offset = index * 12
-        for i in range(12):
-            self._diagnostic_x[offset + i] = self.x_buffer[i]
-            self._diagnostic_y[offset + i] = self.y_buffer[i]
-        # Publish last: main-loop readers never see a partly copied record.
-        self.diagnostic_count = index + 1
-        if self.diagnostic_count == self.diagnostic_capacity:
-            self._diagnostic_active = False
-
-    def get_diagnostic_sample(self, index):
-        """Return one completed record from main-loop code, never an ISR.
-
-        Burst layout: motion, observation, dx low/high, dy low/high, SQUAL,
-        raw sum/max/min, shutter upper/lower. No field is used to erase zeros
-        or to infer that an animal stopped. ticks_us wraps per time.ticks_us().
-        """
-        if not 0 <= index < self.diagnostic_count:
-            raise IndexError('Diagnostic sample not available')
-        offset = index * 12
-        return {
-            'time_ms': self._diagnostic_ms[index],
-            'ticks_us': self._diagnostic_ticks[index],
-            'read_us': self._diagnostic_read_us[index],
-            'x': tuple(self._diagnostic_x[offset:offset + 12]),
-            'y': tuple(self._diagnostic_y[offset:offset + 12]),
-        }
-
-    def get_diagnostics_status(self):
-        """Main-loop summary; identity does not establish optical health."""
-        return {
-            'count': self.diagnostic_count,
-            'capacity': self.diagnostic_capacity,
-            'complete': bool(self.diagnostic_capacity and
-                             self.diagnostic_count == self.diagnostic_capacity),
-            'fault': self.acquisition_fault,
-            'fault_axis': self.fault_axis,
-            'init_attempts': self.init_attempts,
-            'identity_x': (self.sensor_x.product_id, self.sensor_x.revision)
-                          if self.sensor_x else None,
-            'identity_y': (self.sensor_y.product_id, self.sensor_y.revision)
-                          if self.sensor_y else None,
-        }
-
     def read_sample(self):
         """read motion in the interrupt routine"""
         # Read motion in x direction
-        self._reading_axis = 1
         self.sensor_x.read_burst(self.x_buffer_mv)
         self._delta_x = twos_comp(int.from_bytes(self.delta_x_mv, 'little'))
 
         time.sleep_us(100)
 
         # Read motion in y direction
-        self._reading_axis = 2
         self.sensor_y.read_burst(self.y_buffer_mv)
         self._delta_y = twos_comp(int.from_bytes(self.delta_y_mv, 'little'))
-        self._reading_axis = 0
         
         # Record accumulated motion
         self.delta_y += self._delta_y
@@ -608,26 +463,10 @@ class MotionDetector(Analog_input):
         
     def _timer_ISR(self, t):
         """Read a sample to the buffer, update write index."""
-        timestamp = fw.current_time
-        capture = self._diagnostic_active
-        if capture:
-            ticks_us = time.ticks_us()
-        try:
-            self.read_sample()
-        except Exception:
-            # Main-loop fault polling reports this even if the event queue is
-            # full. Never retry/reset hardware or format an exception in an ISR.
-            self.acquisition_fault = 1
-            self.fault_axis = self._reading_axis
-            self._diagnostic_active = False
-            self.timer.callback(None)
-            return
-        if capture:
-            self._capture_diagnostics(
-                timestamp, ticks_us, time.ticks_diff(time.ticks_us(), ticks_us))
+        self.read_sample()
         self._update_continuous_motion()
-        self.data_chx.put(self._delta_x, timestamp)
-        self.data_chy.put(self._delta_y, timestamp)
+        self.data_chx.put(self._delta_x)
+        self.data_chy.put(self._delta_y)
 
         if (
             self.rising_event_ID
@@ -639,44 +478,19 @@ class MotionDetector(Analog_input):
             self.timestamp = fw.current_time
             interrupt_queue.put(self.ID)
 
-    def _process_interrupt(self):
-        if self.acquisition_fault:
-            raise RuntimeError('Motion sensor read failed (axis code {}: 1=X, 2=Y)'.format(
-                self.fault_axis))
-        Analog_input._process_interrupt(self)
-
     def _stop_acquisition(self):
-        """Quiesce sampling before sealing channels, even on shutdown errors."""
+        """Stop sampling analog input values."""
         self.timer.deinit()
-        self.acquiring = False
-        self._diagnostic_active = False
-        error = None
-        try:
-            for channel in (self.data_chx, self.data_chy):
-                try:
-                    channel.stop()
-                except Exception as caught:
-                    if error is None:
-                        error = caught
-            if self._sensors_ready:
-                for sensor in (self.sensor_x, self.sensor_y):
-                    try:
-                        sensor.shut_down(deinitSPI=False)
-                    except Exception as caught:
-                        if error is None:
-                            error = caught
-                try:
-                    self.sensor_y.spi.deinit()
-                except Exception as caught:
-                    if error is None:
-                        error = caught
-        finally:
+        self.data_chx.stop()
+        self.data_chy.stop()
+        if self._sensors_ready:
+            self.sensor_x.shut_down(deinitSPI=False)
+            self.sensor_y.shut_down()
             self._sensors_ready = False
             self._deactivate_lines()
-            self.reset_delta()
-            self.x, self.y = 0, 0
-        if error is not None:
-            raise error
+        self.acquiring = False
+        self.reset_delta()
+        self.x, self.y = 0, 0
 
     def _start_acquisition(self):
         """Start sampling analog input values"""
@@ -684,46 +498,13 @@ class MotionDetector(Analog_input):
             self._initialise_sensors()
         if self.continuous_motion_enabled:
             self._reset_continuous_motion()
-        try:
-            self.timer.init(freq=self.data_chx.sampling_rate)
-            self.timer.callback(self._timer_ISR)
-            self.acquiring = True
-        except Exception:
-            self.timer.deinit()
-            self._deactivate_lines()
-            raise
+        self.timer.init(freq=self.data_chx.sampling_rate)
+        self.timer.callback(self._timer_ISR)
+        self.acquiring = True
 
     def record(self):
         """Start streaming data to computer."""
-        # Fallback for direct/bench callers outside the framework lifecycle.
-        if not self._sensors_ready:
-            self._initialise_sensors()
-        try:
-            irq_state = pyb.disable_irq()
-            try:
-                self.data_chx.record()
-                self.data_chy.record()
-            finally:
-                pyb.enable_irq(irq_state)
-            if not self.acquiring:
-                self._start_acquisition()
-        except Exception:
-            try:
-                self._stop_acquisition()
-            except Exception:
-                pass  # Preserve the original recording/startup error.
-            raise
-
-    def stop(self):
-        """Stop both streams; event-driven acquisition may remain enabled."""
-        if self.threshold_active:
-            irq_state = pyb.disable_irq()
-            try:
-                try:
-                    self.data_chx.stop()
-                finally:
-                    self.data_chy.stop()
-            finally:
-                pyb.enable_irq(irq_state)
-        else:
-            self._stop_acquisition()
+        self.data_chx.record()
+        self.data_chy.record()
+        if not self.acquiring:
+            self._start_acquisition()
