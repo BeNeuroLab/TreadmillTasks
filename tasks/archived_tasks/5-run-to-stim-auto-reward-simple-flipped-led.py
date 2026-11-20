@@ -320,10 +320,10 @@ def set_reward_cues():
 # Run Start/End
 # -------------------------------------------------------------------------
 def run_start():
-    hw.speaker.set_volume(15)
-    hw.speaker.off()
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
+    hw.speaker.set_volume(15)
+    hw.speaker.off()
     hw.reward.reward_duration = v.reward_duration
 
     try:

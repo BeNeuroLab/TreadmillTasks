@@ -589,17 +589,17 @@ class MotionDetector(Analog_input):
 
     def read_sample(self):
         """read motion in the interrupt routine"""
-        # Read motion in y direction
-        self._reading_axis = 2
-        self.sensor_y.read_burst(self.y_buffer_mv)
-        self._delta_y = twos_comp(int.from_bytes(self.delta_y_mv, 'little'))
-
-        time.sleep_us(100)
-
         # Read motion in x direction
         self._reading_axis = 1
         self.sensor_x.read_burst(self.x_buffer_mv)
         self._delta_x = twos_comp(int.from_bytes(self.delta_x_mv, 'little'))
+
+        time.sleep_us(100)
+
+        # Read motion in y direction
+        self._reading_axis = 2
+        self.sensor_y.read_burst(self.y_buffer_mv)
+        self._delta_y = twos_comp(int.from_bytes(self.delta_y_mv, 'little'))
         self._reading_axis = 0
         
         # Record accumulated motion

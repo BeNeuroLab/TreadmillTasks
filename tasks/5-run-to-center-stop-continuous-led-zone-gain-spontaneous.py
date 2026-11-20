@@ -474,10 +474,10 @@ def run_start():
     if not 0 <= v.start_led_percent < v.end_led_percent <= 100:
         raise Exception('Continuous LED range must be within 0 to 100')
 
-    hw.speaker.set_volume(15)
-    hw.speaker.off()
     hw.motionSensor.configure_continuous_motion(v.speed_window_ms)
     hw.motionSensor.record()
+    hw.speaker.set_volume(15)
+    hw.speaker.off()
     hw.reward.reward_duration = v.reward_duration
 
     try:

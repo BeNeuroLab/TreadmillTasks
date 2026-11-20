@@ -601,10 +601,10 @@ def run_start():
     ):
         raise Exception('Forward teleport must finish before the reward zone')
 
-    hw.speaker.set_volume(15)
-    hw.speaker.off()
     hw.motionSensor.configure_continuous_motion(v.speed_window_ms)
     hw.motionSensor.record()
+    hw.speaker.set_volume(15)
+    hw.speaker.off()
     hw.reward.reward_duration = v.reward_duration
 
     try:

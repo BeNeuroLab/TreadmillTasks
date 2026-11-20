@@ -171,9 +171,9 @@ def reset_trial():
 # Run Start/End
 # -------------------------------------------------------------------------
 def run_start():
-    hw.speaker.set_volume(15)
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
+    hw.speaker.set_volume(15)
     hw.reward.reward_duration = v.reward_duration
 
     # LED strip feedback (bilateral symmetric cue)

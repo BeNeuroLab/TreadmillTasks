@@ -392,10 +392,10 @@ def moving_at_cue_on():
 def run_start():
     configure_led_update_conditions()
 
-    hw.speaker.set_volume(15)
-    hw.speaker.off()
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
+    hw.speaker.set_volume(15)
+    hw.speaker.off()
     hw.reward.reward_duration = v.reward_duration
 
     try:

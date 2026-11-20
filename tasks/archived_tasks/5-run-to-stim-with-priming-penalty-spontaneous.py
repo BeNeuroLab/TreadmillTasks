@@ -282,9 +282,9 @@ def run_start():
     v.next_phase = current_phase_name()
     v.start_next_phase_now = False
 
-    hw.speaker.set_volume(15)
     hw.motionSensor.record()
     hw.motionSensor.threshold = v.motion_threshold
+    hw.speaker.set_volume(15)
     hw.reward.reward_duration = v.reward_duration
 
     try:
